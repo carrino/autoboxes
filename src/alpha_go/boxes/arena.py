@@ -1,0 +1,146 @@
+"""Head-to-head arena for Boxes agents.
+
+Plays `num_games` games between two registered agents, alternating who moves first, through
+`alpha_go.gameplay.play_game`, and reports win rate (with a 95% Wilson interval) and mean
+final margin from agent A's point of view.
+
+    uv run -m alpha_go.boxes.arena --rows 3 --a boxes-ab-d4 --b boxes-greedy --num_games 20
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+
+import numpy as np
+
+from alpha_go.agents import Agent, get_agent
+from alpha_go.boxes import agents as _boxes_agents  # noqa: F401  (registers boxes-* agents)
+from alpha_go.gameplay import play_game
+from alpha_go.games import get_game
+
+_thread_local = threading.local()
+
+
+@dataclass
+class MatchResult:
+    a: str
+    b: str
+    rows: int
+    cols: int
+    games: int
+    a_wins: int
+    b_wins: int
+    draws: int
+    margins: list[int]  # final margin for A, one per game
+    a_seconds_per_move: float
+    b_seconds_per_move: float
+
+    @property
+    def a_win_rate(self) -> float:
+        return (self.a_wins + 0.5 * self.draws) / self.games
+
+    def wilson(self, z: float = 1.96) -> tuple[float, float]:
+        """95% interval for A's win rate (draws count half)."""
+        n, p = self.games, self.a_win_rate
+        centre = (p + z * z / (2 * n)) / (1 + z * z / n)
+        half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+        return centre - half, centre + half
+
+    def summary(self) -> dict[str, float | int | str]:
+        lo, hi = self.wilson()
+        return {
+            "a": self.a, "b": self.b, "board": f"{self.rows}x{self.cols}", "games": self.games,
+            "a_wins": self.a_wins, "b_wins": self.b_wins, "draws": self.draws,
+            "a_win_rate": round(self.a_win_rate, 4),
+            "a_win_rate_ci95": f"[{lo:.3f}, {hi:.3f}]",
+            "a_mean_margin": round(float(np.mean(self.margins)), 3),
+            "a_margin_std": round(float(np.std(self.margins)), 3),
+            "a_sec_per_move": round(self.a_seconds_per_move, 4),
+            "b_sec_per_move": round(self.b_seconds_per_move, 4),
+        }
+
+
+def _agents(a: str, b: str) -> tuple[Agent, Agent]:
+    """One agent pair per thread (search agents carry tables that are not thread-safe)."""
+    if not hasattr(_thread_local, "pair"):
+        _thread_local.pair = {}
+    pairs: dict[tuple[str, str], tuple[Agent, Agent]] = _thread_local.pair
+    if (a, b) not in pairs:
+        pairs[(a, b)] = (get_agent(a), get_agent(b))
+    return pairs[(a, b)]
+
+
+def _one_game(
+    a: str, b: str, rows: int, cols: int, index: int, seed: int
+) -> tuple[int, float, int, float, int]:
+    """Play game `index`; A moves first on even indices.
+
+    Returns (margin for A, A seconds, A moves, B seconds, B moves).
+    """
+    agent_a, agent_b = _agents(a, b)
+    a_first = index % 2 == 0
+    first, second = (agent_a, agent_b) if a_first else (agent_b, agent_a)
+    record = play_game(
+        first, second, board_size=rows, board_cols=cols, seed=seed + index,
+        max_moves=get_game("boxes").default_max_moves(rows, cols), collect_boards=False,
+        game=get_game("boxes"), render_debug_on_error=False,
+    )
+    first_margin = int(round(float(record.result[2:]))) if record.result != "Draw" else 0
+    if record.result.startswith("W+"):
+        first_margin = -first_margin
+    a_margin = first_margin if a_first else -first_margin
+    black = (record.black_move_seconds, record.black_move_count)
+    white = (record.white_move_seconds, record.white_move_count)
+    (a_sec, a_moves), (b_sec, b_moves) = (black, white) if a_first else (white, black)
+    return a_margin, a_sec, a_moves, b_sec, b_moves
+
+
+def play_match(
+    a: str, b: str, rows: int, cols: int | None = None, num_games: int = 20,
+    seed: int = 0, num_workers: int = 1,
+) -> MatchResult:
+    """Play `num_games` games between registered agents `a` and `b`, alternating first move."""
+    cols = cols or rows
+    with ThreadPoolExecutor(max_workers=num_workers) as pool:
+        results = list(pool.map(lambda i: _one_game(a, b, rows, cols, i, seed), range(num_games)))
+    margins = [r[0] for r in results]
+    a_sec = sum(r[1] for r in results) / max(1, sum(r[2] for r in results))
+    b_sec = sum(r[3] for r in results) / max(1, sum(r[4] for r in results))
+    return MatchResult(
+        a=a, b=b, rows=rows, cols=cols, games=num_games,
+        a_wins=sum(m > 0 for m in margins), b_wins=sum(m < 0 for m in margins),
+        draws=sum(m == 0 for m in margins), margins=margins,
+        a_seconds_per_move=a_sec, b_seconds_per_move=b_sec,
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Boxes arena: agent A vs agent B")
+    parser.add_argument("--a", required=True, help="Registered agent name for A")
+    parser.add_argument("--b", required=True, help="Registered agent name for B")
+    parser.add_argument("--rows", type=int, default=5)
+    parser.add_argument("--cols", type=int, default=None)
+    parser.add_argument("--num_games", type=int, default=20)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--num_workers", type=int, default=1)
+    args = parser.parse_args()
+    result = play_match(
+        args.a, args.b, args.rows, args.cols, args.num_games, args.seed, args.num_workers
+    )
+    summary = result.summary()
+    print(
+        f"{args.a} vs {args.b} on {summary['board']}: A wins {result.a_wins}, "
+        f"B wins {result.b_wins}, draws {result.draws}; A win rate {summary['a_win_rate']} "
+        f"{summary['a_win_rate_ci95']}; A mean margin {summary['a_mean_margin']} "
+        f"± {summary['a_margin_std']}"
+    )
+    print("===RESULT===")
+    print(json.dumps(summary))
+
+
+if __name__ == "__main__":
+    main()
