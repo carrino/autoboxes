@@ -56,8 +56,9 @@ must keep.
 | 3 | Boxes Python reference rules: `BoxesBoard` (edge mask, box owners, scores, to_play, undo-free), `BoxesState` (MCTS protocol), edge/lattice index tables, ASCII render | `src/alpha_go/boxes/__init__.py`, `boxes/rules.py`, `tests/test_boxes_rules.py` | — |
 | 4 | Symmetries: lattice D4/D2 transforms for planes, edge permutations, round-trip tests | `boxes/symmetry.py`, `tests/test_boxes_symmetry.py` | — |
 | 5 | Exhaustive minimax oracle (negamax over edge subsets with memo) for 1×1, 1×2, 2×2, 2×3; Python MCTS agrees with it; **explicit sign-flip test on a hand-built capture position** | `boxes/oracle.py`, `tests/test_boxes_oracle.py`, `tests/test_boxes_mcts_sign.py` | — |
+| 5b | Forced-move collapse (search side, not the rules): detect opened chains/loops, auto-capture an opened chain down to 2 boxes (a loop down to 4), then expose `take all` vs `keep control` (double-deal) as the only two continuations; `BoxesSearchState` wraps `BoxesBoard` for the search; tests: the collapse never changes the oracle's minimax value on 2×2 / 2×3, and macro-actions map back to their first edge | `boxes/chains.py`, `boxes/forced.py`, `tests/test_boxes_forced.py` | — |
 | 6 | C++ `BoxesBoard` (`uint64_t` edge mask when `E ≤ 64`, `std::bitset` fallback) + pybind; Python-vs-C++ equivalence under random play; perft counts | `cpp/boxes/boxes_game.h/.cpp`, `cpp/boxes/boxes_game_test.cpp`, `tests/test_boxes_cpp_parity.py` | `cpp/CMakeLists.txt`, `cpp/bindings/bindings.cpp` (additive) |
-| 7 | shared: template `MCTSTree<State>` with `player()/apply()/outcome()` + mover-aware backup; `BoxesMCTSTree` binding; C++ sign-flip test; C++ MCTS vs oracle; Go MCTS tests unchanged | `tests/test_boxes_cpp_mcts.py` | `cpp/go/go_game.h` (3 additive methods), `cpp/mcts/mcts.h/.cpp` (template + 4 semantic edits), `bindings.cpp`, `CMakeLists.txt` |
+| 7 | shared: template `MCTSTree<State>` with `player()/apply()/outcome()` + mover-aware backup; `BoxesMCTSTree` binding over the C++ search state (forced-move collapse ported, parity-tested against `boxes/forced.py`); C++ sign-flip test; C++ MCTS vs oracle; Go MCTS tests unchanged | `tests/test_boxes_cpp_mcts.py` | `cpp/go/go_game.h` (3 additive methods), `cpp/mcts/mcts.h/.cpp` (template + 4 semantic edits), `bindings.cpp`, `CMakeLists.txt` |
 | 8 | Baselines: `boxes-random`, `boxes-greedy` (take captures, avoid giving third sides), `boxes-ab-d{N}` (depth-limited alpha-beta, TT on edge mask) + arena CLI (alternating first player, win rate + mean margin ± CI) | `boxes/agents.py`, `boxes/alphabeta.py`, `boxes/arena.py`, `tests/test_boxes_agents.py` | — |
 | 9 | Encoding + net: lattice planes, `BoxesNet` (masked ResNet trunk reused from `model.py`, policy over lattice cells gathered at edges, margin-distribution value head + derived scalar win prob) + symmetry-equivariance tests | `boxes/encode.py`, `boxes/model.py`, `tests/test_boxes_model.py` | — |
 | 10 | shared: `--game boxes` in `self_play.py`, `game=` in `play_game`, `to_play`/`game` keys in NPZ, `BoxesDataset` | `boxes/dataset.py`, `tests/test_boxes_dataset.py` | `self_play.py`, `gameplay.py`, `agents/base.py` (annotation) |
@@ -148,6 +149,32 @@ both supported); fail loudly at startup if `torch.cuda.is_available()` is false 
 * Budget targets: 3×3 iteration (200 games × 200 sims + 2 min train + 100 arena games)
   ≈ 5 min; 5×5 overnight = 10–20 iterations of 400 games × 400 sims on the 3070.
 
+### 2.5 Forced-move collapse (search side)
+
+BoxesZero's ablation credits chain-loop pruning with the largest single gain, so it is a
+Phase 1 item. The raw rules stay one edge per move (arena, text protocol, NPZ and the
+external-engine bridge all speak single edges). The collapse lives in the state the
+*search* expands (`BoxesSearchState` in Python, the same logic in the C++ search state):
+
+* `boxes/chains.py`: union-find on the strings-and-coins dual (boxes = coins, one ground
+  node for the outside) to label chains and loops and to find *opened* components
+  (a component containing a box with three drawn sides).
+* `boxes/forced.py`: when the side to move faces an opened chain (loop), the forced
+  captures are applied automatically down to the last 2 boxes (4 for a loop); the search
+  then sees exactly two continuations, `take all` (capture the rest, then move again) and
+  `keep control` (the double-dealing edge that hands the opponent those 2/4 boxes and the
+  move). With no opened component the action set is the plain undrawn edges, with
+  *safe* edges (no third side created) listed before *loony* ones.
+* Interface to the rest of the system: each macro-action is identified by its first
+  edge, so priors come from the policy head's logit for that edge, visit counts are
+  credited to that edge in the training target, and the move actually played is that
+  edge (the remaining forced edges are played out by the same agent on its next turns;
+  it re-derives the same collapse). This keeps the policy head, NPZ schema and
+  `self_play` unchanged.
+* Tests: for every position reachable on 2×2 and 2×3, the collapsed game tree has the
+  same minimax value as the uncollapsed oracle; the C++ port matches the Python one
+  under random play.
+
 ---
 
 ## 3. Baseline engines (optional, after Phase 1 is green)
@@ -166,13 +193,32 @@ both supported); fail loudly at startup if `torch.cuda.is_available()` is false 
 
 ## 4. Phase 2 — domain knowledge
 
-1. **Exact endgame solver** `boxes/solver.py` + `cpp/boxes/solver.{h,cpp}`: alpha-beta on
-   remaining-box margin with TT keyed on edge mask (the margin-so-far is additive and does
-   not change the optimal line, so keying on the mask alone gives more hits; the
-   `(mask, margin)` key is kept as an option for the depth-limited heuristic search),
-   configurable `N` undrawn edges, used as the MCTS leaf evaluator when
-   `popcount(~mask) ≤ N` (returns exact win prob / margin). Benchmark solve time vs N on
-   5×5 and record a table.
+1. **Exact endgame solver** `boxes/solver.py` + `cpp/boxes/solver.{h,cpp}`, used as the MCTS
+   leaf evaluator when `popcount(~mask) ≤ N`, default `N = 28` undrawn edges; benchmark
+   `N = 24..36` on 5×5 and record the results before raising the default. The solver's
+   margin arithmetic is exact and independent of the net: it returns the remaining margin
+   for the side to move, the leaf value is `sign(board.margin() + remaining)` → 1 / ½ / 0
+   (BoxesZero §4.5), and the margin distribution head is only a training target and the
+   source of `P(margin > 0)` for non-solved leaves.
+   * **Transposition table** keyed on the symmetry-canonical edge mask (the minimum over
+     the 8 lattice transforms, 4 for rectangular boards; `symmetry.edge_permutation`
+     gives the bit permutations), storing the remaining margin for the side to move
+     (margin so far is additive and never changes the optimal line). Entries and bytes
+     are a CLI flag and are printed at startup.
+   * **Move generation**: captures first and forced (reuse the Phase 1 forced-move
+     collapse); all edges of one chain or loop are equivalent and generate a single move;
+     safe moves (no third side) are ordered before loony ones.
+   * **Solver leaf**: when the position is pure chains-and-loops, return `v(G)` in closed
+     form from Allcock 2021 (`c(G)`, terminal bonus, Theorems 1–3) extended with
+     BoxesZero's 1-chain / 2-chain rules (Theorems 4–5). Property-test the closed form
+     against the alpha-beta on every chains-and-loops position reachable on 2×3 and 3×3.
+   * **Benchmark**: report the solve-time distribution (p50 / p99 / max), not the mean,
+     for `N = 24..36` on positions sampled from real self-play games; the MCTS leaf budget
+     is set by the p99.
+   * **Validation**: once a Dabble / PRsBoxes bridge exists, sample ~2000 late positions,
+     let the engine play them out from both sides against our solver, and assert the
+     solver's claimed margin is never beaten. Any disagreement is a solver bug until
+     proven otherwise.
 2. **Chain/loop features** via union-find on the strings-and-coins dual (boxes = coins,
    ground node = outside): per-edge planes (safe move, opens chain/loop, chain-length bucket,
    chain vs loop, ends at ground vs junction) and global scalars (chain counts by length,
@@ -223,10 +269,16 @@ Not touched: `go.py`, `model.py`, `dataset.py`, `engine.py`, `play.py`, `inferen
    value-head distribution over final margins whose `P(margin > 0)` feeds the search,
    (c) terminal values from the final box count, and (d) in Phase 2 the exact endgame
    solver's remaining margin added to the current margin, whose sign is the leaf value
-   (BoxesZero §4.5: `score_s = current − opponent − v(s)` → `Q = ±1`). Optional training
-   flags derived from BoxesZero: value target `0.75·z + 0.25·Q` (upstream already saves
-   the root Q per position) and backward training as an alternative to solver-labelled
-   pretraining.
+   (BoxesZero §4.5: `score_s = current − opponent − v(s)` → `Q = ±1`). The solver's margin
+   arithmetic is exact and independent of the net; the margin-distribution head is a
+   training target and the source of `P(margin > 0)` only. Search flag
+   `--margin_utility_lambda` (default `0.0`): when nonzero the Boxes evaluator backs up
+   `u = win_prob + lambda * tanh(expected_margin / k)` with `--margin_utility_k`
+   (default `6`); the `1 − u` perspective flip still holds because `tanh` is odd. Default
+   behaviour is unchanged; this is for a later arena comparison (KataGo score utility),
+   not Phase 1. Optional training flags derived from BoxesZero: value target
+   `0.75·z + 0.25·Q` (upstream already saves the root Q per position) and backward
+   training as an alternative to solver-labelled pretraining.
 5. **Python version**: not pinned. `scripts/build_cpp.sh` derives `libpython` from the
    venv's `sysconfig` instead of hard-coding 3.10 (shared bug fix).
 6. **Broken upstream tests**: excluded (`--ignore=tests/test_gpu_lease.py`); infra stays
