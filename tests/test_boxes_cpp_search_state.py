@@ -22,7 +22,9 @@ from alpha_go.games import get_game
 CPU = torch.device("cpu")
 
 
-def random_pair(rows: int, cols: int, rng: random.Random) -> tuple[BoxesBoard, alpha_go_cpp.BoxesBoard]:
+def random_pair(
+    rows: int, cols: int, rng: random.Random
+) -> tuple[BoxesBoard, alpha_go_cpp.BoxesBoard]:
     py, cpp = BoxesBoard(rows, cols), alpha_go_cpp.BoxesBoard(rows, cols)
     for _ in range(rng.randint(0, py.num_edges() - 1)):
         e = rng.choice(py.get_legal_moves_flat())
@@ -67,7 +69,7 @@ class TestParity:
                 assert list(moved.get_legal_moves_flat()) == child.get_legal_actions()
 
     def test_search_state_tree_has_oracle_value(self) -> None:
-        """Negamax over C++ search states equals the oracle on 2x2 (collapse is value-preserving)."""
+        """Negamax over C++ search states equals the oracle on 2x2 (value-preserving)."""
         oracle = Oracle(2, 2)
         memo: dict[tuple[int, int], int] = {}
 
@@ -123,7 +125,9 @@ class TestAgentWithCollapse:
             seed=1, max_moves=24, game=get_game("boxes"), collect_metrics=True,
         )
         assert record.num_moves == 24
-        searched = [m for m in record.move_metrics if m.visit_counts is not None]
-        forced = [m for m in record.move_metrics[::2] if m.visit_counts is None]
+        black = [m for m in record.move_metrics if m.agent_color == "black"]
+        searched = [m for m in black if m.visit_counts is not None]
+        forced = [m for m in black if m.visit_counts is None]
         assert searched and all(m.visit_counts.sum() == 32 for m in searched)
-        assert len(searched) + len(forced) == 12
+        assert len(black) == record.black_move_count == len(searched) + len(forced)
+        assert all(m.visit_counts is None for m in record.move_metrics if m.agent_color == "white")
