@@ -134,17 +134,16 @@ uv run -m pytest tests/ --ignore=tests/test_gpu_lease.py   # test_gpu_lease is b
 uv run -m pytest tests/test_boxes_*.py    # Boxes only
 uv run -m mypy src/alpha_go/boxes src/alpha_go/game.py     # keep NEW code strict-clean (upstream has ~157 errors)
 uv run ruff check src/alpha_go/boxes tests/test_boxes_*.py
-./src/alpha_go/cpp/build/go_game_test && ./src/alpha_go/cpp/build/boxes_game_test   # Catch2
+./src/alpha_go/cpp/build/go_game_test && ./src/alpha_go/cpp/build/boxes_game_test && ./src/alpha_go/cpp/build/mcts_test   # Catch2
 
 # Boxes self-play / arena (Phase 1 targets; see PLAN.md for the exact flags)
 uv run -m alpha_go.self_play --game boxes --board_size 3 --black boxes-random --white boxes-greedy --num_games 100
 uv run -m alpha_go.boxes.arena --rows 5 --cols 5 --a boxes-ab-d6 --b boxes-greedy --num_games 200
-EXP=experiments/<date>-boxes-3x3-loop && bash $EXP/run_iteration_local.sh 0 5
+EXP=experiments/2026-10-08_14-42-boxes-3x3-loop && bash $EXP/run_iteration_local.sh 0 5   # add --cpu for a smoke run
 ```
 
-`scripts/build_cpp.sh` as inherited hard-codes `libpython3.10.so`; on another interpreter
-run cmake by hand with `-DPython3_LIBRARY=<libpython for the venv's Python>` until the
-script is fixed (planned shared edit).
+`scripts/build_cpp.sh` reads the venv Python's libpython from `sysconfig`, so any
+interpreter uv picks works (the upstream script hard-coded 3.10).
 
 ## Style rules for new code (in addition to upstream's list above)
 

@@ -47,6 +47,15 @@ must keep.
 
 ## 2. Phase 1 — playable, testable, trainable (3×3 then 5×5)
 
+### Status (2026-10-08)
+
+Landed on `claude/awesome-fermi-ygaeuj`: commits 1-4 (Game protocol + Go adapter,
+mover-aware Python backup, reference rules, symmetries), 5 (oracle + sign tests), 6 (C++
+board), 7 (templated C++ search, Go byte-identical), 8 (baselines + arena), 9 (encoder +
+net), 10 (play loop / CLI / NPZ `to_play` / dataset), 11 (NN MCTS agent + batched
+engine), 12 (3x3 loop, smoke-tested on CPU). Open: 5b forced-move collapse, 13 (5x5 run
+on the GPU box), the text engine protocol (§3) and Phase 2.
+
 ### 2.1 Commit plan
 
 | # | commit | new files | shared files touched |
