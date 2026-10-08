@@ -20,7 +20,6 @@ from numpy.typing import NDArray
 
 from alpha_go.boxes.model import BoxesNet
 
-
 Result = tuple[NDArray[np.float32], float, float]  # edge logits, win prob, expected margin
 
 
