@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 import alpha_go_cpp
 
@@ -36,8 +37,12 @@ class Agent(ABC):
         return None
 
     @abstractmethod
-    def select_move(self, board: alpha_go_cpp.GoBoard, seed: int) -> tuple[int, int]:
-        """Select a move given current game state. Returns (row, col) or PASS."""
+    def select_move(self, board: Any, seed: int) -> tuple[int, int]:
+        """Select a move given current game state. Returns (row, col) or PASS.
+
+        `board` is an `alpha_go_cpp.GoBoard` for Go agents and an
+        `alpha_go_cpp.BoxesBoard` (lattice coordinates) for Boxes agents.
+        """
 
 
 def register_agent(name: str):
