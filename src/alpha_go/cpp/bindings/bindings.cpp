@@ -11,6 +11,51 @@
 
 namespace py = pybind11;
 
+// Bind MCTSTree<State> under `name`. Evaluators are Python callables taking the
+// state (or a list of states for the batched path) and returning
+// (dict[action, prob], value) where value is the side-to-move win probability.
+template <class State>
+void bind_mcts_tree(py::module_& m, const char* name) {
+    using Tree = alpha_go::MCTSTree<State>;
+    py::class_<Tree>(m, name)
+        .def(py::init<const State&, const alpha_go::MCTSConfig&>(),
+             py::arg("root_state"), py::arg("config"),
+             "Create MCTS tree from root state with given config.")
+        .def("run_simulations", &Tree::run_simulations,
+             py::arg("num_simulations"), py::arg("evaluator"),
+             "Run MCTS simulations using the evaluator function.\n"
+             "evaluator: callable(state) -> (dict[int, float], float)\n"
+             "Returns (action -> probability dict, value estimate).")
+        .def("get_action_probabilities", &Tree::get_action_probabilities,
+             py::arg("temperature") = 1.0f,
+             "Get action probabilities based on visit counts.\n"
+             "temperature=0 gives deterministic (argmax), temperature=1 proportional.")
+        .def("select_action", &Tree::select_action,
+             py::arg("temperature") = 1.0f,
+             "Select an action based on visit counts and temperature.")
+        .def("tree_size", &Tree::tree_size,
+             "Get number of nodes in the tree.")
+        .def("get_root_visit_count", &Tree::get_root_visit_count,
+             "Get visit count of root node.")
+        .def("get_root_q_value", &Tree::get_root_q_value,
+             "Get Q-value of root node (player_at_parent / opponent perspective).")
+        .def("get_root_policy_priors", &Tree::get_root_policy_priors,
+             "Get root policy priors as dict[action, probability]. Includes Dirichlet noise if applied.")
+        .def("get_child_visit_counts", &Tree::get_child_visit_counts,
+             "Get visit counts of root's children as dict[action, count].")
+        .def("get_child_q_values", &Tree::get_child_q_values,
+             "Get Q-values of root's children as dict[action, q_value].")
+        .def("get_child_first_eval_values", &Tree::get_child_first_eval_values,
+             "Get the raw NN v_theta recorded at each root-child at expansion "
+             "time as dict[action, value]. Same perspective as Q (root player).")
+        .def("get_child_max_subtree_depths", &Tree::get_child_max_subtree_depths,
+             "Get max subtree depth under each root child as dict[action, depth].")
+        .def("run_simulations_batched", &Tree::run_simulations_batched,
+             py::arg("num_simulations"), py::arg("leaf_batch_size"), py::arg("batched_evaluator"),
+             "Leaf-parallel MCTS with virtual loss.\n"
+             "batched_evaluator: callable(list[state]) -> list[(dict[int,float], float)]");
+}
+
 PYBIND11_MODULE(alpha_go_cpp, m) {
     m.doc() = "C++ backend for AlphaGo MCTS and Go game";
 
@@ -174,44 +219,9 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
                    ", dirichlet_alpha=" + std::to_string(c.dirichlet_alpha) + ")";
         });
 
-    // MCTSTree binding
-    py::class_<alpha_go::MCTSTree>(m, "MCTSTree")
-        .def(py::init<const alpha_go::GoBoard&, const alpha_go::MCTSConfig&>(),
-             py::arg("root_state"), py::arg("config"),
-             "Create MCTS tree from root state with given config.")
-        .def("run_simulations", &alpha_go::MCTSTree::run_simulations,
-             py::arg("num_simulations"), py::arg("evaluator"),
-             "Run MCTS simulations using the evaluator function.\n"
-             "evaluator: callable(GoBoard) -> (dict[int, float], float)\n"
-             "Returns (action -> probability dict, value estimate).")
-        .def("get_action_probabilities", &alpha_go::MCTSTree::get_action_probabilities,
-             py::arg("temperature") = 1.0f,
-             "Get action probabilities based on visit counts.\n"
-             "temperature=0 gives deterministic (argmax), temperature=1 proportional.")
-        .def("select_action", &alpha_go::MCTSTree::select_action,
-             py::arg("temperature") = 1.0f,
-             "Select an action based on visit counts and temperature.")
-        .def("tree_size", &alpha_go::MCTSTree::tree_size,
-             "Get number of nodes in the tree.")
-        .def("get_root_visit_count", &alpha_go::MCTSTree::get_root_visit_count,
-             "Get visit count of root node.")
-        .def("get_root_q_value", &alpha_go::MCTSTree::get_root_q_value,
-             "Get Q-value of root node (player_at_parent / opponent perspective).")
-        .def("get_root_policy_priors", &alpha_go::MCTSTree::get_root_policy_priors,
-             "Get root policy priors as dict[action, probability]. Includes Dirichlet noise if applied.")
-        .def("get_child_visit_counts", &alpha_go::MCTSTree::get_child_visit_counts,
-             "Get visit counts of root's children as dict[action, count].")
-        .def("get_child_q_values", &alpha_go::MCTSTree::get_child_q_values,
-             "Get Q-values of root's children as dict[action, q_value].")
-        .def("get_child_first_eval_values", &alpha_go::MCTSTree::get_child_first_eval_values,
-             "Get the raw NN v_theta recorded at each root-child at expansion "
-             "time as dict[action, value]. Same perspective as Q (root player).")
-        .def("get_child_max_subtree_depths", &alpha_go::MCTSTree::get_child_max_subtree_depths,
-             "Get max subtree depth under each root child as dict[action, depth].")
-        .def("run_simulations_batched", &alpha_go::MCTSTree::run_simulations_batched,
-             py::arg("num_simulations"), py::arg("leaf_batch_size"), py::arg("batched_evaluator"),
-             "Leaf-parallel MCTS with virtual loss.\n"
-             "batched_evaluator: callable(list[GoBoard]) -> list[(dict[int,float], float)]");
+    // MCTSTree bindings: the same template for Go ("MCTSTree") and Boxes ("BoxesMCTSTree")
+    bind_mcts_tree<alpha_go::GoBoard>(m, "MCTSTree");
+    bind_mcts_tree<alpha_go::BoxesBoard>(m, "BoxesMCTSTree");
 
     // Convenience function for running MCTS with a Python evaluator
     m.def("run_mcts", [](
@@ -221,7 +231,7 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         py::function evaluator,
         float temperature
     ) {
-        alpha_go::MCTSTree tree(state, config);
+        alpha_go::GoMCTSTree tree(state, config);
 
         // Wrap Python evaluator
         auto cpp_evaluator = [&evaluator](const alpha_go::GoBoard& s)

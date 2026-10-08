@@ -63,7 +63,7 @@ add_library(mcts STATIC
     mcts/mcts.cpp
 )
 target_include_directories(mcts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(mcts PUBLIC go_game)
+target_link_libraries(mcts PUBLIC go_game boxes_game)
 
 # Python extension module
 pybind11_add_module(alpha_go_cpp
@@ -84,6 +84,9 @@ target_link_libraries(go_game_test PRIVATE go_game Catch2::Catch2WithMain)
 
 add_executable(boxes_game_test boxes/boxes_game_test.cpp)
 target_link_libraries(boxes_game_test PRIVATE boxes_game Catch2::Catch2WithMain)
+
+add_executable(mcts_test mcts/mcts_test.cpp)
+target_link_libraries(mcts_test PRIVATE mcts Catch2::Catch2WithMain)
 
 # Install
 install(TARGETS alpha_go_cpp LIBRARY DESTINATION .)

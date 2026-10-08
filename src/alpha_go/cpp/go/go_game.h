@@ -53,6 +53,24 @@ public:
     float komi() const { return komi_; }
     std::optional<int> ko_point() const { return ko_point_; }
 
+    // Game-state concept used by the templated MCTSTree (mcts/mcts.h):
+    // player() is the side to move as 0 (BLACK) / 1 (WHITE), apply() plays an
+    // action (negative = pass; an illegal move falls back to a pass, as the
+    // rollout code always did), outcome() is 1 / 0.5 / 0 for a player index.
+    int player() const { return to_play_ == BLACK ? 0 : 1; }
+    void apply(int action) {
+        if (action < 0 || !play_flat(action)) {
+            pass();
+        }
+    }
+    float outcome(int player) const {
+        int8_t winner = get_winner();
+        if (winner == 0) {
+            return 0.5f;
+        }
+        return winner == (player == 0 ? BLACK : WHITE) ? 1.0f : 0.0f;
+    }
+
     // Utility
     int flat_index(int row, int col) const { return row * size_ + col; }
     std::pair<int, int> row_col(int flat) const { return {flat / size_, flat % size_}; }
