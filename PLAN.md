@@ -53,8 +53,10 @@ Landed on `claude/awesome-fermi-ygaeuj`: commits 1-4 (Game protocol + Go adapter
 mover-aware Python backup, reference rules, symmetries), 5 (oracle + sign tests), 6 (C++
 board), 7 (templated C++ search, Go byte-identical), 8 (baselines + arena), 9 (encoder +
 net), 10 (play loop / CLI / NPZ `to_play` / dataset), 11 (NN MCTS agent + batched
-engine), 12 (3x3 loop, smoke-tested on CPU). Open: 5b forced-move collapse, 13 (5x5 run
-on the GPU box), the text engine protocol (§3) and Phase 2.
+engine), 12 (3x3 loop, smoke-tested on CPU), 5b (forced-move collapse, Python reference +
+C++ `BoxesSearchState`, used by the NN agent), 13a (the same loop folder runs 5x5 via
+`ROWS=5`, size-tagged outputs, 128ch x 10-block net). Open: 13b (the 5x5 overnight run
+itself and its report, which need the GPU box), the text engine protocol (§3) and Phase 2.
 
 ### 2.1 Commit plan
 
@@ -73,7 +75,7 @@ on the GPU box), the text engine protocol (§3) and Phase 2.
 | 10 | shared: `--game boxes` in `self_play.py`, `game=` in `play_game`, `to_play`/`game` keys in NPZ, `BoxesDataset` | `boxes/dataset.py`, `tests/test_boxes_dataset.py` | `self_play.py`, `gameplay.py`, `agents/base.py` (annotation) |
 | 11 | Batched inference for plane inputs (`PlaneBatchedEngine`, fp16 autocast, prints memory footprint), leaf-batched `BoxesNNEvaluator`, `BoxesMCTSAgent` (uses `CppMCTSAgent` logic through `BoxesMCTSTree`) | `boxes/inference.py`, `boxes/nn_agent.py`, `tests/test_boxes_inference.py` | — |
 | 12 | Local loop: `experiments/<date>-boxes-3x3-loop/{README.md, run_iteration_local.sh, pre_collect.py, run_games.py, train.py, arena_promote.py, analyze.py}`; runs end to end on 3×3 in minutes | experiment dir | `.gitignore` (`*.pt`, `*.npz`, `results.tsv`) |
-| 13 | 5×5 config + overnight run + report | `experiments/<date>-boxes-5x5-loop/` | — |
+| 13 | 5×5: `ROWS=5 bash run_iteration_local.sh` in the 3x3 loop folder (size-tagged data / checkpoints / league state, bigger net and budgets) + overnight run + `report-5x5.md` | same experiment dir | — |
 
 ### 2.2 Rules and data layout (what the tests pin down)
 

@@ -139,7 +139,9 @@ uv run ruff check src/alpha_go/boxes tests/test_boxes_*.py
 # Boxes self-play / arena (Phase 1 targets; see PLAN.md for the exact flags)
 uv run -m alpha_go.self_play --game boxes --board_size 3 --black boxes-random --white boxes-greedy --num_games 100
 uv run -m alpha_go.boxes.arena --rows 5 --cols 5 --a boxes-ab-d6 --b boxes-greedy --num_games 200
-EXP=experiments/2026-10-08_14-42-boxes-3x3-loop && bash $EXP/run_iteration_local.sh 0 5   # add --cpu for a smoke run
+EXP=experiments/2026-10-08_14-42-boxes-3x3-loop && bash $EXP/run_iteration_local.sh 0 5   # 3x3; add --cpu for a smoke run
+ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # 5x5 overnight; outputs tagged 5x5 (checkpoints/5x5, league_state-5x5.json)
+uv run $EXP/analyze.py 5x5                     # report-5x5.md
 ```
 
 `scripts/build_cpp.sh` reads the venv Python's libpython from `sysconfig`, so any
