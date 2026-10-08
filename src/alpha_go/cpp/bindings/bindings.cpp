@@ -3,6 +3,9 @@
 #include <pybind11/numpy.h>
 #include <pybind11/functional.h>
 
+#include <algorithm>
+
+#include "boxes/boxes_game.h"
 #include "go/go_game.h"
 #include "mcts/mcts.h"
 
@@ -87,6 +90,62 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         .def_readonly_static("BLACK", &alpha_go::GoBoard::BLACK)
         .def_readonly_static("WHITE", &alpha_go::GoBoard::WHITE)
         .def_readonly_static("KOMI", &alpha_go::GoBoard::KOMI);
+
+    // BoxesBoard binding (Dots and Boxes)
+    py::class_<alpha_go::BoxesBoard>(m, "BoxesBoard")
+        .def(py::init<int, int>(), py::arg("rows"), py::arg("cols") = 0,
+             "Create an empty R x C Boxes board (cols=0 means square).")
+        .def("rows", &alpha_go::BoxesBoard::rows)
+        .def("cols", &alpha_go::BoxesBoard::cols)
+        .def("num_edges", &alpha_go::BoxesBoard::num_edges)
+        .def("num_boxes", &alpha_go::BoxesBoard::num_boxes)
+        .def("to_play", &alpha_go::BoxesBoard::to_play,
+             "Side to move: PLAYER_1 (1) or PLAYER_2 (2).")
+        .def("player", &alpha_go::BoxesBoard::player, "Side to move as 0 / 1.")
+        .def("move_count", &alpha_go::BoxesBoard::move_count)
+        .def("boxes", &alpha_go::BoxesBoard::boxes, py::arg("player"),
+             "Boxes captured by player index 0 / 1.")
+        .def("owner", &alpha_go::BoxesBoard::owner, py::arg("box"))
+        .def("sides", &alpha_go::BoxesBoard::sides, py::arg("box"))
+        .def("edges", &alpha_go::BoxesBoard::edges, "Drawn-edge bitmask.")
+        .def("row_col", &alpha_go::BoxesBoard::row_col, py::arg("edge"),
+             "Lattice (row, col) of an edge.")
+        .def("edge_index", &alpha_go::BoxesBoard::edge_index, py::arg("row"), py::arg("col"),
+             "Edge at lattice (row, col), or -1.")
+        .def("is_legal_edge", &alpha_go::BoxesBoard::is_legal_edge, py::arg("edge"))
+        .def("is_legal", &alpha_go::BoxesBoard::is_legal, py::arg("row"), py::arg("col"))
+        .def("get_legal_moves_flat", &alpha_go::BoxesBoard::get_legal_moves_flat,
+             "Undrawn edge indices.")
+        .def("play_edge", &alpha_go::BoxesBoard::play_edge, py::arg("edge"),
+             "Draw an edge. Returns true if legal. Captures keep the turn.")
+        .def("play", &alpha_go::BoxesBoard::play, py::arg("row"), py::arg("col"),
+             "Draw the edge at lattice (row, col). Returns true if legal.")
+        .def("is_game_over", &alpha_go::BoxesBoard::is_game_over)
+        .def("score", &alpha_go::BoxesBoard::score, "boxes(PLAYER_1) - boxes(PLAYER_2).")
+        .def("margin", &alpha_go::BoxesBoard::margin, "Box difference for the side to move.")
+        .def("get_winner", &alpha_go::BoxesBoard::get_winner,
+             "PLAYER_1 (1), PLAYER_2 (2), or 0 for a tie.")
+        .def("outcome", &alpha_go::BoxesBoard::outcome, py::arg("player"),
+             "1 / 0.5 / 0 for player index 0 / 1.")
+        .def("copy", [](const alpha_go::BoxesBoard& b) { return alpha_go::BoxesBoard(b); })
+        .def("to_numpy", [](const alpha_go::BoxesBoard& b) {
+            const auto& geo = b.geometry();
+            auto arr = py::array_t<int8_t>({geo.lattice_rows(), geo.lattice_cols()});
+            std::vector<int8_t> grid = b.to_lattice();
+            std::copy(grid.begin(), grid.end(), arr.mutable_data());
+            return arr;
+        }, "Lattice grid: drawn edges 1, captured boxes their owner's code.")
+        .def("render", &alpha_go::BoxesBoard::render, "ASCII picture.")
+        .def("__repr__", [](const alpha_go::BoxesBoard& b) {
+            return "BoxesBoard(" + std::to_string(b.rows()) + "x" + std::to_string(b.cols()) +
+                   ", to_play=" + std::to_string(b.to_play()) +
+                   ", moves=" + std::to_string(b.move_count()) + ")";
+        })
+        .def_readonly_static("PLAYER_1", &alpha_go::BoxesBoard::PLAYER_1)
+        .def_readonly_static("PLAYER_2", &alpha_go::BoxesBoard::PLAYER_2);
+
+    m.def("boxes_perft", &alpha_go::boxes_perft, py::arg("board"), py::arg("depth"),
+          "(sequences, PLAYER_1 boxes summed over leaves, PLAYER_2 boxes summed over leaves).");
 
     // MCTSConfig binding
     py::class_<alpha_go::MCTSConfig>(m, "MCTSConfig")
