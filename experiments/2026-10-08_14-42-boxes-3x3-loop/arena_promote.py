@@ -2,8 +2,9 @@
 
 Plays the iter N checkpoint against the current champion (alternating first player),
 promotes it on a win rate >= --threshold, and also scores it against the fixed baselines
-boxes-greedy and boxes-ab-d4 so progress is visible on an absolute scale. State lives in
-league_state.json next to this file.
+boxes-greedy and boxes-ab-d4 so progress is visible on an absolute scale. Checkpoints are
+read from checkpoints/<tag>/ and state lives in league_state-<tag>.json next to this file
+(tag = <rows>x<cols>), so runs on different boards never collide.
 """
 from __future__ import annotations
 
@@ -15,12 +16,11 @@ from alpha_go.boxes.arena import play_match
 from alpha_go.boxes.nn_agent import register_boxes_mcts_agent
 
 EXP_DIR = Path(__file__).resolve().parent
-STATE = EXP_DIR / "league_state.json"
 
 
-def load_state() -> dict:
-    if STATE.exists():
-        return json.loads(STATE.read_text())
+def load_state(state_file: Path) -> dict:
+    if state_file.exists():
+        return json.loads(state_file.read_text())
     return {"champion": None, "history": []}
 
 
@@ -29,6 +29,8 @@ def main() -> None:
     p.add_argument("--iteration", type=int, required=True)
     p.add_argument("--rows", type=int, default=3)
     p.add_argument("--cols", type=int, default=None)
+    p.add_argument("--tag", default=None,
+                   help="checkpoint subdir and state-file suffix; default <rows>x<cols>")
     p.add_argument("--num_games", type=int, default=100)
     p.add_argument("--baseline_games", type=int, default=40)
     p.add_argument("--num_simulations", type=int, default=200)
@@ -40,19 +42,22 @@ def main() -> None:
     device = "cpu" if args.cpu else None
     mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=0.0,
                 leaf_batch_size=8)
-    candidate_ckpt = EXP_DIR / "checkpoints" / f"iter{args.iteration}.pt"
+    tag = args.tag or f"{args.rows}x{args.cols or args.rows}"
+    ckpt_dir = EXP_DIR / "checkpoints" / tag
+    state_file = EXP_DIR / f"league_state-{tag}.json"
+    candidate_ckpt = ckpt_dir / f"iter{args.iteration}.pt"
     candidate = register_boxes_mcts_agent(f"cand-it{args.iteration}", candidate_ckpt, args.rows,
                                           args.cols, device=device, **mcts)
-    state = load_state()
+    state = load_state(state_file)
     entry: dict = {"iteration": args.iteration}
     if state["champion"] is None:
         promoted, vs_champion = True, None
     else:
         champion = register_boxes_mcts_agent(f"champ-it{state['champion']}",
-                                             EXP_DIR / "checkpoints" / f"iter{state['champion']}.pt",
+                                             ckpt_dir / f"iter{state['champion']}.pt",
                                              args.rows, args.cols, device=device, **mcts)
-        match = play_match(candidate, champion, args.rows, args.cols, args.num_games, seed=1000 + args.iteration,
-                           num_workers=args.num_workers)
+        match = play_match(candidate, champion, args.rows, args.cols, args.num_games,
+                           seed=1000 + args.iteration, num_workers=args.num_workers)
         vs_champion = match.summary()
         promoted = match.a_win_rate >= args.threshold
         print(f"iter{args.iteration} vs champion iter{state['champion']}: {vs_champion}")
@@ -67,8 +72,8 @@ def main() -> None:
         state["champion"] = args.iteration
     entry["champion_after"] = state["champion"]
     state["history"].append(entry)
-    STATE.write_text(json.dumps(state, indent=2))
-    print(f"league: champion=iter{state['champion']} promoted={promoted} -> {STATE.name}")
+    state_file.write_text(json.dumps(state, indent=2))
+    print(f"league: champion=iter{state['champion']} promoted={promoted} -> {state_file.name}")
     print("===RESULT===")
     print(json.dumps(entry))
 

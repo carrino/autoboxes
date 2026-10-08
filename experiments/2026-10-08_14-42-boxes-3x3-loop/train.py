@@ -3,7 +3,7 @@
 Policy loss: cross-entropy against the MCTS visit distribution (every position, both
 players); value loss: cross-entropy over the final margin for the side to move. Every batch
 is augmented with a random lattice symmetry (8 for square boards). Prints a ===RESULT===
-JSON line and saves checkpoints/iter{N}.pt next to this file.
+JSON line and saves checkpoints/<tag>/iter{N}.pt next to this file (tag = <rows>x<cols>).
 """
 # ruff: noqa: N806
 from __future__ import annotations
@@ -31,7 +31,10 @@ sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 EXP_DIR = Path(__file__).resolve().parent
 EXP_NAME = EXP_DIR.name
 GAME_DATA_DIR = Path(os.environ.get("GAME_DATA_DIR", "/nfs/game_data_root")).resolve()
-MODEL = dict(channels=64, n_blocks=6, value_hidden=64)
+MODELS = {  # by box rows: 3x3 trains in minutes, 5x5 overnight on one 8 GB GPU
+    3: dict(channels=64, n_blocks=6, value_hidden=64),
+    5: dict(channels=128, n_blocks=10, value_hidden=64),
+}
 BATCH_SIZE = 256
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
@@ -72,7 +75,8 @@ def manifest_dirs(path: Path) -> list[Path]:
     return dirs
 
 
-def schedule(optimizer: torch.optim.Optimizer, total_steps: int) -> torch.optim.lr_scheduler.LambdaLR:
+def schedule(optimizer: torch.optim.Optimizer, total_steps: int
+             ) -> torch.optim.lr_scheduler.LambdaLR:
     def lr_lambda(step: int) -> float:
         if step < WARMUP_STEPS:
             return step / max(1, WARMUP_STEPS)
@@ -82,7 +86,8 @@ def schedule(optimizer: torch.optim.Optimizer, total_steps: int) -> torch.optim.
 
 
 @torch.no_grad()
-def evaluate(model: BoxesNet, loader: DataLoader, device: torch.device, max_batches: int = 40) -> dict:
+def evaluate(model: BoxesNet, loader: DataLoader, device: torch.device,
+             max_batches: int = 40) -> dict:
     model.eval()
     policy_hits = value_hits = n = 0
     loss_sum = 0.0
@@ -111,6 +116,7 @@ def main() -> None:
     p.add_argument("--max-epochs", type=int, default=20)
     p.add_argument("--rows", type=int, default=3)
     p.add_argument("--cols", type=int, default=None)
+    p.add_argument("--tag", default=None, help="checkpoint subdir; default <rows>x<cols>")
     p.add_argument("--lr", type=float, default=LEARNING_RATE)
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
@@ -130,13 +136,14 @@ def main() -> None:
     steps_per_epoch = max(1, len(loader))
     max_steps = args.max_epochs * steps_per_epoch
 
-    model = BoxesNet(rows, cols, **MODEL).to(device)
+    model_cfg = MODELS.get(rows, MODELS[5])
+    model = BoxesNet(rows, cols, **model_cfg).to(device)
     if args.resume_from:
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
         model.load_state_dict(state["model_state_dict"])
         print(f"resumed from {args.resume_from}")
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"model: BoxesNet {MODEL} {n_params:,} params on {device}")
+    print(f"model: BoxesNet {model_cfg} {n_params:,} params on {device}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=WEIGHT_DECAY)
     scheduler = schedule(optimizer, max_steps)
@@ -168,8 +175,8 @@ def main() -> None:
                       f"value={value_loss.item():.4f} ({time.time() - start:.0f}s)")
     elapsed = time.time() - start
     train_eval = evaluate(model, loader, device)
-    ckpt_dir = EXP_DIR / "checkpoints"
-    ckpt_dir.mkdir(exist_ok=True)
+    ckpt_dir = EXP_DIR / "checkpoints" / (args.tag or f"{rows}x{cols}")
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = ckpt_dir / f"iter{args.iteration}.pt"
     save_boxes_net(model, ckpt_path, iteration=args.iteration, step=step)
     print(f"saved {ckpt_path} after {step} steps in {elapsed:.0f}s; train loss "
