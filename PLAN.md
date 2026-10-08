@@ -204,22 +204,30 @@ Not touched: `go.py`, `model.py`, `dataset.py`, `engine.py`, `play.py`, `inferen
 
 ---
 
-## 6. Decisions I want confirmed before Phase 1
+## 6. Decisions (resolved with the author, 2026-10-08)
 
-1. **Template vs copy for the C++ MCTS.** Recommended: template in place (§5). The
-   alternative — a verbatim copy under `cpp/boxes/` — has zero merge-conflict risk but
-   forks 670 lines that then drift from upstream fixes.
-2. **Policy head over lattice cells gathered at edges** (recommended, makes symmetries
-   trivial and reuses the fully-convolutional trunk) vs a flat `E`-way FC head. The action
-   space exposed to MCTS, NPZ and the text protocol is the edge index either way.
-3. **NPZ for Boxes**: separate `BoxesDataset` reading `to_play` from the file (recommended)
-   vs teaching `GoDataset` about `to_play`. Go NPZs stay unchanged apart from the two new
-   keys the shared writer adds.
-4. **Terminal/outcome semantics for MCTS**: keep upstream's `[0,1]` win-prob Q (recommended,
-   zero search changes beyond the flip rule) vs switching Q to expected margin.
-5. **Python version**: devcontainer pins 3.10; this box got 3.13 from `uv`. Pin with
-   `uv python pin 3.10` + `requires-python` untouched, or make the build script
-   version-agnostic (recommended, also fixes the upstream script).
-6. **`tests/test_gpu_lease.py`**: exclude via `--ignore` in the documented test command, or
-   add the two missing helpers to `infra/remote_exec.py`. I'd rather not touch infra;
-   recommend the ignore until upstream fixes it.
+1. **C++ MCTS**: `template <class State> class MCTSTree` in place, explicit instantiations
+   for `GoBoard` and `BoxesBoard`; `MCTSTree` stays the Go binding name, `BoxesMCTSTree`
+   is added. (A macro needs two compilations with clashing symbols; an interface changes
+   the evaluator callback signature and heap-allocates every node's state.)
+2. **Policy head**: 1×1 conv over lattice cells, gathered at the `E` edge cells. Symmetries
+   (8 for square boards, 4 for rectangular) act on the lattice; the edge permutation is
+   derived by applying the same transform to an index grid. Two constant planes mark edge
+   cells and box cells so an undrawn edge and a dot are distinguishable.
+3. **Data**: the shared NPZ writer always records `to_play`; `GoDataset` is untouched;
+   `BoxesDataset` reads `to_play`, lattice boards and margins.
+4. **Search value**: Q stays a win probability in `[0, 1]`; PUCT, `c_puct`, Dirichlet
+   noise, temperature and resign logic are unchanged, only the mover-aware sign rule is
+   added. The margin enters as (a) an input plane: score so far for the side to move
+   (BoxesZero's third channel, Niu et al. 2025, Entropy 27(3):285), (b) the trained
+   value-head distribution over final margins whose `P(margin > 0)` feeds the search,
+   (c) terminal values from the final box count, and (d) in Phase 2 the exact endgame
+   solver's remaining margin added to the current margin, whose sign is the leaf value
+   (BoxesZero §4.5: `score_s = current − opponent − v(s)` → `Q = ±1`). Optional training
+   flags derived from BoxesZero: value target `0.75·z + 0.25·Q` (upstream already saves
+   the root Q per position) and backward training as an alternative to solver-labelled
+   pretraining.
+5. **Python version**: not pinned. `scripts/build_cpp.sh` derives `libpython` from the
+   venv's `sysconfig` instead of hard-coding 3.10 (shared bug fix).
+6. **Broken upstream tests**: excluded (`--ignore=tests/test_gpu_lease.py`); infra stays
+   untouched.
