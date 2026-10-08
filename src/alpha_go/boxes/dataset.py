@@ -33,7 +33,9 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         self.num_with_mcts = sum("mcts_visits" in g for g in self.games)
 
     def footprint_bytes(self) -> int:
-        return sum(sum(int(v.nbytes) for v in g.values() if hasattr(v, "nbytes")) for g in self.games)
+        return sum(
+            sum(int(v.nbytes) for v in g.values() if hasattr(v, "nbytes")) for g in self.games
+        )
 
     def __len__(self) -> int:
         return int(self.cumsum[-1])
