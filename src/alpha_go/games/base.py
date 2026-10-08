@@ -34,6 +34,14 @@ class Game(Protocol):
         """Index of the side to move: 0 moves first in a new game, 1 is the other side."""
         ...
 
+    def terminal_label(self) -> str:
+        """`GameRecord.termination` value for a game that ended by its own rules."""
+        ...
+
+    def default_max_moves(self, board_size: int, board_cols: int | None = None) -> int:
+        """Move cap the self-play CLI uses when none is given."""
+        ...
+
 
 _GAME_REGISTRY: dict[str, Game] = {}
 

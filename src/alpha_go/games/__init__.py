@@ -1,5 +1,6 @@
 """Game implementations. Importing this package registers every game."""
 # Import games to trigger registration
+from alpha_go.boxes import game as _boxes_game  # noqa: F401
 from alpha_go.games import go_adapter as _go_adapter  # noqa: F401
 from alpha_go.games.base import Game, get_game, list_games, register_game
 

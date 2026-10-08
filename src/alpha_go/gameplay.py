@@ -20,6 +20,7 @@ from rich.console import Console
 
 from alpha_go.agents import Agent, PASS, RESIGN
 from alpha_go.analysis.plotting import render_board_simple, get_column_labels
+from alpha_go.games import Game, get_game
 
 # Re-export constants from C++ module for compatibility
 BLACK = alpha_go_cpp.GoBoard.BLACK
@@ -70,12 +71,16 @@ class GameRecord:
         termination: How the game ended ("double_pass" or "max_moves").
         black_checkpoint_path: Optional checkpoint path for black agent.
         white_checkpoint_path: Optional checkpoint path for white agent.
+        game: Game name ("go" or "boxes"); "black"/"white" mean first/second player.
+        to_play: Side to move (0 / 1) before each move, aligned with `boards`.
     """
     board_size: int
     black_agent: str
     white_agent: str
     moves: list[tuple[int, int]] = field(default_factory=list)
     boards: list[NDArray[Any]] = field(default_factory=list)
+    game: str = "go"
+    to_play: list[int] = field(default_factory=list)
     move_metrics: list[MoveMetric] = field(default_factory=list)
     winner: int | None = None
     result: str = ""
@@ -170,6 +175,8 @@ def play_game(
     white_agent_name: str = "",
     black_is_teacher: bool = False,
     white_is_teacher: bool = False,
+    game: Game | None = None,
+    board_cols: int | None = None,
 ) -> GameRecord:
     """Play a single game between two agents.
 
@@ -185,6 +192,8 @@ def play_game(
         fallback_to_pass: Fall back to pass on illegal moves instead of raising (default False).
         black_agent_name: Override name for black agent (defaults to class name).
         white_agent_name: Override name for white agent (defaults to class name).
+        game: Game to play (default Go). Boards and dense action vectors come from it.
+        board_cols: Columns for rectangular boards (Boxes); None means square.
 
     Returns:
         GameRecord with game data.
@@ -192,7 +201,8 @@ def play_game(
     Raises:
         RuntimeError: If an illegal move is played and fallback_to_pass is False.
     """
-    board = alpha_go_cpp.GoBoard(board_size, komi)
+    game = game or get_game("go")
+    board = game.new_board(board_size, komi, board_cols)
 
     # Get agent names and checkpoint paths
     black_name = black_agent_name or type(black_agent).__name__
@@ -207,6 +217,7 @@ def play_game(
         black_checkpoint_path=black_ckpt,
         white_checkpoint_path=white_ckpt,
         komi=komi,
+        game=game.name,
     )
 
     # Initialize agents
@@ -220,6 +231,7 @@ def play_game(
         while not board.is_game_over() and move_count < max_moves:
             if collect_boards:
                 record.boards.append(board.to_numpy().copy())
+                record.to_play.append(game.player(board))
 
             current_player = board.to_play()
             current_agent = agents[current_player]
@@ -249,30 +261,19 @@ def play_game(
                 # Extract MCTS search statistics if available
                 search_result = getattr(current_agent, "last_search_result", None)
                 if search_result is not None:
-                    bs = board.size()
-                    n_actions = bs * bs + 1
-                    pass_idx = n_actions - 1
+                    n_actions = game.num_actions(board)
 
                     visit_counts = np.zeros(n_actions, dtype=np.int16)
                     for flat_idx, count in search_result.tree.get_child_visit_counts().items():
-                        if flat_idx == alpha_go_cpp.PASS_ACTION:
-                            visit_counts[pass_idx] = count
-                        else:
-                            visit_counts[flat_idx] = count
+                        visit_counts[game.action_index(board, flat_idx)] = count
 
                     q_values = np.zeros(n_actions, dtype=np.float32)
                     for flat_idx, q in search_result.tree.get_child_q_values().items():
-                        if flat_idx == alpha_go_cpp.PASS_ACTION:
-                            q_values[pass_idx] = q
-                        else:
-                            q_values[flat_idx] = q
+                        q_values[game.action_index(board, flat_idx)] = q
 
                     policy_priors = np.zeros(n_actions, dtype=np.float32)
                     for flat_idx, p in search_result.tree.get_root_policy_priors().items():
-                        if flat_idx == alpha_go_cpp.PASS_ACTION:
-                            policy_priors[pass_idx] = p
-                        else:
-                            policy_priors[flat_idx] = p
+                        policy_priors[game.action_index(board, flat_idx)] = p
 
                     temperature = getattr(current_agent, "temperature", None)
                     # get_root_q_value() is from player_at_parent (opponent)
@@ -313,7 +314,7 @@ def play_game(
                     move = PASS
                 else:
                     # Illegal move - render debug and raise
-                    if render_debug_on_error:
+                    if render_debug_on_error and game.name == "go":
                         debug_path = render_illegal_move_debug(
                             board=board,
                             invalid_move=move,
@@ -331,7 +332,7 @@ def play_game(
                 black_agent.notify_move(move[0], move[1])
                 white_agent.notify_move(move[0], move[1])
             except Exception as e:
-                if render_debug_on_error:
+                if render_debug_on_error and game.name == "go":
                     debug_path = render_illegal_move_debug(
                         board=board,
                         invalid_move=move,
@@ -350,7 +351,7 @@ def play_game(
         # Score the game (unless already decided by resignation)
         if record.termination != "resign":
             record.num_moves = move_count
-            record.termination = "double_pass" if board.is_game_over() else "max_moves"
+            record.termination = game.terminal_label() if board.is_game_over() else "max_moves"
             score = board.score()
             if score > 0:
                 record.result = f"B+{score:.1f}"
@@ -405,6 +406,8 @@ def save_game_data(
         komi=record.komi,
         termination=record.termination,
         code_version="v5-mcts-stats",
+        game=record.game,
+        to_play=np.array(record.to_play, dtype=np.int8),
     )
 
     # Add MCTS search statistics if available

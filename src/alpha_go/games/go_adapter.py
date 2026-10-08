@@ -27,3 +27,11 @@ class GoGame:
 
     def player(self, board: Any) -> int:
         return 0 if board.to_play() == alpha_go_cpp.GoBoard.BLACK else 1
+
+    def terminal_label(self) -> str:
+        return "double_pass"
+
+    def default_max_moves(self, board_size: int, board_cols: int | None = None) -> int:
+        # A Go game's natural ceiling is ~2 * board_size**2 moves (every point played
+        # twice: once placed, once recaptured).
+        return board_size * board_size * 2

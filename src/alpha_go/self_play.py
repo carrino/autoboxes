@@ -20,6 +20,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 from rich.table import Table
 
 from alpha_go.agents import Agent, get_agent, list_agents
+from alpha_go.boxes import agents as _boxes_agents  # noqa: F401  (registers boxes-* agents)
+from alpha_go.games import get_game, list_games
 from alpha_go.gameplay import (
     play_game,
     save_game_data,
@@ -321,6 +323,8 @@ def _play_game_worker(work_item: tuple) -> GameResult:  # type: ignore[type-arg]
             collect_metrics=getattr(cli_args, "collect_metrics", False),
             black_is_teacher=getattr(cli_args, "black_is_teacher", False),
             white_is_teacher=getattr(cli_args, "white_is_teacher", False),
+            game=get_game(getattr(cli_args, "game", "go")),
+            board_cols=getattr(cli_args, "board_cols", None),
         )
     except Exception:
         import traceback
@@ -376,6 +380,8 @@ def run_sequential(
             collect_metrics=getattr(args, "collect_metrics", False),
             black_is_teacher=getattr(args, "black_is_teacher", False),
             white_is_teacher=getattr(args, "white_is_teacher", False),
+            game=get_game(getattr(args, "game", "go")),
+            board_cols=getattr(args, "board_cols", None),
         )
 
         if _profiler:
@@ -518,11 +524,23 @@ def main() -> None:
         help="Number of games to play",
     )
     parser.add_argument(
+        "--game",
+        type=str,
+        default="go",
+        choices=list_games(),
+        help="Game to play (default: go). For boxes, --board_size is the number of box rows.",
+    )
+    parser.add_argument(
         "--board_size",
         type=int,
         default=9,
-        choices=[9, 13, 19],
-        help="Board size",
+        help="Board size (Go: 9, 13 or 19; Boxes: box rows)",
+    )
+    parser.add_argument(
+        "--board-cols",
+        type=int,
+        default=None,
+        help="Box columns for a rectangular Boxes board (default: square)",
     )
     parser.add_argument(
         "--max-moves",
@@ -610,7 +628,7 @@ def main() -> None:
     # recaptured). Avoids hardcoded constants like 300 that cap 19x19 games
     # below the natural game length.
     if args.max_moves is None:
-        args.max_moves = args.board_size * args.board_size * 2
+        args.max_moves = get_game(args.game).default_max_moves(args.board_size, args.board_cols)
 
     # Local execution mode
     if args.seed is not None:
