@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "boxes/boxes_game.h"
+#include "boxes/boxes_search.h"
 #include "go/go_game.h"
 #include "mcts/mcts.h"
 
@@ -192,6 +193,43 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
     m.def("boxes_perft", &alpha_go::boxes_perft, py::arg("board"), py::arg("depth"),
           "(sequences, PLAYER_1 boxes summed over leaves, PLAYER_2 boxes summed over leaves).");
 
+    // BoxesSearchState binding: forced-move collapse around a BoxesBoard
+    py::class_<alpha_go::BoxesSearchState>(m, "BoxesSearchState")
+        .def(py::init<const alpha_go::BoxesBoard&>(), py::arg("board"),
+             "Collapse the side to move's forced captures; see get_legal_moves_flat().")
+        .def("get_legal_moves_flat", &alpha_go::BoxesSearchState::get_legal_moves_flat,
+             "Macro-actions by first edge (take-all / keep-control at a decision, else edges).")
+        .def("prefix", &alpha_go::BoxesSearchState::prefix,
+             "Edges auto-played from the constructing position (all by the same mover).")
+        .def("has_decision", &alpha_go::BoxesSearchState::has_decision)
+        .def("decision_take", &alpha_go::BoxesSearchState::decision_take)
+        .def("decision_control", &alpha_go::BoxesSearchState::decision_control)
+        .def("apply", &alpha_go::BoxesSearchState::apply, py::arg("action"),
+             "Play a macro-action and collapse for the new side to move.")
+        .def("board", &alpha_go::BoxesSearchState::board,
+             py::return_value_policy::copy, "Copy of the underlying board.")
+        .def("to_play", &alpha_go::BoxesSearchState::to_play)
+        .def("player", &alpha_go::BoxesSearchState::player)
+        .def("rows", &alpha_go::BoxesSearchState::rows)
+        .def("cols", &alpha_go::BoxesSearchState::cols)
+        .def("num_edges", &alpha_go::BoxesSearchState::num_edges)
+        .def("edges", &alpha_go::BoxesSearchState::edges)
+        .def("margin", &alpha_go::BoxesSearchState::margin)
+        .def("move_count", &alpha_go::BoxesSearchState::move_count)
+        .def("boxes", &alpha_go::BoxesSearchState::boxes, py::arg("player"))
+        .def("is_game_over", &alpha_go::BoxesSearchState::is_game_over)
+        .def("outcome", &alpha_go::BoxesSearchState::outcome, py::arg("player"))
+        .def("row_col", &alpha_go::BoxesSearchState::row_col, py::arg("edge"))
+        .def("copy", [](const alpha_go::BoxesSearchState& s) { return alpha_go::BoxesSearchState(s); })
+        .def("to_numpy", [](const alpha_go::BoxesSearchState& s) {
+            const auto& geo = s.board().geometry();
+            auto arr = py::array_t<int8_t>({geo.lattice_rows(), geo.lattice_cols()});
+            std::vector<int8_t> grid = s.to_lattice();
+            std::copy(grid.begin(), grid.end(), arr.mutable_data());
+            return arr;
+        })
+        .def("render", &alpha_go::BoxesSearchState::render);
+
     // MCTSConfig binding
     py::class_<alpha_go::MCTSConfig>(m, "MCTSConfig")
         .def(py::init<>())
@@ -222,6 +260,7 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
     // MCTSTree bindings: the same template for Go ("MCTSTree") and Boxes ("BoxesMCTSTree")
     bind_mcts_tree<alpha_go::GoBoard>(m, "MCTSTree");
     bind_mcts_tree<alpha_go::BoxesBoard>(m, "BoxesMCTSTree");
+    bind_mcts_tree<alpha_go::BoxesSearchState>(m, "BoxesSearchMCTSTree");
 
     // Convenience function for running MCTS with a Python evaluator
     m.def("run_mcts", [](

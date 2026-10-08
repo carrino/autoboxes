@@ -174,9 +174,11 @@ class BoxesMCTSAgent(Agent):
         resign_consec_turns: int = 5,
         pcr_sims: list[int] | None = None,
         pcr_probs: list[float] | None = None,
+        forced_collapse: bool = True,
     ) -> None:
         self.evaluator = evaluator
         self.num_simulations = num_simulations
+        self.forced_collapse = forced_collapse
         self.temperature = temperature
         self.temperature_cutoff = temperature_cutoff
         self.leaf_batch_size = leaf_batch_size
@@ -202,7 +204,11 @@ class BoxesMCTSAgent(Agent):
         self._consec_below = 0
 
     def search(self, board: Any) -> BoxesSearchResult:
-        tree = alpha_go_cpp.BoxesMCTSTree(board, self.cpp_config)
+        """Search from a board or a BoxesSearchState (collapsed position)."""
+        if isinstance(board, alpha_go_cpp.BoxesSearchState):
+            tree = alpha_go_cpp.BoxesSearchMCTSTree(board, self.cpp_config)
+        else:
+            tree = alpha_go_cpp.BoxesMCTSTree(board, self.cpp_config)
         if self.leaf_batch_size > 0:
             tree.run_simulations_batched(
                 self.num_simulations, self.leaf_batch_size, self.evaluator.batch_evaluate
@@ -213,7 +219,15 @@ class BoxesMCTSAgent(Agent):
 
     def select_move(self, board: Any, seed: int) -> tuple[int, int]:
         torch.manual_seed(seed)
-        result = self.search(board)
+        self.last_search_result = None
+        if self.forced_collapse:
+            state = alpha_go_cpp.BoxesSearchState(board)
+            if state.prefix():  # a forced capture: play it, no search needed
+                row, col = board.row_col(state.prefix()[0])
+                return int(row), int(col)
+            result = self.search(state)
+        else:
+            result = self.search(board)
         self.last_search_result = result
         if self.resign_threshold > 0:
             losing = 1.0 - result.Q < self.resign_threshold

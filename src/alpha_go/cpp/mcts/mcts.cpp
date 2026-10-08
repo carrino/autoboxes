@@ -1,6 +1,7 @@
 #include "mcts.h"
 
 #include "boxes/boxes_game.h"
+#include "boxes/boxes_search.h"
 
 #include <algorithm>
 #include <cmath>
@@ -635,5 +636,6 @@ std::unordered_map<int, int> MCTSTree<State>::get_child_max_subtree_depths() con
 // Explicit instantiations: one search implementation for both games.
 template class MCTSTree<GoBoard>;
 template class MCTSTree<BoxesBoard>;
+template class MCTSTree<BoxesSearchState>;
 
 }  // namespace alpha_go
