@@ -356,8 +356,10 @@ def _perform_alphago_playout_impl(
             child, config, get_policy_and_value_fn, rollout_policy_fn, trace,
             current_depth + 1,
         )
-        # Child value is from current player's perspective, we need parent's perspective
-        U = 1.0 - child_value
+        # Child value is from the perspective of the player who moved at this node. Flip it
+        # to this node's player_at_parent unless the same player moved twice in a row (a
+        # capture in Dots and Boxes keeps the turn); in Go the mover always changes.
+        U = child_value if child.player_at_parent == node.player_at_parent else 1.0 - child_value
 
     # Backup: Update visit count and action value
     node.N += 1
