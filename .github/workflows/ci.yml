@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      # Same setup as a WSL2 box (GETTING_STARTED.md): system Python with headers, cmake, gcc.
+      - run: sudo apt-get update && sudo apt-get install -y build-essential cmake python3-dev
+      - run: uv sync --frozen --python /usr/bin/python3
+      - run: bash scripts/build_cpp.sh
+      - name: Catch2
+        run: ./src/alpha_go/cpp/build/go_game_test && ./src/alpha_go/cpp/build/boxes_game_test && ./src/alpha_go/cpp/build/mcts_test
+      - name: ruff (new code)
+        run: uv run ruff check src/alpha_go/boxes src/alpha_go/games tests/test_boxes_*.py experiments/2026-10-08_14-42-boxes-3x3-loop experiments/2026-10-09_01-05-boxes-3x3-search-autoresearch
+      - name: mypy strict (new code)
+        run: uv run -m mypy src/alpha_go/boxes src/alpha_go/games
+      - name: pytest (test_gpu_lease.py is broken upstream; GPU paths skip on CPU)
+        run: uv run -m pytest tests/ --ignore=tests/test_gpu_lease.py -q
