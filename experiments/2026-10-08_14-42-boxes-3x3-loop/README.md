@@ -29,6 +29,10 @@ uv run $EXP/oracle_eval.py --tag 3x3              # every checkpoint vs the exac
 
 Every budget (`BOOT_GAMES SP_GAMES SP_SIMS SP_WORKERS TRAIN_BUDGET ARENA_GAMES BASE_GAMES
 ARENA_SIMS`) can be overridden from the environment; the script prints the budgets it uses.
+`SP_PROCS=4` splits each self-play phase over four processes (disjoint game indices, own
+seeds, threads and GPU engines), which is the remedy when `nvidia-smi` shows the GPU idle
+while the game threads sit on the interpreter lock. `SOLVER_N=24` turns the exact endgame
+solver on in self-play and the arena at 24 undrawn edges (see `solver_bench.py`).
 Resume by passing the last trained iteration as `<start>`; the script refuses to start from
 a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iteration and scale
 `SP_GAMES` / `SP_SIMS` / `ARENA_GAMES` so one iteration fits your night.

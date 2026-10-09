@@ -159,6 +159,8 @@ class BoxesSearchResult:
 class BoxesMCTSAgent(Agent):
     """C++ MCTS over `BoxesMCTSTree` with a BoxesNet evaluator."""
 
+    _solver_announced = False
+
     def __init__(
         self,
         evaluator: BoxesLeafEvaluator | BoxesEngineEvaluator,
@@ -233,9 +235,12 @@ class BoxesMCTSAgent(Agent):
         if self.solver is None:
             self.solver = alpha_go_cpp.BoxesSolver(int(board.rows()), int(board.cols()),
                                                    self.solver_table_entries)
-            print(f"BoxesSolver: max_undrawn={self.solver_max_undrawn} "
-                  f"node_budget={self.solver_node_budget} table={self.solver.table_entries()} "
-                  f"entries = {self.solver.table_bytes() / 1e6:.1f} MB", flush=True)
+            if not BoxesMCTSAgent._solver_announced:  # footprint once per process
+                BoxesMCTSAgent._solver_announced = True
+                print(f"BoxesSolver: max_undrawn={self.solver_max_undrawn} "
+                      f"node_budget={self.solver_node_budget} "
+                      f"table={self.solver.table_entries()} entries = "
+                      f"{self.solver.table_bytes() / 1e6:.1f} MB per agent", flush=True)
         return alpha_go_cpp.BoxesSearchState(board, self.solver, self.solver_max_undrawn,
                                              self.solver_node_budget)
 

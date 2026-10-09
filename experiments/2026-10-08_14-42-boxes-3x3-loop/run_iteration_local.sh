@@ -13,6 +13,8 @@ END=${2:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 CPU_FLAG=${3:-}
 ROWS=${ROWS:-3}; COLS=${COLS:-$ROWS}; TAG=${TAG:-${ROWS}x${COLS}}
 SOLVER_N=${SOLVER_N:-0}  # exact endgame solver at <= N undrawn edges in self-play and arena (0 = off)
+SP_PROCS=${SP_PROCS:-1}  # self-play processes per iteration; each gets SP_WORKERS/SP_PROCS threads and
+                         # its own GPU engine, which sidesteps the interpreter lock across threads
 SIZE_ARGS="--rows $ROWS --cols $COLS"
 TAG_ARGS="--tag $TAG"
 CKPT="$EXP_DIR/checkpoints/$TAG"
@@ -36,7 +38,7 @@ SP_WORKERS=${SP_WORKERS:-$D_WORKERS}; TRAIN_BUDGET=${TRAIN_BUDGET:-$D_TRAIN}; AR
 BASE_GAMES=${BASE_GAMES:-$D_BASE}; ARENA_SIMS=${ARENA_SIMS:-$D_ASIMS}
 echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x $SP_SIMS sims ($SP_WORKERS workers), "\
      "train ${TRAIN_BUDGET}s, arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
-     "solver N=$SOLVER_N"
+     "solver N=$SOLVER_N, self-play processes $SP_PROCS"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
 
@@ -61,11 +63,18 @@ for ITER in $(seq "$START" "$END"); do
     NEXT=$((ITER + 1))
     log "Iter ${ITER}: self-play with $CKPT/iter${ITER}.pt"
     t0=$(date +%s)
-    uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
-        --num_games "$SP_GAMES" --num_simulations "$SP_SIMS" --num_workers "$SP_WORKERS" \
-        --solver_max_undrawn "$SOLVER_N" \
-        --save-name "${DATA}/selfplay-it${ITER}" --seed "$((ITER * 100000))" $CPU_FLAG \
-        2>&1 | tee "$LOGS/collect-it${ITER}.log"
+    # SP_PROCS processes play disjoint game-index ranges into the same directory (NPZ names carry
+    # the game index), each with its own seed, threads and GPU engine.
+    PER_PROC=$((SP_GAMES / SP_PROCS)); THREADS=$(( SP_WORKERS / SP_PROCS > 0 ? SP_WORKERS / SP_PROCS : 1 ))
+    for P in $(seq 0 $((SP_PROCS - 1))); do
+        uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
+            --num_games "$PER_PROC" --game_index_offset "$((P * PER_PROC))" \
+            --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" \
+            --save-name "${DATA}/selfplay-it${ITER}" --seed "$((ITER * 100000 + P * 1000))" $CPU_FLAG \
+            > "$LOGS/collect-it${ITER}-p${P}.log" 2>&1 &
+    done
+    wait
+    tail -n 4 "$LOGS"/collect-it${ITER}-p*.log
     t1=$(date +%s)
     DS="$EXP_DIR/dataset-${TAG}-it${NEXT}.txt"
     { echo "# ${EXP_NAME} ${TAG} iter${NEXT} dataset (auto-generated): last 4 self-play iterations"
