@@ -136,6 +136,9 @@ def encode_batch(boards: list[Any], features: str = "basic") -> NDArray[np.float
     """Planes (B, K, H, W) for same-size boards; C++ boards and search states are encoded
     in C++ (`alpha_go_cpp.encode_planes`, parity-tested against `encode`)."""
     if isinstance(boards[0], (alpha_go_cpp.BoxesBoard, alpha_go_cpp.BoxesSearchState)):
-        return np.asarray(alpha_go_cpp.encode_planes(boards, features == "chains"),
-                          dtype=np.float32)
+        # The basic call keeps the one-argument form, so an extension built before the
+        # chain planes still serves basic runs.
+        planes = (alpha_go_cpp.encode_planes(boards, True) if features == "chains"
+                  else alpha_go_cpp.encode_planes(boards))
+        return np.asarray(planes, dtype=np.float32)
     return np.stack([encode(b, features) for b in boards])
