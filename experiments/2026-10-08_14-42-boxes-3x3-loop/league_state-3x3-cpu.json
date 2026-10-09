@@ -1,5 +1,5 @@
 {
-  "champion": 3,
+  "champion": 4,
   "history": [
     {
       "iteration": 1,
@@ -139,6 +139,57 @@
       "promoted": true,
       "champion_before": 2,
       "champion_after": 3
+    },
+    {
+      "iteration": 4,
+      "vs_boxes-greedy": {
+        "a": "cand-it4",
+        "b": "boxes-greedy",
+        "board": "3x3",
+        "games": 20,
+        "a_wins": 20,
+        "b_wins": 0,
+        "draws": 0,
+        "a_win_rate": 1.0,
+        "a_win_rate_ci95": "[0.839, 1.000]",
+        "a_mean_margin": 3.8,
+        "a_margin_std": 1.72,
+        "a_sec_per_move": 0.6035,
+        "b_sec_per_move": 0.0001
+      },
+      "vs_boxes-ab-d4": {
+        "a": "cand-it4",
+        "b": "boxes-ab-d4",
+        "board": "3x3",
+        "games": 20,
+        "a_wins": 20,
+        "b_wins": 0,
+        "draws": 0,
+        "a_win_rate": 1.0,
+        "a_win_rate_ci95": "[0.839, 1.000]",
+        "a_mean_margin": 3.2,
+        "a_margin_std": 1.99,
+        "a_sec_per_move": 0.6152,
+        "b_sec_per_move": 0.0021
+      },
+      "vs_champion": {
+        "a": "cand-it4",
+        "b": "champ-it3",
+        "board": "3x3",
+        "games": 40,
+        "a_wins": 26,
+        "b_wins": 14,
+        "draws": 0,
+        "a_win_rate": 0.65,
+        "a_win_rate_ci95": "[0.495, 0.779]",
+        "a_mean_margin": 0.75,
+        "a_margin_std": 4.176,
+        "a_sec_per_move": 0.6059,
+        "b_sec_per_move": 0.6484
+      },
+      "promoted": true,
+      "champion_before": 3,
+      "champion_after": 4
     }
   ]
 }
