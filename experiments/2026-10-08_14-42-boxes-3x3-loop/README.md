@@ -24,6 +24,7 @@ bash $EXP/run_iteration_local.sh 0 1 --cpu        # tiny CPU smoke run (smoke bu
 ROWS=5 TAG=5x5-probe BOOT_GAMES=50 SP_GAMES=16 SP_SIMS=100 TRAIN_BUDGET=60 ARENA_GAMES=8 BASE_GAMES=2 \
     bash $EXP/run_iteration_local.sh 0 0          # 5x5 GPU timing probe, one iteration, kept apart by TAG
 uv run $EXP/analyze.py 3x3                        # report-3x3.md from league_state-3x3.json + timing/3x3/
+uv run $EXP/oracle_eval.py --tag 3x3              # every checkpoint vs the exact oracle on late positions
 ```
 
 Every budget (`BOOT_GAMES SP_GAMES SP_SIMS SP_WORKERS TRAIN_BUDGET ARENA_GAMES BASE_GAMES
@@ -49,6 +50,12 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
 - `run_iteration_local.sh <start> <end> [--cpu]` — the loop; `ROWS`/`COLS` pick the board,
   `TAG` the output name, `--cpu` switches to smoke budgets so the pipeline runs anywhere.
 - `analyze.py <tag>` — tabulates `league_state-<tag>.json` and `timing/<tag>/` into `report-<tag>.md`.
+- `oracle_eval.py --tag <tag>` — the exact check that training works: samples late positions
+  (6..14 undrawn edges by default) from the run's own games, solves them with the oracle, and
+  reports per checkpoint the share of oracle-optimal moves for the raw policy and for the
+  searched agent, value-sign agreement and margin error, next to greedy and alpha-beta on the
+  same positions; the chance level (a random legal move) is printed too. Writes
+  `data/oracle_eval-<tag>.csv`. Both move rates must rise with the iteration.
 
 ## Budgets (GPU defaults)
 
