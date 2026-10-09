@@ -94,7 +94,8 @@ If you ever need to generate a datetime string, format it in PST time zone, i.e.
 
 This repository is a fork of `ericjang/autogo` that adds Dots and Boxes ("Boxes") as a
 second game. Read `ARCHITECTURE.md` (how upstream works, where Go leaks in) and `PLAN.md`
-(phased plan, shared-file list) before changing anything.
+(phased plan, shared-file list) before changing anything. `GETTING_STARTED.md` takes a bare
+WSL2 shell to the first training run, with the failures seen on the way and their fixes.
 
 ## Mergeability rule (non-negotiable)
 
