@@ -150,6 +150,10 @@ class TestDataset:
         searched, plain = ds[0], ds[47]
         assert searched["planes"].shape == (11, 7, 7) and searched["policy"].shape == (24,)
         assert searched["has_mcts"] and searched["policy"].sum() == pytest.approx(1.0)
+        # The policy target is the normalised visit distribution, whatever the sampling
+        # temperature was (the first game's first position is searched by the NN agent).
+        visits = ds.games[0]["mcts_visits"][0].astype(float)
+        assert np.allclose(searched["policy"].numpy(), visits / visits.sum())
         assert not plain["has_mcts"] and plain["policy"].max() == pytest.approx(0.9 + 0.1 / 24)
         # Margin target is the final box difference for the side to move at that position.
         score_p1 = float(record.result[2:]) * (1 if record.result.startswith("B") else -1)

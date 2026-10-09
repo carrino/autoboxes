@@ -3,8 +3,8 @@
 Each NPZ holds one game: `boards` (n, H, W) lattice grids before each move, `to_play`
 (n,) sides to move, `moves` (n, 2) lattice coordinates, `result` ("B+3.0" = player 1 won
 by 3), and, when the agents searched, `mcts_visits` (n, E) with `mcts_temperatures` and
-`mcts_root_values`. A sample is the encoded planes, the policy target (visit distribution
-`N^(1/tau)`, or a label-smoothed one-hot of the played edge without search data), the
+`mcts_root_values`. A sample is the encoded planes, the policy target (the normalised visit
+distribution, or a label-smoothed one-hot of the played edge without search data), the
 final margin for the side to move, and the root value for the z/Q mix option.
 """
 from __future__ import annotations
@@ -64,14 +64,11 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         score_p1 = parse_score_from_result(str(game["result"]))
         margin = int(score_p1) if to_play == 1 else -int(score_p1)
         if "mcts_visits" in game:
+            # The policy target is the search's visit distribution regardless of the
+            # temperature the move was sampled with (AlphaZero): a one-hot of the chosen
+            # move would discard the search's ranking of the other moves.
             visits = game["mcts_visits"][local].astype(np.float32)
-            temperature = float(game["mcts_temperatures"][local])
-            policy = np.zeros_like(visits)
-            if temperature == 0:
-                policy[int(np.argmax(visits))] = 1.0
-            else:
-                powered = np.power(visits, 1.0 / temperature)
-                policy = powered / max(powered.sum(), 1e-8)
+            policy = visits / max(visits.sum(), 1e-8)
             root_value = float(game["mcts_root_values"][local])
         else:
             r, c = (int(x) for x in game["moves"][local])
