@@ -2,7 +2,8 @@
 
 Policy loss: cross-entropy against the MCTS visit distribution (every position, both
 players); value loss: cross-entropy over the final margin for the side to move. Every batch
-is augmented with a random lattice symmetry (8 for square boards). Prints a ===RESULT===
+is augmented with a random lattice symmetry (8 for square boards; `alpha_go.boxes.augment`,
+tested in tests/test_boxes_augment.py). Prints a ===RESULT===
 JSON line and saves checkpoints/<tag>/iter{N}.pt next to this file (tag = <rows>x<cols>).
 """
 # ruff: noqa: N806
@@ -20,11 +21,10 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
+from alpha_go.boxes.augment import augment, inverse_edge_perms
 from alpha_go.boxes.dataset import BoxesDataset
 from alpha_go.boxes.model import BoxesNet
 from alpha_go.boxes.nn_agent import pick_device, save_boxes_net
-from alpha_go.boxes.rules import geometry
-from alpha_go.boxes.symmetry import apply, edge_permutation, transforms
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 
@@ -39,31 +39,6 @@ BATCH_SIZE = 256
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
 WARMUP_STEPS = 100
-
-
-def torch_apply(x: torch.Tensor, k: int) -> torch.Tensor:
-    """Same transform as alpha_go.boxes.symmetry.apply, on tensors (last two axes)."""
-    out = torch.flip(x, dims=(-1,)) if k >= 4 else x
-    return torch.rot90(out, k % 4, dims=(-2, -1))
-
-
-def check_torch_apply(rows: int, cols: int) -> None:
-    grid = np.random.default_rng(0).random((3, 2 * rows + 1, 2 * cols + 1)).astype(np.float32)
-    for k in transforms(rows, cols):
-        assert np.array_equal(torch_apply(torch.from_numpy(grid), k).numpy(), apply(grid, k))
-
-
-def augment(planes: torch.Tensor, policy: torch.Tensor, rows: int, cols: int,
-            inverse_perms: dict[int, torch.Tensor], rng: np.random.Generator
-            ) -> tuple[torch.Tensor, torch.Tensor]:
-    ks = transforms(rows, cols)
-    choice = rng.choice(len(ks), size=planes.shape[0])
-    for i, k in enumerate(ks):
-        mask = torch.from_numpy(choice == i).to(planes.device)
-        if mask.any():
-            planes[mask] = torch_apply(planes[mask], k)
-            policy[mask] = policy[mask][:, inverse_perms[k]]
-    return planes, policy
 
 
 def manifest_dirs(path: Path) -> list[Path]:
@@ -124,7 +99,6 @@ def main() -> None:
     device = pick_device("cpu" if args.cpu else None)
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
     rows, cols = args.rows, args.cols or args.rows
-    check_torch_apply(rows, cols)
     t0 = time.time()
     dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt))
     assert (dataset.rows, dataset.cols) == (rows, cols), (dataset.rows, dataset.cols)
@@ -148,9 +122,7 @@ def main() -> None:
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=WEIGHT_DECAY)
     scheduler = schedule(optimizer, max_steps)
     use_amp = device.type == "cuda"
-    geo = geometry(rows, cols)
-    inverse_perms = {k: torch.from_numpy(np.argsort(edge_permutation(geo, k))).to(device)
-                     for k in transforms(rows, cols)}
+    inverse_perms = inverse_edge_perms(rows, cols, device)
     rng = np.random.default_rng(args.iteration)
 
     model.train()
