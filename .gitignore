@@ -45,3 +45,4 @@ experiments/**/timing/
 *.pt
 *.npz
 results.tsv
+experiments/**/dataset-*-it*.txt
