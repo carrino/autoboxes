@@ -18,6 +18,10 @@ self-play iterations), so every checkpoint is scored on one fixed set. Writes
 data/oracle_eval-<tag>.csv and prints the table. Usage:
 
   uv run oracle_eval.py --tag 5x5-solver [--iterations 0 1 2] [--max-undrawn 28]
+  uv run oracle_eval.py --tag 5x5-mid --positions-tag 5x5-solver --min-undrawn 26 --max-undrawn 32
+
+The second form scores one run's checkpoints on another run's games: positions from a run's
+own games are in its checkpoints' training sets, so part of a score on them is memorisation.
 """
 # ruff: noqa: N806
 from __future__ import annotations
@@ -110,6 +114,9 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--tag", default=None,
                    help="checkpoint subdir and data subdir; default <rows>x<cols>")
+    p.add_argument("--positions-tag", default=None,
+                   help="sample positions from this run's games instead of --tag's: a run the "
+                        "checkpoints never trained on removes memorisation from the score")
     p.add_argument("--rows", type=int, default=None,
                    help="board rows; default from a tag like 5x5-solver, else 3")
     p.add_argument("--cols", type=int, default=None)
@@ -140,7 +147,8 @@ def main() -> None:
 
     rng = random.Random(args.seed)
     t0 = time.time()
-    boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / tag, rows, cols,
+    positions_tag = args.positions_tag or tag
+    boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / positions_tag, rows, cols,
                             args.min_undrawn, args.max_undrawn, args.num_positions, rng)
     solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
     geo = geometry(rows, cols)
@@ -184,7 +192,8 @@ def main() -> None:
     out = EXP_DIR / "data" / f"oracle_eval-{tag}.csv"
     out.parent.mkdir(exist_ok=True)
     fields = ["agent", "iteration", "policy_optimal", "search_optimal", "value_sign", "margin_mae",
-              "num_positions", "min_undrawn", "max_undrawn", "num_simulations", "search_flags"]
+              "num_positions", "min_undrawn", "max_undrawn", "num_simulations", "search_flags",
+              "positions_tag"]
     with out.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
@@ -192,7 +201,8 @@ def main() -> None:
             writer.writerow({**row, "num_positions": len(boards),
                              "min_undrawn": args.min_undrawn, "max_undrawn": args.max_undrawn,
                              "num_simulations": args.num_simulations,
-                             "search_flags": json.dumps({**mcts_flags, **evaluator_flags})})
+                             "search_flags": json.dumps({**mcts_flags, **evaluator_flags}),
+                             "positions_tag": positions_tag})
     print(f"wrote {out}")
 
 
