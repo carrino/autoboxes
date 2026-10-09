@@ -140,6 +140,9 @@ checkpoint. Two more knobs matter on 5x5:
 - `TRAIN_MIN_UNDRAWN=24` trains only on positions above the solver zone, and
   `FEATURES=chains` gives the net the chain / loop structure as input planes (new run from
   iteration 0; the feature set lives in the checkpoint).
+- `EXTRA_DATA="experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-26-34"` adds
+  solver-labelled midgame positions (`solver_label.py`, exact values and optimal edges) to
+  every training set.
 
 After any run, `uv run $EXP/oracle_eval.py --tag <tag>` scores every checkpoint against the
 exact oracle on late positions from the run's own games; the raw-policy and searched-move

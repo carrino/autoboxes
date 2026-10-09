@@ -1,6 +1,7 @@
 """Boxes NN evaluators, MCTS agent, batched engine and dataset."""
 from __future__ import annotations
 
+import random
 import sys
 from pathlib import Path
 
@@ -11,7 +12,7 @@ import torch
 
 from alpha_go import self_play
 from alpha_go.agents import get_agent
-from alpha_go.boxes.dataset import BoxesDataset
+from alpha_go.boxes.dataset import BoxesDataset, save_labelled_positions
 from alpha_go.boxes.inference import PlaneBatchedEngine
 from alpha_go.boxes.model import BoxesNet
 from alpha_go.boxes.nn_agent import (
@@ -26,7 +27,7 @@ from alpha_go.boxes.nn_agent import (
     search_flags,
 )
 from alpha_go.boxes.oracle import Oracle
-from alpha_go.boxes.rules import BoxesBoard
+from alpha_go.boxes.rules import BoxesBoard, geometry
 from alpha_go.gameplay import play_game, save_game_data
 from alpha_go.games import get_game
 
@@ -210,6 +211,52 @@ class TestDataset:
         chains = BoxesDataset([tmp_path], features="chains")
         assert chains[0]["planes"].shape == (21, 7, 7)
         assert chains.split(0.5, seed=0)[1].features == "chains"
+
+    def test_solver_labelled_positions_carry_exact_targets(self, tmp_path: Path) -> None:
+        """2x3 positions labelled by the C++ solver, written in the game format, read back:
+        the policy target is uniform over the oracle's best edges, the margin is the oracle's
+        final margin, and the undrawn-edge filter keeps the right positions."""
+        geo, oracle = geometry(2, 3), Oracle(2, 3)
+        solver = alpha_go_cpp.BoxesSolver(2, 3)
+        rng = random.Random(3)
+        labelled: dict[int, list] = {}
+        expected: dict[tuple[int, int], tuple[list[int], int]] = {}
+        for _ in range(40):
+            py, cpp = BoxesBoard(2, 3), alpha_go_cpp.BoxesBoard(2, 3)
+            for e in rng.sample(range(17), rng.randint(4, 12)):
+                py.play_edge(e)
+                cpp.play_edge(e)
+            if cpp.is_game_over() or alpha_go_cpp.BoxesSearchState(cpp).prefix():
+                continue
+            best = sorted(oracle.best_edges(py))
+            final = oracle.final_margin(py)
+            margin_p1 = final if cpp.to_play() == 1 else -final
+            labelled.setdefault(margin_p1, []).append((cpp.to_numpy(), cpp.to_play() - 1, best))
+            expected[(cpp.edges(), cpp.to_play())] = (best, final)
+        for margin_p1, items in labelled.items():
+            grids = np.stack([g for g, _, _ in items]).astype(np.int8)
+            to_play = np.array([t for _, t, _ in items], dtype=np.int8)
+            save_labelled_positions(tmp_path / f"m{margin_p1 + 6}.npz", grids, to_play,
+                                    [o for _, _, o in items], margin_p1, geo)
+        ds = BoxesDataset([tmp_path], min_undrawn=7)
+        assert len(expected) > 10 and len(ds) == sum(
+            1 for (mask, _), _ in expected.items() if 17 - bin(mask).count("1") >= 7)
+        for i in range(len(ds)):
+            sample = ds[i]
+            game_idx = int(np.searchsorted(ds.cumsum[1:], i, side="right"))
+            game = ds.games[game_idx]
+            local = i - int(ds.cumsum[game_idx])
+            board = alpha_go_cpp.BoxesBoard(2, 3)
+            for e in range(17):
+                if game["boards"][local][geo.edge_rc[e]] == 1:
+                    board.play_edge(e)
+            best, final = expected[(board.edges(), int(game["to_play"][local]) + 1)]
+            policy = sample["policy"].numpy()
+            assert sorted(np.flatnonzero(policy).tolist()) == best
+            assert np.allclose(policy[best], 1.0 / len(best)) and sample["has_mcts"]
+            assert sample["margin"].item() == final
+            assert sample["root_value"].item() == float(final > 0) + 0.5 * float(final == 0)
+        assert solver.final_margin(board) == final  # the C++ solver agrees on the last one
 
     def test_samples_from_searched_and_unsearched_games(self, tmp_path: Path, monkeypatch) -> None:
         monkeypatch.setattr(self_play, "GAME_DATA_DIR", tmp_path)

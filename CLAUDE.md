@@ -149,6 +149,7 @@ FEATURES=chains TRAIN_MIN_UNDRAWN=24 WINDOW=8 TRAIN_EPOCHS=2 SOLVER_N=28 TAG=5x5
 uv run $EXP/analyze.py 5x5                     # report-5x5.md
 uv run $EXP/oracle_eval.py --tag 3x3           # checkpoints vs the exact oracle on late positions
 uv run $EXP/solver_bench.py --tag 5x5 --undrawn 20 24 28 32 --selfplay-only   # picks SOLVER_N
+uv run $EXP/solver_label.py --positions-tag 5x5-solver --min-undrawn 26 --max-undrawn 34 --num-positions 20000 --save-name 5x5-oracle-26-34   # exact midgame labels for EXTRA_DATA
 ```
 
 `scripts/build_cpp.sh` reads the venv Python's libpython from `sysconfig`, so any

@@ -23,6 +23,8 @@ TRAIN_MIN_UNDRAWN=${TRAIN_MIN_UNDRAWN:-0}  # train only on positions with at lea
                                            # (e.g. SOLVER_N - 4: the solver owns the rest in play)
 FEATURES=${FEATURES:-basic}  # net input planes: basic (11) or chains (+10 chain / loop planes, PLAN 4.2);
                              # fixed per checkpoint, so a chains run starts from iter0
+EXTRA_DATA=${EXTRA_DATA:-}  # extra dataset directories (under $GAME_DATA_DIR, space-separated) added to every
+                            # iteration's training set, e.g. solver-labelled midgame positions from solver_label.py
 SEARCH_ARGS=${SEARCH_ARGS:-}  # extra search flags for self-play and the arena, e.g.
                               # "--policy_temperature 0.7 --margin_utility_lambda 0.5" (see nn_agent.add_search_flags)
 SIZE_ARGS="--rows $ROWS --cols $COLS"
@@ -50,7 +52,7 @@ echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x
      "train ${TRAIN_BUDGET}s / <= $TRAIN_EPOCHS epochs over the last $WINDOW iterations (>= $TRAIN_MIN_UNDRAWN undrawn), "\
      "arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
      "solver N=$SOLVER_N, merge equivalent $MERGE_EQ, self-play processes $SP_PROCS, search args '$SEARCH_ARGS', "\
-     "features $FEATURES"
+     "features $FEATURES, extra data '$EXTRA_DATA'"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
 
@@ -61,7 +63,7 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
         uv run "$EXP_DIR/pre_collect.py" $SIZE_ARGS --num_games "$BOOT_GAMES" \
             --save-name "${DATA}/bootstrap-it0" 2>&1 | tee "$LOGS/bootstrap.log"
     fi
-    echo "${DATA}/bootstrap-it0" > "$EXP_DIR/dataset-${TAG}-it0.txt"
+    { echo "${DATA}/bootstrap-it0"; for X in $EXTRA_DATA; do echo "$X"; done; } > "$EXP_DIR/dataset-${TAG}-it0.txt"
     log "Train iter0 from bootstrap games"
     uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "dataset-${TAG}-it0.txt" --iteration 0 \
         --time-budget "$TRAIN_BUDGET" --max-epochs "$TRAIN_EPOCHS" --min-undrawn "$TRAIN_MIN_UNDRAWN" \
@@ -92,7 +94,8 @@ for ITER in $(seq "$START" "$END"); do
     t1=$(date +%s)
     DS="$EXP_DIR/dataset-${TAG}-it${NEXT}.txt"
     { echo "# ${EXP_NAME} ${TAG} iter${NEXT} dataset (auto-generated): last $WINDOW self-play iterations"
-      for K in $(seq $((ITER - WINDOW + 1 > 0 ? ITER - WINDOW + 1 : 0)) "$ITER"); do echo "${DATA}/selfplay-it${K}"; done; } > "$DS"
+      for K in $(seq $((ITER - WINDOW + 1 > 0 ? ITER - WINDOW + 1 : 0)) "$ITER"); do echo "${DATA}/selfplay-it${K}"; done
+      for X in $EXTRA_DATA; do echo "$X"; done; } > "$DS"
     log "Train iter${NEXT} from $(basename "$DS")"
     uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "$(basename "$DS")" --iteration "$NEXT" \
         --resume-from "$CKPT/iter${ITER}.pt" --time-budget "$TRAIN_BUDGET" --max-epochs "$TRAIN_EPOCHS" \

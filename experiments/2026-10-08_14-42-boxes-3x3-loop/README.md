@@ -47,6 +47,10 @@ falling at iteration 12 while the train loss kept falling (`analyze.py` shows bo
 loop structure of `encode.py`: chain lengths, loops, opened components, safe edges and the
 long-chain count and parity); the feature set is stored in the checkpoint, so self-play and
 the arena pick it up on their own, and a chains run starts from iteration 0.
+`EXTRA_DATA="experiments/<this folder>/5x5-oracle-26-34"` adds solver-labelled positions from
+`solver_label.py` to every iteration's training set: exact final margins and uniform optimal
+policies for midgame positions the solver can settle offline, a supervised foothold for the
+value head where self-play outcomes alone taught it nothing.
 Solver-played moves (positions at or below `SOLVER_N` undrawn edges) record one visit per
 optimal edge, so their policy target is uniform over the exact optimal set rather than a
 one-hot of an arbitrary optimal edge, and their root value is the exact outcome.
@@ -78,6 +82,9 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   solved within each node budget) of the exact endgame solver on positions with N undrawn
   edges taken from the run's own games; sets `SOLVER_N` for a solver arm
   (`SOLVER_N=28 TAG=5x5-solver ROWS=5 bash run_iteration_local.sh 0 20`).
+- `solver_label.py --positions-tag 5x5-solver --min-undrawn 26 --max-undrawn 34 --num-positions 20000 --save-name 5x5-oracle-26-34`
+  labels midgame positions from a run's games exactly (value and optimal-edge set) and writes
+  them as training data for `EXTRA_DATA`.
 - `oracle_eval.py --tag <tag>` — the exact check that training works: samples late positions
   (6..14 undrawn edges by default) from the run's own games, solves them with the oracle, and
   reports per checkpoint the share of oracle-optimal moves for the raw policy and for the

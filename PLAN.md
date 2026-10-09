@@ -88,7 +88,11 @@ net's search decides moves in play, was flat for all 31 iterations (searched mov
 optimal, alpha-beta depth 4 0.53, value sign 0.55-0.65): the net never learned the midgame.
 `TRAIN_MIN_UNDRAWN` trains only above the solver zone, and §4.2's chain / loop input planes
 are implemented behind `FEATURES=chains` (`encode.py` planes 11..20, C++ parity-tested,
-stored in the checkpoint) so the net is handed the structure instead of counting it.
+stored in the checkpoint) so the net is handed the structure instead of counting it. Scored
+on positions from another run's games (`oracle_eval.py --positions-tag`), the basic net's
+midgame value stayed at chance (sign 0.54-0.57) through three iterations of the repaired
+pipeline, so the earlier climb on its own games was memorisation; `solver_label.py` plus
+`EXTRA_DATA` give the value head exact supervision on positions the solver settles offline.
 
 ### 2.1 Commit plan
 
