@@ -1,9 +1,11 @@
-"""Score checkpoints against the exact oracle on late positions from the run's own games.
+"""Score checkpoints against exact values on late positions from the run's own games.
 
-Every position with --min-undrawn..--max-undrawn undrawn edges (default 6..14: 3x3 solves in
-seconds, the lower bound skips trivial endings) is solved exactly, which gives the set of
-optimal edges and the exact final margin for the side to move. Per checkpoint this reports,
-on the same sampled positions:
+Every sampled position with --min-undrawn..--max-undrawn undrawn edges (default 8..24) is
+solved exactly by the C++ endgame solver (itself verified against the brute-force oracle in
+tests/test_boxes_cpp_solver.py), which gives the set of optimal edges and the exact final
+margin for the side to move. Only positions where the search decides are sampled: those
+with a forced capture are played without a search and would count as optimal for free.
+Per checkpoint this reports, on the same sampled positions:
 
   policy_optimal  the raw net's argmax over legal edges is an optimal edge
   search_optimal  the MCTS agent's move (forced-move collapse, temperature 0) is optimal
@@ -15,7 +17,7 @@ from every NPZ game under $GAME_DATA_DIR/experiments/<this folder>/<tag>/ (boots
 self-play iterations), so every checkpoint is scored on one fixed set. Writes
 data/oracle_eval-<tag>.csv and prints the table. Usage:
 
-  uv run oracle_eval.py --tag 3x3 [--iterations 0 1 2] [--max-undrawn 12] [--num-positions 300]
+  uv run oracle_eval.py --tag 5x5-solver [--iterations 0 1 2] [--max-undrawn 28]
 """
 # ruff: noqa: N806
 from __future__ import annotations
@@ -39,7 +41,7 @@ from alpha_go.agents.base import get_agent
 from alpha_go.boxes.encode import encode_batch
 from alpha_go.boxes.model import BoxesNet
 from alpha_go.boxes.nn_agent import BoxesLeafEvaluator, BoxesMCTSAgent, load_boxes_net, pick_device
-from alpha_go.boxes.oracle import Oracle
+from alpha_go.boxes.rules import geometry
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 
@@ -51,7 +53,7 @@ GAME_DATA_DIR = Path(os.environ.get("GAME_DATA_DIR", "/nfs/game_data_root")).res
 def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_undrawn: int,
                    n: int, rng: random.Random) -> list[Any]:
     """Replay every game (C++ boards, which the agents expect) and sample n distinct
-    non-terminal positions with few undrawn edges."""
+    search-decided positions with min_undrawn..max_undrawn undrawn edges."""
     boards: dict[tuple[int, int, int], Any] = {}
     for path in sorted(game_dir.rglob("*.npz")):
         game = np.load(path)
@@ -60,7 +62,8 @@ def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_u
             if row < 0:
                 break
             undrawn = board.num_edges() - board.move_count()
-            if min_undrawn <= undrawn <= max_undrawn:
+            decided = not alpha_go_cpp.BoxesSearchState(board).prefix()
+            if min_undrawn <= undrawn <= max_undrawn and decided:
                 boards.setdefault((board.edges(), board.to_play(), board.margin()), board.copy())
             board.play(int(row), int(col))
     assert boards, f"no positions with {min_undrawn}..{max_undrawn} undrawn edges under {game_dir}"
@@ -103,8 +106,8 @@ def main() -> None:
     p.add_argument("--cols", type=int, default=None)
     p.add_argument("--iterations", type=int, nargs="*", default=None,
                    help="checkpoint iterations to score; default every iter*.pt found")
-    p.add_argument("--min-undrawn", type=int, default=6)
-    p.add_argument("--max-undrawn", type=int, default=14)
+    p.add_argument("--min-undrawn", type=int, default=8)
+    p.add_argument("--max-undrawn", type=int, default=24)
     p.add_argument("--num-positions", type=int, default=300)
     p.add_argument("--num_simulations", type=int, default=100)
     p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4")
@@ -128,9 +131,17 @@ def main() -> None:
     t0 = time.time()
     boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / tag, rows, cols,
                             args.min_undrawn, args.max_undrawn, args.num_positions, rng)
-    oracle = Oracle(rows, cols)
-    values = [oracle.value(b.edges()) for b in boards]  # remaining margin, side to move
-    best = [{e for e in b.get_legal_moves_flat() if oracle.child_value(b.edges(), e) == v}
+    solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
+    geo = geometry(rows, cols)
+
+    def child_value(mask: int, e: int) -> int:
+        gained = sum(1 for b in geo.edge_boxes[e]
+                     if all(((mask | 1 << e) >> s) & 1 for s in geo.box_edges[b]))
+        rest = solver.value(mask | 1 << e)
+        return gained + rest if gained else -rest
+
+    values = [solver.value(b.edges()) for b in boards]  # remaining margin, side to move
+    best = [{e for e in b.get_legal_moves_flat() if child_value(b.edges(), e) == v}
             for b, v in zip(boards, values)]
     final = np.array([b.margin() + v for b, v in zip(boards, values)])
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
