@@ -226,9 +226,11 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
 
     // BoxesSolver binding: exact endgame solver (PLAN.md §4.1)
     py::class_<alpha_go::BoxesSolver, std::shared_ptr<alpha_go::BoxesSolver>>(m, "BoxesSolver")
-        .def(py::init<int, int, std::size_t>(), py::arg("rows"), py::arg("cols") = 0,
-             py::arg("table_entries") = std::size_t{1} << 20,
-             "Exact remaining-margin solver with a bounded transposition table (one per thread).")
+        .def(py::init<int, int, std::size_t, bool, bool>(), py::arg("rows"), py::arg("cols") = 0,
+             py::arg("table_entries") = std::size_t{1} << 20, py::arg("use_leaf") = true,
+             py::arg("use_equivalence") = true,
+             "Exact remaining-margin solver with a bounded transposition table (one per thread); "
+             "use_leaf / use_equivalence switch two reductions off for tests.")
         .def("value", &alpha_go::BoxesSolver::value, py::arg("mask"),
              "Remaining box margin for the side to move under optimal play (unbounded search).")
         .def("value_within", &alpha_go::BoxesSolver::value_within, py::arg("mask"),

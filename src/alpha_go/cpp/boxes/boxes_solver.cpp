@@ -27,8 +27,10 @@ std::pair<int, int> transform_cell(int r, int c, int height, int width, int k) {
 
 }  // namespace
 
-BoxesSolver::BoxesSolver(int rows, int cols, std::size_t table_entries)
-    : proto_(rows, cols), full_(chains::full_mask(proto_.geometry())) {
+BoxesSolver::BoxesSolver(int rows, int cols, std::size_t table_entries, bool use_leaf,
+                         bool use_equivalence)
+    : proto_(rows, cols), full_(chains::full_mask(proto_.geometry())), use_leaf_(use_leaf),
+      use_equivalence_(use_equivalence) {
     const BoxesGeometry& geo = proto_.geometry();
     const int height = geo.lattice_rows();
     const int width = geo.lattice_cols();
@@ -104,7 +106,7 @@ std::vector<int> BoxesSolver::moves(uint64_t quiet, const std::vector<int>& deg,
     const BoxesGeometry& geo = proto_.geometry();
     std::vector<bool> drop(geo.num_edges, false);
     for (const auto& comp : comps) {
-        if (!comp.independent()) {
+        if (!use_equivalence_ || !comp.independent()) {
             continue;
         }
         std::vector<int> edges;
@@ -200,7 +202,7 @@ int BoxesSolver::search(uint64_t mask, int alpha, int beta) {
     } else {
         const std::vector<int> deg = chains::degrees(quiet, geo);
         const std::vector<chains::Component> comps = chains::components(quiet, geo, deg);
-        bool simple = *std::max_element(deg.begin(), deg.end()) <= 2;
+        bool simple = use_leaf_ && *std::max_element(deg.begin(), deg.end()) <= 2;
         for (const auto& c : comps) {
             simple = simple && c.independent();
         }

@@ -23,7 +23,10 @@ namespace alpha_go {
 // One instance per thread: the table is not synchronised.
 class BoxesSolver {
 public:
-    BoxesSolver(int rows, int cols = 0, std::size_t table_entries = std::size_t{1} << 20);
+    // use_leaf / use_equivalence switch two reductions off so tests can compare them against
+    // the bare search (both are exact; see solver.py).
+    BoxesSolver(int rows, int cols = 0, std::size_t table_entries = std::size_t{1} << 20,
+                bool use_leaf = true, bool use_equivalence = true);
 
     int value(uint64_t mask);                                            // unbounded
     std::optional<int> value_within(uint64_t mask, uint64_t max_nodes);  // nullopt if over budget
@@ -63,6 +66,8 @@ private:
     uint64_t nodes_ = 0;
     uint64_t budget_ = 0;
     bool aborted_ = false;
+    bool use_leaf_ = true;
+    bool use_equivalence_ = true;
     std::map<std::pair<std::vector<int>, std::vector<int>>, int> loony_cache_;
 };
 
