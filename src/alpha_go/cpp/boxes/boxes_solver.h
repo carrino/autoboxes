@@ -32,7 +32,8 @@ public:
     std::optional<int> value_within(uint64_t mask, uint64_t max_nodes);  // nullopt if over budget
     int remaining(const BoxesBoard& board) { return value(board.edges()); }
     int final_margin(const BoxesBoard& board) { return board.margin() + value(board.edges()); }
-    int best_edge(const BoxesBoard& board);  // an optimal edge, forced captures first
+    int best_edge(const BoxesBoard& board) { return best_edge_mask(board.edges()); }
+    int best_edge_mask(uint64_t mask);  // an optimal edge, forced captures first
 
     uint64_t canonical(uint64_t mask) const;
     int loony_value(std::vector<int> chains, std::vector<int> loops);

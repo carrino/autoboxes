@@ -253,11 +253,11 @@ std::optional<int> BoxesSolver::value_within(uint64_t mask, uint64_t max_nodes) 
     return v;
 }
 
-int BoxesSolver::best_edge(const BoxesBoard& board) {
+int BoxesSolver::best_edge_mask(uint64_t mask) {
     const BoxesGeometry& geo = proto_.geometry();
     std::vector<int> prefix;
     chains::Decision decision;
-    const uint64_t quiet = chains::collapse_mask(board.edges(), geo, prefix, decision);
+    const uint64_t quiet = chains::collapse_mask(mask, geo, prefix, decision);
     if (!prefix.empty()) {
         return prefix[0];
     }

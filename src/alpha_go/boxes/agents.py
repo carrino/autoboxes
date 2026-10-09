@@ -10,6 +10,8 @@ from __future__ import annotations
 import random
 from typing import Any
 
+import alpha_go_cpp  # type: ignore[import-not-found]
+
 import alpha_go.boxes.nn_agent  # noqa: F401  (registers boxes-mcts-* alongside the baselines)
 from alpha_go.agents.base import Agent, register_agent
 from alpha_go.boxes.rules import BoxesGeometry, geometry
@@ -177,3 +179,35 @@ class BoxesAlphaBetaAgent(Agent):
 for _depth in (2, 4, 6):
     _cls = type(f"BoxesAlphaBetaD{_depth}", (BoxesAlphaBetaAgent,), {"depth": _depth})
     register_agent(f"boxes-ab-d{_depth}")(_cls)
+
+
+class BoxesSolverBackedAgent(Agent):
+    """Fast baseline with a perfect endgame: greedy (depth 0) or alpha-beta until `undrawn`
+    edges remain, then the exact C++ solver plays the rest. Registered as
+    boxes-greedy-s<N> and boxes-ab-d<depth>-s<N>."""
+
+    undrawn = 24
+    depth = 0
+
+    def __init__(self) -> None:
+        self.searcher = AlphaBeta(self.depth) if self.depth else None
+        self.solver: Any = None
+
+    def select_move(self, board: Any, seed: int) -> tuple[int, int]:
+        if int(board.num_edges()) - int(board.move_count()) <= self.undrawn:
+            if self.solver is None:
+                self.solver = alpha_go_cpp.BoxesSolver(int(board.rows()), int(board.cols()),
+                                                       1 << 20)
+            mask = int(board.edges() if callable(board.edges) else board.edges)
+            return lattice(board, int(self.solver.best_edge_mask(mask)))
+        rng = random.Random(seed)
+        if self.searcher is None:
+            return lattice(board, greedy_edge(board, geometry(board.rows(), board.cols()), rng))
+        return lattice(board, self.searcher.best_edge(board, rng))
+
+
+for _depth in (0, 2):
+    _name = f"boxes-{'greedy' if _depth == 0 else f'ab-d{_depth}'}-s24"
+    _cls = type(f"BoxesSolverBacked{_depth}", (BoxesSolverBackedAgent,),
+                {"depth": _depth, "undrawn": 24})
+    register_agent(_name)(_cls)

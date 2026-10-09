@@ -14,15 +14,19 @@ EXP_DIR = Path(__file__).resolve().parent
 def main() -> None:
     tag = sys.argv[1]
     state = json.loads((EXP_DIR / f"league_state-{tag}.json").read_text())
+    history = state["history"]
+    baselines = sorted({k[3:] for e in history for k in e
+                        if k.startswith("vs_") and k != "vs_champion"})
+    header = "| iter | vs champion | " + " | ".join(
+        f"vs {b.removeprefix('boxes-')}" for b in baselines)
     lines = [f"# boxes-{tag}-loop report", "", f"Champion: iter{state['champion']}", "",
-             "| iter | vs champion | vs greedy | vs ab-d4 | promoted |", "|---|---|---|---|---|"]
-    for e in state["history"]:
+             header + " | promoted |", "|---" * (3 + len(baselines)) + "|"]
+    for e in history:
         champ = e["vs_champion"]
         vc = f"{champ['a_win_rate']:.2f} {champ['a_win_rate_ci95']}" if champ else "bootstrap"
-        lines.append(f"| {e['iteration']} | {vc} | {e['vs_boxes-greedy']['a_win_rate']:.2f} "
-                     f"(margin {e['vs_boxes-greedy']['a_mean_margin']:+.2f}) | "
-                     f"{e['vs_boxes-ab-d4']['a_win_rate']:.2f} "
-                     f"(margin {e['vs_boxes-ab-d4']['a_mean_margin']:+.2f}) | {e['promoted']} |")
+        cells = [f"{e[f'vs_{b}']['a_win_rate']:.2f} (margin {e[f'vs_{b}']['a_mean_margin']:+.2f})"
+                 if f"vs_{b}" in e else "-" for b in baselines]
+        lines.append(f"| {e['iteration']} | {vc} | " + " | ".join(cells) + f" | {e['promoted']} |")
     timing_dir = EXP_DIR / "timing" / tag
     if timing_dir.exists():
         lines += ["", "| iter | collect s | train s | arena s |", "|---|---|---|---|"]

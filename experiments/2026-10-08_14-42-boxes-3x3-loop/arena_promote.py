@@ -2,8 +2,9 @@
 
 Plays the iter N checkpoint against the current champion (alternating first player, the
 first --opening_moves moves sampled at temperature 1 so the games differ),
-promotes it on a win rate >= --threshold, and also scores it against the fixed baselines
-boxes-greedy and boxes-ab-d4 so progress is visible on an absolute scale. Checkpoints are
+promotes it on a win rate >= --threshold, and also scores it against --baselines (default
+boxes-greedy and boxes-ab-d4; boxes-greedy-s24 / boxes-ab-d2-s24 are the fast solver-backed
+ones) so progress is visible on an absolute scale. Checkpoints are
 read from checkpoints/<tag>/ and state lives in league_state-<tag>.json next to this file
 (tag = <rows>x<cols>), so runs on different boards never collide.
 """
@@ -38,6 +39,8 @@ def main() -> None:
     p.add_argument("--num_simulations", type=int, default=200)
     p.add_argument("--num_workers", type=int, default=8)
     p.add_argument("--threshold", type=float, default=0.55)
+    p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4",
+                   help="comma-separated registered agents for the absolute-scale columns")
     p.add_argument("--opening_moves", type=int, default=4,
                    help="moves sampled at temperature 1 before greedy play, for game variety")
     p.add_argument("--solver_max_undrawn", type=int, default=0,
@@ -84,7 +87,7 @@ def main() -> None:
         vs_champion = match.summary()
         promoted = match.a_win_rate >= args.threshold
         print(f"iter{args.iteration} vs champion iter{state['champion']}: {vs_champion}")
-    for baseline in ("boxes-greedy", "boxes-ab-d4"):
+    for baseline in [b for b in args.baselines.split(",") if b]:
         result = play_match(candidate, baseline, args.rows, args.cols, args.baseline_games,
                             seed=2000 + args.iteration, num_workers=args.num_workers)
         entry[f"vs_{baseline}"] = result.summary()

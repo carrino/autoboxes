@@ -13,6 +13,7 @@ END=${2:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 CPU_FLAG=${3:-}
 ROWS=${ROWS:-3}; COLS=${COLS:-$ROWS}; TAG=${TAG:-${ROWS}x${COLS}}
 SOLVER_N=${SOLVER_N:-0}  # exact endgame solver at <= N undrawn edges in self-play and arena (0 = off)
+BASELINES=${BASELINES:-boxes-greedy,boxes-ab-d4}  # arena absolute-scale opponents (boxes-ab-d2-s24 is the fast one)
 SP_PROCS=${SP_PROCS:-1}  # self-play processes per iteration; each gets SP_WORKERS/SP_PROCS threads and
                          # its own GPU engine, which sidesteps the interpreter lock across threads
 SIZE_ARGS="--rows $ROWS --cols $COLS"
@@ -56,7 +57,7 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
     log "Arena: iter0 becomes the first champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$SOLVER_N" \
-        $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
+        --baselines "$BASELINES" $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
 fi
 
 for ITER in $(seq "$START" "$END"); do
@@ -87,7 +88,7 @@ for ITER in $(seq "$START" "$END"); do
     log "Arena: iter${NEXT} vs champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG \
-        --solver_max_undrawn "$SOLVER_N" \
+        --solver_max_undrawn "$SOLVER_N" --baselines "$BASELINES" \
         2>&1 | tee "$LOGS/arena-it${NEXT}.log"
     t3=$(date +%s)
     echo "{\"iteration\": $NEXT, \"collect\": $((t1 - t0)), \"train\": $((t2 - t1)), \"arena\": $((t3 - t2))}" \

@@ -90,3 +90,16 @@ class TestAgents:
         board = alpha_go_cpp.BoxesBoard(2, 3)
         assert board.is_legal(*agent.select_move(board, 1))
         assert agent.searcher.depth == int(name[-1])
+
+    @pytest.mark.parametrize("name", ["boxes-greedy-s24", "boxes-ab-d2-s24"])
+    def test_solver_backed_baselines(self, name: str) -> None:
+        # Perfect from 24 undrawn edges: on 2x3 that is the whole game, so moving first it
+        # scores at least the game value and moving second it concedes at most that value
+        # against alpha-beta depth 4. The solver phase accepts Python boards as well.
+        agent = get_agent(name)
+        cpp = alpha_go_cpp.BoxesBoard(3, 3)
+        assert cpp.is_legal(*agent.select_move(cpp, 1))
+        assert BoxesBoard(2, 3).is_legal(*agent.select_move(BoxesBoard(2, 3), 1))
+        value = alpha_go_cpp.BoxesSolver(2, 3).value(0)
+        assert all(play_out(name, "boxes-ab-d4", 2, 3, seed) >= value for seed in range(3))
+        assert all(play_out("boxes-ab-d4", name, 2, 3, seed) <= value for seed in range(3))

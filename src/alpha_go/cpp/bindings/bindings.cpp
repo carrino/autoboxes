@@ -240,6 +240,8 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
              "Final margin for the side to move under optimal play from `board`.")
         .def("best_edge", &alpha_go::BoxesSolver::best_edge, py::arg("board"),
              "An optimal edge for the side to move (forced captures first).")
+        .def("best_edge_mask", &alpha_go::BoxesSolver::best_edge_mask, py::arg("mask"),
+             "best_edge from an edge mask (works for Python boards too).")
         .def("canonical", &alpha_go::BoxesSolver::canonical, py::arg("mask"))
         .def("loony_value", &alpha_go::BoxesSolver::loony_value, py::arg("chains"), py::arg("loops"),
              "Exact value of a simple loony endgame from its chain and loop sizes.")
