@@ -24,7 +24,7 @@ void bind_mcts_tree(py::module_& m, const char* name) {
         .def(py::init<const State&, const alpha_go::MCTSConfig&>(),
              py::arg("root_state"), py::arg("config"),
              "Create MCTS tree from root state with given config.")
-        .def("run_simulations", &Tree::run_simulations,
+        .def("run_simulations", &Tree::run_simulations, py::call_guard<py::gil_scoped_release>(),
              py::arg("num_simulations"), py::arg("evaluator"),
              "Run MCTS simulations using the evaluator function.\n"
              "evaluator: callable(state) -> (dict[int, float], float)\n"
@@ -53,7 +53,7 @@ void bind_mcts_tree(py::module_& m, const char* name) {
              "time as dict[action, value]. Same perspective as Q (root player).")
         .def("get_child_max_subtree_depths", &Tree::get_child_max_subtree_depths,
              "Get max subtree depth under each root child as dict[action, depth].")
-        .def("run_simulations_batched", &Tree::run_simulations_batched,
+        .def("run_simulations_batched", &Tree::run_simulations_batched, py::call_guard<py::gil_scoped_release>(),
              py::arg("num_simulations"), py::arg("leaf_batch_size"), py::arg("batched_evaluator"),
              "Leaf-parallel MCTS with virtual loss.\n"
              "batched_evaluator: callable(list[state]) -> list[(dict[int,float], float)]");
@@ -235,16 +235,16 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
              py::arg("use_equivalence") = true,
              "Exact remaining-margin solver with a bounded transposition table (one per thread); "
              "use_leaf / use_equivalence switch two reductions off for tests.")
-        .def("value", &alpha_go::BoxesSolver::value, py::arg("mask"),
+        .def("value", &alpha_go::BoxesSolver::value, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
              "Remaining box margin for the side to move under optimal play (unbounded search).")
-        .def("value_within", &alpha_go::BoxesSolver::value_within, py::arg("mask"),
+        .def("value_within", &alpha_go::BoxesSolver::value_within, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
              py::arg("max_nodes"), "Like value(), or None once max_nodes nodes were visited.")
-        .def("remaining", &alpha_go::BoxesSolver::remaining, py::arg("board"))
-        .def("final_margin", &alpha_go::BoxesSolver::final_margin, py::arg("board"),
+        .def("remaining", &alpha_go::BoxesSolver::remaining, py::call_guard<py::gil_scoped_release>(), py::arg("board"))
+        .def("final_margin", &alpha_go::BoxesSolver::final_margin, py::call_guard<py::gil_scoped_release>(), py::arg("board"),
              "Final margin for the side to move under optimal play from `board`.")
-        .def("best_edge", &alpha_go::BoxesSolver::best_edge, py::arg("board"),
+        .def("best_edge", &alpha_go::BoxesSolver::best_edge, py::call_guard<py::gil_scoped_release>(), py::arg("board"),
              "An optimal edge for the side to move (forced captures first).")
-        .def("best_edge_mask", &alpha_go::BoxesSolver::best_edge_mask, py::arg("mask"),
+        .def("best_edge_mask", &alpha_go::BoxesSolver::best_edge_mask, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
              "best_edge from an edge mask (works for Python boards too).")
         .def("canonical", &alpha_go::BoxesSolver::canonical, py::arg("mask"))
         .def("loony_value", &alpha_go::BoxesSolver::loony_value, py::arg("chains"), py::arg("loops"),
@@ -258,9 +258,10 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         .def(py::init<int, int, std::size_t>(), py::arg("rows"), py::arg("cols") = 0,
              py::arg("table_entries") = std::size_t{1} << 20,
              "Depth-limited negamax on the remaining margin with a greedy-haul leaf (one per thread).")
-        .def("value", &alpha_go::BoxesAlphaBeta::value, py::arg("mask"), py::arg("depth"),
+        .def("value", &alpha_go::BoxesAlphaBeta::value, py::call_guard<py::gil_scoped_release>(), py::arg("mask"), py::arg("depth"),
              "Exact depth-limited value for the side to move (captures do not consume depth).")
-        .def("best_edge", &alpha_go::BoxesAlphaBeta::best_edge, py::arg("mask"), py::arg("depth"),
+        .def("best_edge", &alpha_go::BoxesAlphaBeta::best_edge, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
+             py::arg("depth"),
              py::arg("seed"), "Highest-valued edge; ties broken by the seeded move order.")
         .def("greedy_haul", &alpha_go::BoxesAlphaBeta::greedy_haul, py::arg("mask"))
         .def("classify", &alpha_go::BoxesAlphaBeta::classify, py::arg("mask"), py::arg("edge"),
@@ -274,6 +275,7 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
              "Collapse the side to move's forced captures; see get_legal_moves_flat().")
         .def(py::init<const alpha_go::BoxesBoard&, std::shared_ptr<alpha_go::BoxesSolver>, int,
                       uint64_t, bool>(),
+             py::call_guard<py::gil_scoped_release>(),
              py::arg("board"), py::arg("solver"), py::arg("max_undrawn"), py::arg("node_budget"),
              py::arg("merge_equivalent") = false,
              "As above, and positions with <= max_undrawn undrawn edges that the solver settles "
