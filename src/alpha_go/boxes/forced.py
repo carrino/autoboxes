@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from alpha_go.boxes.chains import OPEN, Component, components, degrees
+from alpha_go.boxes.chains import OPEN, Component, components, degrees, equivalent_drop
 from alpha_go.boxes.rules import BoxesGeometry, geometry
 
 
@@ -138,24 +138,36 @@ def collapse(board: Any) -> Collapsed:
 
 
 class BoxesSearchState:
-    """A collapsed position: MCTS protocol + evaluator surface (see module docstring)."""
+    """A collapsed position: MCTS protocol + evaluator surface (see module docstring).
 
-    __slots__ = ("board", "decision")
+    With `merge_equivalent` a quiet position offers one edge per independent chain or
+    loop (`chains.equivalent_drop`, BoxesZero's "equivalent edges"); the dropped edges
+    lead to the same outcome as the kept one.
+    """
 
-    def __init__(self, board: Any, decision: Decision | None) -> None:
+    __slots__ = ("board", "decision", "merge_equivalent")
+
+    def __init__(self, board: Any, decision: Decision | None,
+                 merge_equivalent: bool = False) -> None:
         self.board = board
         self.decision = decision
+        self.merge_equivalent = merge_equivalent
 
     @classmethod
-    def from_board(cls, board: Any) -> BoxesSearchState:
+    def from_board(cls, board: Any, merge_equivalent: bool = False) -> BoxesSearchState:
         c = collapse(board)
-        return cls(c.board, c.decision)
+        return cls(c.board, c.decision, merge_equivalent)
 
     # --- MCTS protocol ---
     def get_legal_actions(self) -> list[int]:
         if self.decision is not None:
             return self.decision.actions
-        return list(self.board.get_legal_moves_flat())
+        legal = list(self.board.get_legal_moves_flat())
+        if not self.merge_equivalent:
+            return legal
+        mask, geo = edge_mask(self.board), box_geometry(self.board)
+        drop = equivalent_drop(mask, geo, components(mask, geo))
+        return [e for e in legal if e not in drop]
 
     def apply_action(self, action: int) -> BoxesSearchState:
         board = self.board.copy()
@@ -164,7 +176,7 @@ class BoxesSearchState:
             edges = self.decision.take
         for e in edges:
             assert board.play_edge(e)
-        return BoxesSearchState.from_board(board)
+        return BoxesSearchState.from_board(board, self.merge_equivalent)
 
     def is_terminal(self) -> bool:
         return bool(self.board.is_game_over())
@@ -178,7 +190,7 @@ class BoxesSearchState:
         return int(self.board.player())
 
     def clone(self) -> BoxesSearchState:
-        return BoxesSearchState(self.board.copy(), self.decision)
+        return BoxesSearchState(self.board.copy(), self.decision, self.merge_equivalent)
 
     # --- evaluator surface (same names as the boards) ---
     def get_legal_moves_flat(self) -> list[int]:

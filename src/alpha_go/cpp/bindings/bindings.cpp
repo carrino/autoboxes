@@ -270,11 +270,14 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         .def(py::init<const alpha_go::BoxesBoard&>(), py::arg("board"),
              "Collapse the side to move's forced captures; see get_legal_moves_flat().")
         .def(py::init<const alpha_go::BoxesBoard&, std::shared_ptr<alpha_go::BoxesSolver>, int,
-                      uint64_t>(),
+                      uint64_t, bool>(),
              py::arg("board"), py::arg("solver"), py::arg("max_undrawn"), py::arg("node_budget"),
+             py::arg("merge_equivalent") = false,
              "As above, and positions with <= max_undrawn undrawn edges that the solver settles "
-             "within node_budget nodes are terminal with the exact outcome.")
+             "within node_budget nodes are terminal with the exact outcome; merge_equivalent keeps "
+             "one edge per independent chain or loop in quiet positions.")
         .def("solved", &alpha_go::BoxesSearchState::solved)
+        .def("merge_equivalent", &alpha_go::BoxesSearchState::merge_equivalent)
         .def("solved_margin", &alpha_go::BoxesSearchState::solved_margin,
              "Exact final margin for the side to move when solved().")
         .def("get_legal_moves_flat", &alpha_go::BoxesSearchState::get_legal_moves_flat,

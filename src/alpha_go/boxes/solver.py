@@ -24,7 +24,7 @@ from __future__ import annotations
 from functools import cache
 from typing import Any
 
-from alpha_go.boxes.chains import GROUND, Component, components, degrees
+from alpha_go.boxes.chains import Component, components, degrees, equivalent_drop, independent
 from alpha_go.boxes.forced import collapse_mask, edge_mask
 from alpha_go.boxes.rules import BoxesGeometry, geometry
 from alpha_go.boxes.symmetry import edge_permutation, transforms
@@ -54,15 +54,6 @@ def loony_value(chains: tuple[int, ...], loops: tuple[int, ...]) -> int:
         value = min(-size - rest, 8 - size + rest)
         best = value if best is None else max(best, value)
     return 0 if best is None else best
-
-
-def independent(comp: Component) -> bool:
-    return comp.is_loop or comp.ends == (GROUND, GROUND)
-
-
-def component_edges(mask: int, geo: BoxesGeometry, comp: Component) -> list[int]:
-    """Undrawn edges of a component (its links, including those to the ground)."""
-    return sorted({e for b in comp.boxes for e in geo.box_edges[b] if not (mask >> e) & 1})
 
 
 def completed(before: int, after: int, geo: BoxesGeometry) -> int:
@@ -122,18 +113,7 @@ class Solver:
         """Undrawn edges of a quiet position, one representative per independent component."""
         geo = self.geo
         legal = [e for e in range(geo.num_edges) if not (quiet >> e) & 1]
-        if not self.use_equivalence:
-            return legal
-        drop: set[int] = set()
-        for comp in comps:
-            if not independent(comp):
-                continue
-            edges = component_edges(quiet, geo, comp)
-            keep = edges[0]
-            if not comp.is_loop and comp.size == 2:  # hard-hearted handout: the middle edge
-                keep = next(e for e in edges if len(geo.edge_boxes[e]) == 2
-                            and set(geo.edge_boxes[e]) == set(comp.boxes))
-            drop.update(e for e in edges if e != keep)
+        drop = equivalent_drop(quiet, geo, comps) if self.use_equivalence else set()
         return [e for e in legal if e not in drop]
 
     # --- board-level helpers -------------------------------------------------

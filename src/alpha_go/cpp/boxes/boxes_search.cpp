@@ -7,9 +7,9 @@ BoxesSearchState::BoxesSearchState(const BoxesBoard& board) : board_(board) {
 }
 
 BoxesSearchState::BoxesSearchState(const BoxesBoard& board, std::shared_ptr<BoxesSolver> solver,
-                                   int max_undrawn, uint64_t node_budget)
+                                   int max_undrawn, uint64_t node_budget, bool merge_equivalent)
     : board_(board), solver_(std::move(solver)), max_undrawn_(max_undrawn),
-      node_budget_(node_budget) {
+      node_budget_(node_budget), merge_equivalent_(merge_equivalent) {
     collapse();
 }
 
@@ -17,7 +17,21 @@ std::vector<int> BoxesSearchState::get_legal_moves_flat() const {
     if (has_decision_) {
         return {take_[0], control_};
     }
-    return board_.get_legal_moves_flat();
+    std::vector<int> legal = board_.get_legal_moves_flat();
+    if (!merge_equivalent_) {
+        return legal;
+    }
+    const BoxesGeometry& geo = board_.geometry();
+    const uint64_t mask = board_.edges();
+    const std::vector<bool> drop =
+        chains::equivalent_drop(mask, geo, chains::components(mask, geo, chains::degrees(mask, geo)));
+    std::vector<int> kept;
+    for (int e : legal) {
+        if (!drop[e]) {
+            kept.push_back(e);
+        }
+    }
+    return kept;
 }
 
 void BoxesSearchState::apply(int action) {

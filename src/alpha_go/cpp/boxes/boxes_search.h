@@ -23,6 +23,8 @@ namespace alpha_go {
 // that the solver settles within node_budget nodes is terminal for the search:
 // is_game_over() is true and outcome() is the exact 1 / 0.5 / 0 from the final
 // margin, so the net is never asked about it. Children inherit the solver.
+// With merge_equivalent a quiet position offers one edge per independent chain or loop
+// (chains::equivalent_drop, BoxesZero's "equivalent edges").
 class BoxesSearchState {
 public:
     static constexpr int GROUND = chains::GROUND;
@@ -30,7 +32,7 @@ public:
 
     explicit BoxesSearchState(const BoxesBoard& board);
     BoxesSearchState(const BoxesBoard& board, std::shared_ptr<BoxesSolver> solver,
-                     int max_undrawn, uint64_t node_budget);
+                     int max_undrawn, uint64_t node_budget, bool merge_equivalent = false);
 
     // MCTS State concept
     bool is_game_over() const { return solved_ || board_.is_game_over(); }
@@ -47,6 +49,7 @@ public:
 
     // Solver verdict (see class comment)
     bool solved() const { return solved_; }
+    bool merge_equivalent() const { return merge_equivalent_; }
     int solved_margin() const { return solved_margin_; }  // final margin, side to move
 
     // Board surface used by the evaluators and the play loop
@@ -75,6 +78,7 @@ private:
     std::shared_ptr<BoxesSolver> solver_;
     int max_undrawn_ = 0;
     uint64_t node_budget_ = 0;
+    bool merge_equivalent_ = false;
     bool solved_ = false;
     int solved_margin_ = 0;
 };

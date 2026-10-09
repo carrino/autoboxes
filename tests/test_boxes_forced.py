@@ -80,8 +80,11 @@ class TestHandBuilt:
 
 
 class TestMinimaxInvariance:
+    @pytest.mark.parametrize("merge", [False, True])
     @pytest.mark.parametrize("rows,cols", [(1, 3), (2, 2), (2, 3)])
-    def test_collapsed_tree_has_the_oracle_value(self, rows: int, cols: int) -> None:
+    def test_collapsed_tree_has_the_oracle_value(self, rows: int, cols: int, merge: bool) -> None:
+        # With merge, quiet positions offer one edge per independent chain or loop; the
+        # dropped edges must be equivalent, so the game value is unchanged.
         oracle = Oracle(rows, cols)
         memo: dict[tuple[int, int], int] = {}
 
@@ -113,5 +116,5 @@ class TestMinimaxInvariance:
             c = collapse(board)
             me = board.player()
             prefix_gain = c.board.boxes[me] - board.boxes[me]
-            state = BoxesSearchState(c.board, c.decision)
+            state = BoxesSearchState(c.board, c.decision, merge)
             assert prefix_gain + value(state) == oracle.value(board.edges), board.render()

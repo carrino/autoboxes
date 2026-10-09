@@ -138,6 +138,32 @@ int control_edge(uint64_t mask, const BoxesGeometry& geo, const Component& comp,
     return -1;
 }
 
+std::vector<bool> equivalent_drop(uint64_t mask, const BoxesGeometry& geo,
+                                  const std::vector<Component>& comps) {
+    std::vector<bool> drop(geo.num_edges, false);
+    for (const auto& comp : comps) {
+        if (!comp.independent()) {
+            continue;
+        }
+        std::vector<int> edges;
+        for (int b : comp.boxes) {
+            for (int e : undrawn_sides(mask, geo, b)) {
+                edges.push_back(e);
+            }
+        }
+        std::sort(edges.begin(), edges.end());
+        edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+        int keep = edges[0];
+        if (!comp.is_loop && comp.boxes.size() == 2) {  // hard-hearted handout: the middle edge
+            keep = shared_edge(geo, comp.boxes[0], comp.boxes[1]);
+        }
+        for (int e : edges) {
+            drop[e] = drop[e] || e != keep;
+        }
+    }
+    return drop;
+}
+
 int completed(uint64_t before, uint64_t after, const BoxesGeometry& geo) {
     int count = 0;
     for (const auto& sides : geo.box_edges) {

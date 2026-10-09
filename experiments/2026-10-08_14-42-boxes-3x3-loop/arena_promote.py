@@ -46,6 +46,8 @@ def main() -> None:
     p.add_argument("--solver_max_undrawn", type=int, default=0,
                    help="exact endgame solver at <= N undrawn edges for the candidate and champion")
     p.add_argument("--solver_node_budget", type=int, default=20_000)
+    p.add_argument("--merge_equivalent", type=int, default=0,
+                   help="1: one action per independent chain or loop in quiet positions")
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
@@ -66,7 +68,8 @@ def main() -> None:
     mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=1.0,
                 temperature_cutoff=args.opening_moves, leaf_batch_size=16,
                 solver_max_undrawn=args.solver_max_undrawn,
-                solver_node_budget=args.solver_node_budget)
+                solver_node_budget=args.solver_node_budget,
+                merge_equivalent=bool(args.merge_equivalent))
     tag = args.tag or f"{args.rows}x{args.cols or args.rows}"
     ckpt_dir = EXP_DIR / "checkpoints" / tag
     state_file = EXP_DIR / f"league_state-{tag}.json"

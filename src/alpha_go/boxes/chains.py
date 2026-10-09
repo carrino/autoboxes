@@ -93,3 +93,33 @@ def analyse(board: Any) -> list[Component]:
     """Components of a Python or C++ BoxesBoard."""
     return components(int(board.edges()) if callable(board.edges) else int(board.edges),
                       geometry(board.rows(), board.cols()))
+
+
+def independent(comp: Component) -> bool:
+    """A loop, or a chain whose both ends are the ground (border edges)."""
+    return comp.is_loop or comp.ends == (GROUND, GROUND)
+
+
+def component_edges(mask: int, geo: BoxesGeometry, comp: Component) -> list[int]:
+    """Undrawn edges of a component (its links, including those to the ground)."""
+    return sorted({e for b in comp.boxes for e in geo.box_edges[b] if not (mask >> e) & 1})
+
+
+def equivalent_drop(mask: int, geo: BoxesGeometry, comps: list[Component]) -> set[int]:
+    """Edges of a quiet position that are equivalent to a kept representative.
+
+    All edges of an independent chain of 3+ or of a loop lead to the same outcome (the
+    opponent faces the same take-all / keep-control choice), and a 2-chain is handed out
+    by its middle edge (the hard-hearted handout weakly dominates), so one edge per
+    independent component is kept: the lowest-indexed one, or the middle edge of a 2-chain.
+    """
+    drop: set[int] = set()
+    for comp in comps:
+        if not independent(comp):
+            continue
+        edges = component_edges(mask, geo, comp)
+        keep = edges[0]
+        if not comp.is_loop and comp.size == 2:
+            keep = next(e for e in edges if set(geo.edge_boxes[e]) == set(comp.boxes))
+        drop.update(e for e in edges if e != keep)
+    return drop

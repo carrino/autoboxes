@@ -180,6 +180,7 @@ class BoxesMCTSAgent(Agent):
         solver_max_undrawn: int = 0,
         solver_node_budget: int = 20_000,
         solver_table_entries: int = 1 << 20,
+        merge_equivalent: bool = False,
     ) -> None:
         self.evaluator = evaluator
         self.num_simulations = num_simulations
@@ -190,6 +191,9 @@ class BoxesMCTSAgent(Agent):
         self.solver_node_budget = solver_node_budget
         self.solver_table_entries = solver_table_entries
         self.solver: Any = None  # built on first use, one per agent (tables are per thread)
+        # One action per independent chain or loop in quiet positions (BoxesZero's
+        # equivalent edges); visits and policy targets land on the representative edge.
+        self.merge_equivalent = merge_equivalent
         self.temperature = temperature
         self.temperature_cutoff = temperature_cutoff
         self.leaf_batch_size = leaf_batch_size
@@ -231,7 +235,7 @@ class BoxesMCTSAgent(Agent):
     def search_state(self, board: Any) -> Any:
         """Collapsed position, solver-terminated when a solver is configured."""
         if self.solver_max_undrawn <= 0:
-            return alpha_go_cpp.BoxesSearchState(board)
+            return alpha_go_cpp.BoxesSearchState(board, None, 0, 0, self.merge_equivalent)
         if self.solver is None:
             self.solver = alpha_go_cpp.BoxesSolver(int(board.rows()), int(board.cols()),
                                                    self.solver_table_entries)
@@ -242,7 +246,7 @@ class BoxesMCTSAgent(Agent):
                       f"table={self.solver.table_entries()} entries = "
                       f"{self.solver.table_bytes() / 1e6:.1f} MB per agent", flush=True)
         return alpha_go_cpp.BoxesSearchState(board, self.solver, self.solver_max_undrawn,
-                                             self.solver_node_budget)
+                                             self.solver_node_budget, self.merge_equivalent)
 
     def select_move(self, board: Any, seed: int) -> tuple[int, int]:
         torch.manual_seed(seed)

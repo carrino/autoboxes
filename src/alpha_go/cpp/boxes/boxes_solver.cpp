@@ -104,27 +104,8 @@ int BoxesSolver::loony_value(std::vector<int> chains, std::vector<int> loops) {
 std::vector<int> BoxesSolver::moves(uint64_t quiet, const std::vector<int>& deg,
                                     const std::vector<chains::Component>& comps) const {
     const BoxesGeometry& geo = proto_.geometry();
-    std::vector<bool> drop(geo.num_edges, false);
-    for (const auto& comp : comps) {
-        if (!use_equivalence_ || !comp.independent()) {
-            continue;
-        }
-        std::vector<int> edges;
-        for (int b : comp.boxes) {
-            for (int e : chains::undrawn_sides(quiet, geo, b)) {
-                edges.push_back(e);
-            }
-        }
-        std::sort(edges.begin(), edges.end());
-        edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
-        int keep = edges[0];
-        if (!comp.is_loop && comp.size() == 2) {  // hard-hearted handout: the middle edge
-            keep = chains::shared_edge(geo, comp.boxes[0], comp.boxes[1]);
-        }
-        for (int e : edges) {
-            drop[e] = drop[e] || e != keep;
-        }
-    }
+    const std::vector<bool> drop = use_equivalence_ ? chains::equivalent_drop(quiet, geo, comps)
+                                                    : std::vector<bool>(geo.num_edges, false);
     std::vector<int> safe;
     std::vector<int> loony;
     for (int e = 0; e < geo.num_edges; ++e) {

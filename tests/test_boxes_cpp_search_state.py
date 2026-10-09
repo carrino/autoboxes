@@ -55,6 +55,24 @@ class TestParity:
             assert state.to_play() == c.board.to_play() and state.margin() == c.board.margin()
         assert decisions > 0 or rows * cols <= 3
 
+    @pytest.mark.parametrize("rows,cols", [(2, 3), (3, 3), (5, 5)])
+    def test_merge_equivalent_matches_python(self, rows: int, cols: int) -> None:
+        rng = random.Random(rows * 13 + cols)
+        merged_fewer = 0
+        for _ in range(60):
+            py, cpp = random_pair(rows, cols, rng)
+            py_state = PyState.from_board(py, merge_equivalent=True)
+            state = alpha_go_cpp.BoxesSearchState(cpp, None, 0, 0, True)
+            assert state.merge_equivalent() and not state.solved()
+            assert list(state.get_legal_moves_flat()) == py_state.get_legal_actions(), py.render()
+            plain = alpha_go_cpp.BoxesSearchState(cpp)
+            merged_fewer += len(state.get_legal_moves_flat()) < len(plain.get_legal_moves_flat())
+            child = state.copy()
+            if not state.is_game_over():
+                child.apply(state.get_legal_moves_flat()[0])
+                assert child.merge_equivalent()
+        assert merged_fewer > 0
+
     def test_apply_matches_python(self) -> None:
         rng = random.Random(5)
         for _ in range(30):

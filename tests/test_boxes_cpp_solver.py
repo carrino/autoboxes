@@ -130,9 +130,11 @@ class TestSolvedSearchState:
         child.apply(state.get_legal_moves_flat()[0])
         assert child.solved() or child.is_game_over()
 
-    def test_mcts_plays_perfectly_with_the_solver(self) -> None:
+    @pytest.mark.parametrize("merge", [False, True])
+    def test_mcts_plays_perfectly_with_the_solver(self, merge: bool) -> None:
         # From 16 undrawn edges the search reaches solved states within two plies, so with
-        # a uniform net the chosen move must have the oracle-optimal outcome.
+        # a uniform net the chosen move must have the oracle-optimal outcome, with and
+        # without one action per independent chain or loop.
         solver, oracle = alpha_go_cpp.BoxesSolver(3, 3), Oracle(3, 3)
         cfg = alpha_go_cpp.MCTSConfig()
         cfg.c_puct = 1.0
@@ -140,7 +142,8 @@ class TestSolvedSearchState:
         rng = random.Random(16)
         for _ in range(12):
             board = random_cpp_position(3, 3, 16, rng)
-            state = alpha_go_cpp.BoxesSearchState(board, solver, 14, 10**7)
+            state = alpha_go_cpp.BoxesSearchState(board, solver, 14, 10**7, merge)
+            assert state.merge_equivalent() == merge
             if state.prefix() or state.has_decision():
                 continue
             tree = alpha_go_cpp.BoxesSearchMCTSTree(state, cfg)

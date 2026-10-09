@@ -48,6 +48,10 @@ std::vector<int> take_sequence(uint64_t mask, const BoxesGeometry& geo,
                                const std::vector<int>& boxes);
 int control_edge(uint64_t mask, const BoxesGeometry& geo, const Component& comp,
                  const std::vector<int>& deg);
+// Edges of a quiet position equivalent to a kept representative (one per independent
+// chain or loop; a 2-chain keeps its middle edge): drop[e] is true for the dropped ones.
+std::vector<bool> equivalent_drop(uint64_t mask, const BoxesGeometry& geo,
+                                  const std::vector<Component>& comps);
 // Boxes completed between two masks.
 int completed(uint64_t before, uint64_t after, const BoxesGeometry& geo);
 // Forced-move collapse: auto-capture for the side to move until nothing is forced.

@@ -36,6 +36,8 @@ def main() -> None:
     p.add_argument("--solver_max_undrawn", type=int, default=0,
                    help="exact endgame solver at <= N undrawn edges (0 = off)")
     p.add_argument("--solver_node_budget", type=int, default=20_000)
+    p.add_argument("--merge_equivalent", type=int, default=0,
+                   help="1: one action per independent chain or loop in quiet positions")
     p.add_argument("--cpu", action="store_true")
     args, remaining = p.parse_known_args()
 
@@ -49,6 +51,7 @@ def main() -> None:
         temperature_cutoff=args.temperature_cutoff, add_noise=True,
         noise_alpha=DIRICHLET_ALPHA, noise_weight=DIRICHLET_WEIGHT, leaf_batch_size=LEAF_BATCH_SIZE,
         solver_max_undrawn=args.solver_max_undrawn, solver_node_budget=args.solver_node_budget,
+        merge_equivalent=bool(args.merge_equivalent),
     )
     black = register_boxes_mcts_agent("sp-black", args.checkpoint, args.rows, args.cols,
                                       engine=engine, **mcts)
