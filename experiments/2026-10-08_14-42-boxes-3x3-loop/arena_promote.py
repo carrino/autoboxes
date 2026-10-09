@@ -14,7 +14,8 @@ import json
 from pathlib import Path
 
 from alpha_go.boxes.arena import play_match
-from alpha_go.boxes.nn_agent import register_boxes_mcts_agent
+from alpha_go.boxes.inference import PlaneBatchedEngine
+from alpha_go.boxes.nn_agent import load_boxes_net, pick_device, register_boxes_mcts_agent
 
 EXP_DIR = Path(__file__).resolve().parent
 
@@ -35,7 +36,7 @@ def main() -> None:
     p.add_argument("--num_games", type=int, default=100)
     p.add_argument("--baseline_games", type=int, default=40)
     p.add_argument("--num_simulations", type=int, default=200)
-    p.add_argument("--num_workers", type=int, default=4)
+    p.add_argument("--num_workers", type=int, default=8)
     p.add_argument("--threshold", type=float, default=0.55)
     p.add_argument("--opening_moves", type=int, default=4,
                    help="moves sampled at temperature 1 before greedy play, for game variety")
@@ -45,7 +46,18 @@ def main() -> None:
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
-    device = "cpu" if args.cpu else None
+    device = pick_device("cpu" if args.cpu else None)
+    assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
+    engines: list[PlaneBatchedEngine] = []
+
+    def shared_engine(checkpoint: Path) -> PlaneBatchedEngine:
+        # One GPU engine per net, shared by every game thread (as in self-play), so leaves
+        # from all threads batch into the same forwards.
+        engine = PlaneBatchedEngine(load_boxes_net(checkpoint, device), device,
+                                    batch_size=64, batch_timeout_ms=1.0)
+        engine.start()
+        engines.append(engine)
+        return engine
     # Sample the first few moves from the visit distribution: at temperature 0 both nets are
     # deterministic and a 100-game match is the same two games played 50 times each.
     mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=1.0,
@@ -57,15 +69,16 @@ def main() -> None:
     state_file = EXP_DIR / f"league_state-{tag}.json"
     candidate_ckpt = ckpt_dir / f"iter{args.iteration}.pt"
     candidate = register_boxes_mcts_agent(f"cand-it{args.iteration}", candidate_ckpt, args.rows,
-                                          args.cols, device=device, **mcts)
+                                          args.cols, engine=shared_engine(candidate_ckpt), **mcts)
     state = load_state(state_file)
     entry: dict = {"iteration": args.iteration}
     if state["champion"] is None:
         promoted, vs_champion = True, None
     else:
-        champion = register_boxes_mcts_agent(f"champ-it{state['champion']}",
-                                             ckpt_dir / f"iter{state['champion']}.pt",
-                                             args.rows, args.cols, device=device, **mcts)
+        champion_ckpt = ckpt_dir / f"iter{state['champion']}.pt"
+        champion = register_boxes_mcts_agent(f"champ-it{state['champion']}", champion_ckpt,
+                                             args.rows, args.cols,
+                                             engine=shared_engine(champion_ckpt), **mcts)
         match = play_match(candidate, champion, args.rows, args.cols, args.num_games,
                            seed=1000 + args.iteration, num_workers=args.num_workers)
         vs_champion = match.summary()
@@ -86,6 +99,8 @@ def main() -> None:
     print(f"league: champion=iter{state['champion']} promoted={promoted} -> {state_file.name}")
     print("===RESULT===")
     print(json.dumps(entry))
+    for engine in engines:
+        engine.stop()
 
 
 if __name__ == "__main__":
