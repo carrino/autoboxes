@@ -17,6 +17,8 @@ BASELINES=${BASELINES:-boxes-greedy,boxes-ab-d4}  # arena absolute-scale opponen
 MERGE_EQ=${MERGE_EQ:-0}  # 1: one search action per independent chain or loop (equivalent edges)
 SP_PROCS=${SP_PROCS:-1}  # self-play processes per iteration; each gets SP_WORKERS/SP_PROCS threads and
                          # its own GPU engine, which sidesteps the interpreter lock across threads
+SEARCH_ARGS=${SEARCH_ARGS:-}  # extra search flags for self-play and the arena, e.g.
+                              # "--policy_temperature 0.7 --margin_utility_lambda 0.5" (see nn_agent.add_search_flags)
 SIZE_ARGS="--rows $ROWS --cols $COLS"
 TAG_ARGS="--tag $TAG"
 CKPT="$EXP_DIR/checkpoints/$TAG"
@@ -40,7 +42,7 @@ SP_WORKERS=${SP_WORKERS:-$D_WORKERS}; TRAIN_BUDGET=${TRAIN_BUDGET:-$D_TRAIN}; AR
 BASE_GAMES=${BASE_GAMES:-$D_BASE}; ARENA_SIMS=${ARENA_SIMS:-$D_ASIMS}
 echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x $SP_SIMS sims ($SP_WORKERS workers), "\
      "train ${TRAIN_BUDGET}s, arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
-     "solver N=$SOLVER_N, merge equivalent $MERGE_EQ, self-play processes $SP_PROCS"
+     "solver N=$SOLVER_N, merge equivalent $MERGE_EQ, self-play processes $SP_PROCS, search args '$SEARCH_ARGS'"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
 
@@ -58,7 +60,7 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
     log "Arena: iter0 becomes the first champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$SOLVER_N" \
-        --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
+        --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
 fi
 
 for ITER in $(seq "$START" "$END"); do
@@ -72,7 +74,7 @@ for ITER in $(seq "$START" "$END"); do
         uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
             --num_games "$PER_PROC" --game_index_offset "$((P * PER_PROC))" \
             --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" \
-            --merge_equivalent "$MERGE_EQ" \
+            --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
             --save-name "${DATA}/selfplay-it${ITER}" --seed "$((ITER * 100000 + P * 1000))" $CPU_FLAG \
             > "$LOGS/collect-it${ITER}-p${P}.log" 2>&1 &
     done
@@ -90,7 +92,7 @@ for ITER in $(seq "$START" "$END"); do
     log "Arena: iter${NEXT} vs champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG \
-        --solver_max_undrawn "$SOLVER_N" --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" \
+        --solver_max_undrawn "$SOLVER_N" --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
         2>&1 | tee "$LOGS/arena-it${NEXT}.log"
     t3=$(date +%s)
     echo "{\"iteration\": $NEXT, \"collect\": $((t1 - t0)), \"train\": $((t2 - t1)), \"arena\": $((t3 - t2))}" \

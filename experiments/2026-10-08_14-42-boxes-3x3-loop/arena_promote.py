@@ -16,7 +16,13 @@ from pathlib import Path
 
 from alpha_go.boxes.arena import play_match
 from alpha_go.boxes.inference import PlaneBatchedEngine
-from alpha_go.boxes.nn_agent import load_boxes_net, pick_device, register_boxes_mcts_agent
+from alpha_go.boxes.nn_agent import (
+    add_search_flags,
+    load_boxes_net,
+    pick_device,
+    register_boxes_mcts_agent,
+    search_flags,
+)
 
 EXP_DIR = Path(__file__).resolve().parent
 
@@ -49,7 +55,9 @@ def main() -> None:
     p.add_argument("--merge_equivalent", type=int, default=0,
                    help="1: one action per independent chain or loop in quiet positions")
     p.add_argument("--cpu", action="store_true")
+    add_search_flags(p)
     args = p.parse_args()
+    mcts_flags, evaluator_flags = search_flags(args)
 
     device = pick_device("cpu" if args.cpu else None)
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
@@ -65,11 +73,12 @@ def main() -> None:
         return engine
     # Sample the first few moves from the visit distribution: at temperature 0 both nets are
     # deterministic and a 100-game match is the same two games played 50 times each.
-    mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=1.0,
-                temperature_cutoff=args.opening_moves, leaf_batch_size=16,
+    mcts = dict(num_simulations=args.num_simulations, temperature=1.0,
+                temperature_cutoff=args.opening_moves,
                 solver_max_undrawn=args.solver_max_undrawn,
                 solver_node_budget=args.solver_node_budget,
-                merge_equivalent=bool(args.merge_equivalent))
+                merge_equivalent=bool(args.merge_equivalent),
+                evaluator_kwargs=evaluator_flags, **mcts_flags)
     tag = args.tag or f"{args.rows}x{args.cols or args.rows}"
     ckpt_dir = EXP_DIR / "checkpoints" / tag
     state_file = EXP_DIR / f"league_state-{tag}.json"

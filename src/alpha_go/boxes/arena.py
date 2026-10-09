@@ -131,17 +131,24 @@ def register_checkpoint(name: str, args: argparse.Namespace) -> None:
     """`ckpt:<path>` names become MCTS agents on that checkpoint, one shared GPU engine
     per checkpoint across the game threads, with the search flags of the CLI."""
     from alpha_go.boxes.inference import PlaneBatchedEngine
-    from alpha_go.boxes.nn_agent import load_boxes_net, pick_device, register_boxes_mcts_agent
+    from alpha_go.boxes.nn_agent import (
+        load_boxes_net,
+        pick_device,
+        register_boxes_mcts_agent,
+        search_flags,
+    )
     device = pick_device("cpu" if args.cpu else None)
     path = name[len("ckpt:"):]
     engine = PlaneBatchedEngine(load_boxes_net(path, device), device, batch_size=64)
     engine.start()
+    mcts_flags, evaluator_flags = search_flags(args)
     register_boxes_mcts_agent(name, path, args.rows, args.cols, engine=engine,
-                              num_simulations=args.sims, c_puct=1.5, temperature=1.0,
-                              temperature_cutoff=args.opening_moves, leaf_batch_size=16,
+                              num_simulations=args.sims, temperature=1.0,
+                              temperature_cutoff=args.opening_moves,
                               solver_max_undrawn=args.solver,
                               solver_node_budget=args.solver_budget,
-                              merge_equivalent=bool(args.merge_eq))
+                              merge_equivalent=bool(args.merge_eq),
+                              evaluator_kwargs=evaluator_flags, **mcts_flags)
 
 
 def main() -> None:
@@ -163,6 +170,8 @@ def main() -> None:
     parser.add_argument("--merge_eq", type=int, default=0,
                         help="ckpt agents: equivalent-edge merge")
     parser.add_argument("--cpu", action="store_true")
+    from alpha_go.boxes.nn_agent import add_search_flags
+    add_search_flags(parser)
     args = parser.parse_args()
     for name in (args.a, args.b):
         if name.startswith("ckpt:"):

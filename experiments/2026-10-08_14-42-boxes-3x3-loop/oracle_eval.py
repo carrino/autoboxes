@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 import random
 import re
@@ -40,7 +41,14 @@ import alpha_go.boxes.agents  # noqa: F401  (registers boxes-* agents)
 from alpha_go.agents.base import get_agent
 from alpha_go.boxes.encode import encode_batch
 from alpha_go.boxes.model import BoxesNet
-from alpha_go.boxes.nn_agent import BoxesLeafEvaluator, BoxesMCTSAgent, load_boxes_net, pick_device
+from alpha_go.boxes.nn_agent import (
+    BoxesLeafEvaluator,
+    BoxesMCTSAgent,
+    add_search_flags,
+    load_boxes_net,
+    pick_device,
+    search_flags,
+)
 from alpha_go.boxes.rules import geometry
 
 sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
@@ -113,7 +121,9 @@ def main() -> None:
     p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--cpu", action="store_true")
+    add_search_flags(p)
     args = p.parse_args()
+    mcts_flags, evaluator_flags = search_flags(args)
 
     device = pick_device("cpu" if args.cpu else None)
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
@@ -162,8 +172,9 @@ def main() -> None:
         t1 = time.time()
         model = load_boxes_net(ckpt_dir / f"iter{it}.pt", device)
         argmax, win, expected = raw_net(model, device, boards)
-        agent = BoxesMCTSAgent(BoxesLeafEvaluator(model, device), c_puct=1.5, temperature=0.0,
-                               num_simulations=args.num_simulations)
+        agent = BoxesMCTSAgent(BoxesLeafEvaluator(model, device, **evaluator_flags),
+                               temperature=0.0, num_simulations=args.num_simulations,
+                               **mcts_flags)
         decided = final != 0
         row = {
             "agent": f"iter{it}", "iteration": it,
@@ -180,14 +191,15 @@ def main() -> None:
     out = EXP_DIR / "data" / f"oracle_eval-{tag}.csv"
     out.parent.mkdir(exist_ok=True)
     fields = ["agent", "iteration", "policy_optimal", "search_optimal", "value_sign", "margin_mae",
-              "num_positions", "min_undrawn", "max_undrawn", "num_simulations"]
+              "num_positions", "min_undrawn", "max_undrawn", "num_simulations", "search_flags"]
     with out.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for row in rows_out:
             writer.writerow({**row, "num_positions": len(boards),
                              "min_undrawn": args.min_undrawn, "max_undrawn": args.max_undrawn,
-                             "num_simulations": args.num_simulations})
+                             "num_simulations": args.num_simulations,
+                             "search_flags": json.dumps({**mcts_flags, **evaluator_flags})})
     print(f"wrote {out}")
 
 

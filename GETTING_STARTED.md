@@ -129,6 +129,11 @@ checkpoint. Two more knobs matter on 5x5:
   fewer edges are undrawn (`TAG=5x5-solver` keeps that run apart from the baseline). Pick N
   from `uv run $EXP/solver_bench.py --tag 5x5-probe --undrawn 20 24 28 32 --selfplay-only`:
   the largest N whose `solved_within_20000` column is close to 1.0.
+- `SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5"` passes extra search
+  flags to self-play and the arena (`c_puct`, `leaf_batch_size`, `policy_temperature`,
+  `margin_utility_lambda`, `margin_utility_k`; the same flags work on `oracle_eval.py` and
+  `alpha_go.boxes.arena`). The values come from the autoresearch folder's report
+  (`experiments/2026-10-09_01-05-boxes-3x3-search-autoresearch/report.md`).
 
 After any run, `uv run $EXP/oracle_eval.py --tag <tag>` scores every checkpoint against the
 exact oracle on late positions from the run's own games; the raw-policy and searched-move

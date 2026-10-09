@@ -12,10 +12,14 @@ import sys
 import torch
 
 from alpha_go.boxes.inference import PlaneBatchedEngine
-from alpha_go.boxes.nn_agent import load_boxes_net, pick_device, register_boxes_mcts_agent
+from alpha_go.boxes.nn_agent import (
+    add_search_flags,
+    load_boxes_net,
+    pick_device,
+    register_boxes_mcts_agent,
+    search_flags,
+)
 
-C_PUCT = 1.5
-LEAF_BATCH_SIZE = 16
 DIRICHLET_ALPHA = 0.5  # ~10 / branching factor on 3x3; noise keeps openings diverse
 DIRICHLET_WEIGHT = 0.25
 
@@ -39,7 +43,9 @@ def main() -> None:
     p.add_argument("--merge_equivalent", type=int, default=0,
                    help="1: one action per independent chain or loop in quiet positions")
     p.add_argument("--cpu", action="store_true")
+    add_search_flags(p)
     args, remaining = p.parse_known_args()
+    mcts_flags, evaluator_flags = search_flags(args)
 
     device = pick_device("cpu" if args.cpu else None)
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
@@ -47,18 +53,18 @@ def main() -> None:
     engine = PlaneBatchedEngine(model, device, batch_size=args.batch_size, batch_timeout_ms=1.0)
     engine.start()
     mcts = dict(
-        num_simulations=args.num_simulations, c_puct=C_PUCT, temperature=args.temperature,
+        num_simulations=args.num_simulations, temperature=args.temperature,
         temperature_cutoff=args.temperature_cutoff, add_noise=True,
-        noise_alpha=DIRICHLET_ALPHA, noise_weight=DIRICHLET_WEIGHT, leaf_batch_size=LEAF_BATCH_SIZE,
+        noise_alpha=DIRICHLET_ALPHA, noise_weight=DIRICHLET_WEIGHT,
         solver_max_undrawn=args.solver_max_undrawn, solver_node_budget=args.solver_node_budget,
-        merge_equivalent=bool(args.merge_equivalent),
+        merge_equivalent=bool(args.merge_equivalent), **mcts_flags,
     )
     black = register_boxes_mcts_agent("sp-black", args.checkpoint, args.rows, args.cols,
-                                      engine=engine, **mcts)
+                                      engine=engine, evaluator_kwargs=evaluator_flags, **mcts)
     white = register_boxes_mcts_agent("sp-white", args.checkpoint, args.rows, args.cols,
-                                      engine=engine, **mcts)
+                                      engine=engine, evaluator_kwargs=evaluator_flags, **mcts)
     print(f"self-play: {args.num_games} games, {args.num_simulations} sims, device={device}, "
-          f"torch={torch.__version__}", flush=True)
+          f"torch={torch.__version__}, search {mcts_flags} {evaluator_flags}", flush=True)
     from alpha_go.self_play import main as self_play_main
     sys.argv = [
         "self_play", "--game", "boxes", "--board_size", str(args.rows),

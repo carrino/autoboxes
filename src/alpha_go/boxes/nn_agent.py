@@ -9,6 +9,7 @@ shaped by the margin-utility term from PLAN.md decision 4).
 # ruff: noqa: N803, N806  (dimension-suffixed tensor names)
 from __future__ import annotations
 
+import argparse
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,6 +61,32 @@ def policy_dict(
 def shaped_value(win: float, expected_margin: float, lam: float, k: float) -> float:
     """Decision 4: u = win_prob + lambda * tanh(expected_margin / k); lambda=0 is plain win prob."""
     return win + lam * math.tanh(expected_margin / k)
+
+
+def add_search_flags(parser: argparse.ArgumentParser) -> None:
+    """The search knobs every Boxes CLI exposes, with the loop's original values as defaults.
+
+    experiments/2026-10-09_01-05-boxes-3x3-search-autoresearch tunes them against the exact
+    oracle; `search_flags` turns the parsed values into the agent and evaluator kwargs.
+    """
+    parser.add_argument("--c_puct", type=float, default=1.5)
+    parser.add_argument("--leaf_batch_size", type=int, default=16,
+                        help="leaves evaluated per search step (smaller: less virtual loss)")
+    parser.add_argument("--policy_temperature", type=float, default=1.0,
+                        help="prior = softmax(logits / T) over legal edges; T < 1 sharpens")
+    parser.add_argument("--margin_utility_lambda", type=float, default=0.0,
+                        help="leaf value = P(win) + lambda * tanh(E[margin] / k)")
+    parser.add_argument("--margin_utility_k", type=float, default=6.0)
+
+
+def search_flags(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
+    """(MCTS kwargs, evaluator kwargs) from `add_search_flags` arguments."""
+    return (
+        dict(c_puct=args.c_puct, leaf_batch_size=args.leaf_batch_size),
+        dict(policy_temperature=args.policy_temperature,
+             margin_utility_lambda=args.margin_utility_lambda,
+             margin_utility_k=args.margin_utility_k),
+    )
 
 
 class BoxesLeafEvaluator:

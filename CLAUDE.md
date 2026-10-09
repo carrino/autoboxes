@@ -144,6 +144,7 @@ uv run -m alpha_go.boxes.arena --rows 5 --a ckpt:$EXP/checkpoints/5x5-solver/ite
 EXP=experiments/2026-10-08_14-42-boxes-3x3-loop && bash $EXP/run_iteration_local.sh 0 5   # 3x3; add --cpu for a smoke run
 ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # 5x5 overnight; outputs tagged 5x5 (checkpoints/5x5, league_state-5x5.json)
 SOLVER_N=24 SP_PROCS=4 TAG=5x5-solver ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # solver arm, 4 self-play processes
+SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5" TAG=5x5-tuned ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # tuned search knobs
 uv run $EXP/analyze.py 5x5                     # report-5x5.md
 uv run $EXP/oracle_eval.py --tag 3x3           # checkpoints vs the exact oracle on late positions
 uv run $EXP/solver_bench.py --tag 5x5 --undrawn 20 24 28 32 --selfplay-only   # picks SOLVER_N

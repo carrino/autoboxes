@@ -36,6 +36,8 @@ solver on in self-play and the arena at 24 undrawn edges (see `solver_bench.py`)
 `MERGE_EQ=1` gives the search one action per independent chain or loop in quiet positions
 (BoxesZero's equivalent edges; value-preserving, tested against the oracle). `BASELINES`
 picks the arena's absolute-scale opponents (default `boxes-greedy,boxes-ab-d4`, both C++).
+`SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5"` passes extra search
+flags (`nn_agent.add_search_flags`) to self-play and the arena.
 Resume by passing the last trained iteration as `<start>`; the script refuses to start from
 a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iteration and scale
 `SP_GAMES` / `SP_SIMS` / `ARENA_GAMES` so one iteration fits your night.
