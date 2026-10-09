@@ -22,6 +22,7 @@ SP_PROCS=${SP_PROCS:-1}  # self-play processes per iteration; each gets SP_WORKE
                          # its own GPU engine, which sidesteps the interpreter lock across threads
 WINDOW=${WINDOW:-4}  # self-play iterations in each training set (replay window)
 TRAIN_EPOCHS=${TRAIN_EPOCHS:-20}  # cap on passes over the window per iteration (the time budget usually binds first)
+TRAIN_ARGS=${TRAIN_ARGS:-}  # extra train.py flags, e.g. "--q-mix 1.0" or "--channels 192 --n-blocks 12"
 TRAIN_MIN_UNDRAWN=${TRAIN_MIN_UNDRAWN:-0}  # train only on positions with at least this many undrawn edges
                                            # (e.g. SOLVER_N - 4: the solver owns the rest in play)
 FEATURES=${FEATURES:-basic}  # net input planes: basic (11) or chains (+10 chain / loop planes, PLAN 4.2);
@@ -61,7 +62,7 @@ echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x
      "solver N=$SOLVER_N (budget $SOLVER_BUDGET nodes; arena N=$ARENA_SOLVER_N), merge equivalent $MERGE_EQ, "\
      "self-play processes $SP_PROCS, "\
      "search args '$SEARCH_ARGS', "\
-     "features $FEATURES, extra data '$EXTRA_DATA', branch from '$START_FROM' at $START_UNDRAWN undrawn "\
+     "features $FEATURES, train args '$TRAIN_ARGS', extra data '$EXTRA_DATA', branch from '$START_FROM' at $START_UNDRAWN undrawn "\
      "($START_FRACTION of games), stop when solved $STOP_WHEN_SOLVED"
 BRANCH_ARGS=""
 if [ -n "$START_FROM" ]; then
@@ -83,7 +84,7 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
     log "Train iter0 from bootstrap games"
     uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "dataset-${TAG}-it0.txt" --iteration 0 \
         --time-budget "$TRAIN_BUDGET" --max-epochs "$TRAIN_EPOCHS" --min-undrawn "$TRAIN_MIN_UNDRAWN" \
-        --features "$FEATURES" $CPU_FLAG 2>&1 | tee "$LOGS/train-it0.log"
+        --features "$FEATURES" $TRAIN_ARGS $CPU_FLAG 2>&1 | tee "$LOGS/train-it0.log"
     log "Arena: iter0 becomes the first champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$ARENA_SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" \
@@ -115,7 +116,8 @@ for ITER in $(seq "$START" "$END"); do
     log "Train iter${NEXT} from $(basename "$DS")"
     uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "$(basename "$DS")" --iteration "$NEXT" \
         --resume-from "$CKPT/iter${ITER}.pt" --time-budget "$TRAIN_BUDGET" --max-epochs "$TRAIN_EPOCHS" \
-        --min-undrawn "$TRAIN_MIN_UNDRAWN" --features "$FEATURES" $CPU_FLAG 2>&1 | tee "$LOGS/train-it${NEXT}.log"
+        --min-undrawn "$TRAIN_MIN_UNDRAWN" --features "$FEATURES" $TRAIN_ARGS $CPU_FLAG \
+        2>&1 | tee "$LOGS/train-it${NEXT}.log"
     t2=$(date +%s)
     log "Arena: iter${NEXT} vs champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \

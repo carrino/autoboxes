@@ -107,6 +107,8 @@ def main() -> None:
     p.add_argument("--min-undrawn", type=int, default=0,
                    help="train only on positions with at least this many undrawn edges "
                         "(a solver run's net never needs the solver zone)")
+    p.add_argument("--channels", type=int, default=None, help="override the net width")
+    p.add_argument("--n-blocks", type=int, default=None, help="override the residual depth")
     p.add_argument("--features", choices=["basic", "chains"], default="basic",
                    help="input planes (encode.py): chains adds the chain / loop structure")
     p.add_argument("--cpu", action="store_true")
@@ -131,7 +133,9 @@ def main() -> None:
     steps_per_epoch = max(1, len(loader))
     max_steps = args.max_epochs * steps_per_epoch
 
-    model_cfg = MODELS.get(rows, MODELS[5])
+    model_cfg = {**MODELS.get(rows, MODELS[5]),
+                 **{k: v for k, v in dict(channels=args.channels, n_blocks=args.n_blocks).items()
+                    if v is not None}}
     model = BoxesNet(rows, cols, features=args.features, **model_cfg).to(device)
     if args.resume_from:
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
@@ -191,6 +195,7 @@ def main() -> None:
         "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),
         "val_value_acc": round(val_eval["value_acc"], 4), "val_positions": len(val_set),
         "q_mix": args.q_mix, "min_undrawn": args.min_undrawn, "features": args.features,
+        "model": model_cfg,
         "steps_completed": step,
         "positions": len(train_set), "elapsed_seconds": round(elapsed), "n_params": n_params,
         "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2**20) if use_amp else 0,

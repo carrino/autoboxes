@@ -49,6 +49,8 @@ must keep.
 
 ### Status (2026-10-08)
 
+`EXPERIMENTS.md` is the run-by-run log with the numbers behind every statement below.
+
 Landed on `claude/awesome-fermi-ygaeuj`: commits 1-4 (Game protocol + Go adapter,
 mover-aware Python backup, reference rules, symmetries), 5 (oracle + sign tests), 6 (C++
 board), 7 (templated C++ search, Go byte-identical), 8 (baselines + arena), 9 (encoder +

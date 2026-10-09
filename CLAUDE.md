@@ -93,8 +93,9 @@ If you ever need to generate a datetime string, format it in PST time zone, i.e.
 # autoboxes fork — Dots and Boxes conventions (appended; everything above is upstream)
 
 This repository is a fork of `ericjang/autogo` that adds Dots and Boxes ("Boxes") as a
-second game. Read `ARCHITECTURE.md` (how upstream works, where Go leaks in) and `PLAN.md`
-(phased plan, shared-file list) before changing anything. `GETTING_STARTED.md` takes a bare
+second game. Read `ARCHITECTURE.md` (how upstream works, where Go leaks in), `PLAN.md`
+(phased plan, shared-file list) and `EXPERIMENTS.md` (every run so far, its numbers and what
+it changed) before changing anything. `GETTING_STARTED.md` takes a bare
 WSL2 shell to the first training run, with the failures seen on the way and their fixes.
 
 ## Mergeability rule (non-negotiable)
