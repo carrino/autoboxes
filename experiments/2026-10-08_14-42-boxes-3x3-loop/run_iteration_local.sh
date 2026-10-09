@@ -13,6 +13,7 @@ END=${2:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 CPU_FLAG=${3:-}
 ROWS=${ROWS:-3}; COLS=${COLS:-$ROWS}; TAG=${TAG:-${ROWS}x${COLS}}
 SOLVER_N=${SOLVER_N:-0}  # exact endgame solver at <= N undrawn edges in self-play and arena (0 = off)
+SOLVER_BUDGET=${SOLVER_BUDGET:-20000}  # nodes the solver may spend per position before the search takes over
 BASELINES=${BASELINES:-boxes-greedy,boxes-ab-d4}  # arena absolute-scale opponents
 MERGE_EQ=${MERGE_EQ:-0}  # 1: one search action per independent chain or loop (equivalent edges)
 SP_PROCS=${SP_PROCS:-1}  # self-play processes per iteration; each gets SP_WORKERS/SP_PROCS threads and
@@ -51,7 +52,8 @@ BASE_GAMES=${BASE_GAMES:-$D_BASE}; ARENA_SIMS=${ARENA_SIMS:-$D_ASIMS}
 echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x $SP_SIMS sims ($SP_WORKERS workers), "\
      "train ${TRAIN_BUDGET}s / <= $TRAIN_EPOCHS epochs over the last $WINDOW iterations (>= $TRAIN_MIN_UNDRAWN undrawn), "\
      "arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
-     "solver N=$SOLVER_N, merge equivalent $MERGE_EQ, self-play processes $SP_PROCS, search args '$SEARCH_ARGS', "\
+     "solver N=$SOLVER_N (budget $SOLVER_BUDGET nodes), merge equivalent $MERGE_EQ, self-play processes $SP_PROCS, "\
+     "search args '$SEARCH_ARGS', "\
      "features $FEATURES, extra data '$EXTRA_DATA'"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
@@ -70,7 +72,7 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
         --features "$FEATURES" $CPU_FLAG 2>&1 | tee "$LOGS/train-it0.log"
     log "Arena: iter0 becomes the first champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
-        --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$SOLVER_N" \
+        --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" \
         --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
 fi
 
@@ -84,7 +86,7 @@ for ITER in $(seq "$START" "$END"); do
     for P in $(seq 0 $((SP_PROCS - 1))); do
         uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
             --num_games "$PER_PROC" --game_index_offset "$((P * PER_PROC))" \
-            --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" \
+            --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" \
             --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
             --save-name "${DATA}/selfplay-it${ITER}" --seed "$((ITER * 100000 + P * 1000))" $CPU_FLAG \
             > "$LOGS/collect-it${ITER}-p${P}.log" 2>&1 &
@@ -104,7 +106,7 @@ for ITER in $(seq "$START" "$END"); do
     log "Arena: iter${NEXT} vs champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG \
-        --solver_max_undrawn "$SOLVER_N" --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
+        --solver_max_undrawn "$SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
         2>&1 | tee "$LOGS/arena-it${NEXT}.log"
     t3=$(date +%s)
     echo "{\"iteration\": $NEXT, \"collect\": $((t1 - t0)), \"train\": $((t2 - t1)), \"arena\": $((t3 - t2))}" \
