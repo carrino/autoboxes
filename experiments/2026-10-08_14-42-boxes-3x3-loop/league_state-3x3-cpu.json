@@ -1,0 +1,42 @@
+{
+  "champion": 1,
+  "history": [
+    {
+      "iteration": 1,
+      "vs_boxes-greedy": {
+        "a": "cand-it1",
+        "b": "boxes-greedy",
+        "board": "3x3",
+        "games": 20,
+        "a_wins": 18,
+        "b_wins": 2,
+        "draws": 0,
+        "a_win_rate": 0.9,
+        "a_win_rate_ci95": "[0.699, 0.972]",
+        "a_mean_margin": 3.0,
+        "a_margin_std": 3.347,
+        "a_sec_per_move": 0.5873,
+        "b_sec_per_move": 0.0001
+      },
+      "vs_boxes-ab-d4": {
+        "a": "cand-it1",
+        "b": "boxes-ab-d4",
+        "board": "3x3",
+        "games": 20,
+        "a_wins": 12,
+        "b_wins": 8,
+        "draws": 0,
+        "a_win_rate": 0.6,
+        "a_win_rate_ci95": "[0.387, 0.781]",
+        "a_mean_margin": 0.0,
+        "a_margin_std": 3.715,
+        "a_sec_per_move": 0.6224,
+        "b_sec_per_move": 0.0018
+      },
+      "vs_champion": null,
+      "promoted": true,
+      "champion_before": null,
+      "champion_after": 1
+    }
+  ]
+}
