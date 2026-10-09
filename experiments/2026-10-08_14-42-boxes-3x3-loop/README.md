@@ -7,10 +7,11 @@ setting `ROWS=5`. Everything runs with plain `uv run`; no cluster, SSH or /nfs. 
 uses the forced-move collapse (`BoxesSearchState`), so captures and chain take-outs are not
 searched edge by edge.
 
-Every output is tagged by board size (`TAG=<rows>x<cols>`): game data under
+Every output is tagged (`TAG`, default `<rows>x<cols>`): game data under
 `$GAME_DATA_DIR/experiments/<this folder>/$TAG/`, checkpoints under `checkpoints/$TAG/`,
 logs under `logs/$TAG/`, timing under `timing/$TAG/`, manifests `dataset-$TAG-itN.txt`,
-league state `league_state-$TAG.json`, report `report-$TAG.md`. 3x3 and 5x5 runs never collide.
+league state `league_state-$TAG.json`, report `report-$TAG.md`. 3x3 and 5x5 runs never collide,
+and `TAG=5x5-probe` keeps a timing probe apart from the real 5x5 run.
 
 ## Run
 
@@ -19,13 +20,17 @@ export GAME_DATA_DIR=$HOME/autoboxes-data/game_data_root   # WSL filesystem, nev
 EXP=experiments/<this folder>
 bash $EXP/run_iteration_local.sh 0 5              # 3x3, iterations 0..5 on the GPU
 ROWS=5 bash $EXP/run_iteration_local.sh 0 20      # 5x5 overnight (128ch x 10 blocks)
-bash $EXP/run_iteration_local.sh 0 1 --cpu        # tiny CPU smoke run (see SMOKE_* in the script)
+bash $EXP/run_iteration_local.sh 0 1 --cpu        # tiny CPU smoke run (smoke budgets)
+ROWS=5 TAG=5x5-probe BOOT_GAMES=50 SP_GAMES=16 SP_SIMS=100 TRAIN_BUDGET=60 ARENA_GAMES=8 BASE_GAMES=2 \
+    bash $EXP/run_iteration_local.sh 0 0          # 5x5 GPU timing probe, one iteration, kept apart by TAG
 uv run $EXP/analyze.py 3x3                        # report-3x3.md from league_state-3x3.json + timing/3x3/
 ```
 
+Every budget (`BOOT_GAMES SP_GAMES SP_SIMS SP_WORKERS TRAIN_BUDGET ARENA_GAMES BASE_GAMES
+ARENA_SIMS`) can be overridden from the environment; the script prints the budgets it uses.
 Resume by passing the last trained iteration as `<start>`; the script refuses to start from
 a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iteration and scale
-`SP_GAMES` / `SP_SIMS` / `ARENA_GAMES` in the script so one iteration fits your night.
+`SP_GAMES` / `SP_SIMS` / `ARENA_GAMES` so one iteration fits your night.
 
 ## Pieces
 
@@ -42,7 +47,7 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   promote at >= 55% (`--threshold`); also reports candidate vs `boxes-greedy` and
   `boxes-ab-d4`; appends to `league_state-<tag>.json`.
 - `run_iteration_local.sh <start> <end> [--cpu]` — the loop; `ROWS`/`COLS` pick the board,
-  `--cpu` switches to the SMOKE_* budgets so the pipeline can be exercised anywhere.
+  `TAG` the output name, `--cpu` switches to smoke budgets so the pipeline runs anywhere.
 - `analyze.py <tag>` — tabulates `league_state-<tag>.json` and `timing/<tag>/` into `report-<tag>.md`.
 
 ## Budgets (GPU defaults)

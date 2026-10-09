@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local loop: bootstrap -> train iter0 -> [collect-it{N} -> train-it{N+1} -> promote] for N in start..end.
-# Usage: [ROWS=5 [COLS=5]] bash run_iteration_local.sh <start_iter> <end_iter> [--cpu]
-# Everything a run writes is tagged by board size (TAG=<rows>x<cols>): game data under
+# Usage: [ROWS=5 [COLS=5] [TAG=5x5-probe] [SP_GAMES=.. SP_SIMS=.. ...]] bash run_iteration_local.sh <start_iter> <end_iter> [--cpu]
+# Everything a run writes is tagged (TAG defaults to <rows>x<cols>): game data under
 # $GAME_DATA_DIR/experiments/<this folder>/$TAG/, checkpoints/$TAG/, logs/$TAG/, timing/$TAG/,
 # dataset-$TAG-itN.txt and league_state-$TAG.json, so 3x3 and 5x5 runs never collide.
 set -euo pipefail
@@ -11,25 +11,30 @@ EXP_NAME="$(basename "$EXP_DIR")"
 START=${1:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 END=${2:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 CPU_FLAG=${3:-}
-ROWS=${ROWS:-3}; COLS=${COLS:-$ROWS}; TAG="${ROWS}x${COLS}"
+ROWS=${ROWS:-3}; COLS=${COLS:-$ROWS}; TAG=${TAG:-${ROWS}x${COLS}}
 SIZE_ARGS="--rows $ROWS --cols $COLS"
+TAG_ARGS="--tag $TAG"
 CKPT="$EXP_DIR/checkpoints/$TAG"
 LOGS="$EXP_DIR/logs/$TAG"
 export GAME_DATA_DIR="${GAME_DATA_DIR:-$HOME/autoboxes-data/game_data_root}"
 mkdir -p "$CKPT" "$LOGS" "$EXP_DIR/timing/$TAG" "$GAME_DATA_DIR"
 
-# GPU budgets (3x3: minutes per iteration; 5x5: read timing/5x5/it1.json and scale these so
-# one iteration fits the time you have). The --cpu smoke profile proves the pipeline end to
-# end in a few minutes.
-BOOT_GAMES=400; SP_GAMES=200; SP_SIMS=200; SP_WORKERS=8; TRAIN_BUDGET=180; ARENA_GAMES=100; BASE_GAMES=40; ARENA_SIMS=200
-if [ "$ROWS" -ge 5 ]; then
-    # boxes-ab-d4 is pure Python and costs ~2 s/move on 5x5, so the baseline matches stay small.
-    BOOT_GAMES=600; SP_GAMES=400; SP_SIMS=400; TRAIN_BUDGET=300; ARENA_GAMES=60; BASE_GAMES=10; ARENA_SIMS=400
-fi
+# Budget defaults: --cpu smoke (proves the pipeline in minutes), 5x5 overnight, 3x3 (minutes per
+# iteration). Any budget can be overridden from the environment, e.g. a 5x5 timing probe:
+#   ROWS=5 TAG=5x5-probe BOOT_GAMES=50 SP_GAMES=16 SP_SIMS=100 TRAIN_BUDGET=60 ARENA_GAMES=8 BASE_GAMES=2 bash run_iteration_local.sh 0 0
+# boxes-ab-d4 is pure Python and costs ~2 s/move on 5x5, so its baseline matches stay small.
 if [ "$CPU_FLAG" = "--cpu" ]; then
-    BOOT_GAMES=${SMOKE_BOOT_GAMES:-30}; SP_GAMES=${SMOKE_SP_GAMES:-12}; SP_SIMS=${SMOKE_SP_SIMS:-24}; SP_WORKERS=2
-    TRAIN_BUDGET=${SMOKE_TRAIN_BUDGET:-20}; ARENA_GAMES=${SMOKE_ARENA_GAMES:-6}; BASE_GAMES=${SMOKE_BASE_GAMES:-4}; ARENA_SIMS=24
+    D_BOOT=30; D_SP=12; D_SIMS=24; D_WORKERS=2; D_TRAIN=20; D_ARENA=6; D_BASE=4; D_ASIMS=24
+elif [ "$ROWS" -ge 5 ]; then
+    D_BOOT=600; D_SP=400; D_SIMS=400; D_WORKERS=8; D_TRAIN=300; D_ARENA=60; D_BASE=10; D_ASIMS=400
+else
+    D_BOOT=400; D_SP=200; D_SIMS=200; D_WORKERS=8; D_TRAIN=180; D_ARENA=100; D_BASE=40; D_ASIMS=200
 fi
+BOOT_GAMES=${BOOT_GAMES:-$D_BOOT}; SP_GAMES=${SP_GAMES:-$D_SP}; SP_SIMS=${SP_SIMS:-$D_SIMS}
+SP_WORKERS=${SP_WORKERS:-$D_WORKERS}; TRAIN_BUDGET=${TRAIN_BUDGET:-$D_TRAIN}; ARENA_GAMES=${ARENA_GAMES:-$D_ARENA}
+BASE_GAMES=${BASE_GAMES:-$D_BASE}; ARENA_SIMS=${ARENA_SIMS:-$D_ASIMS}
+echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x $SP_SIMS sims ($SP_WORKERS workers), "\
+     "train ${TRAIN_BUDGET}s, arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
 
@@ -42,10 +47,10 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
     fi
     echo "${DATA}/bootstrap-it0" > "$EXP_DIR/dataset-${TAG}-it0.txt"
     log "Train iter0 from bootstrap games"
-    uv run "$EXP_DIR/train.py" $SIZE_ARGS --dataset-txt "dataset-${TAG}-it0.txt" --iteration 0 \
+    uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "dataset-${TAG}-it0.txt" --iteration 0 \
         --time-budget "$TRAIN_BUDGET" $CPU_FLAG 2>&1 | tee "$LOGS/train-it0.log"
     log "Arena: iter0 becomes the first champion"
-    uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
+    uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
 fi
 
@@ -62,12 +67,12 @@ for ITER in $(seq "$START" "$END"); do
     { echo "# ${EXP_NAME} ${TAG} iter${NEXT} dataset (auto-generated): last 4 self-play iterations"
       for K in $(seq $((ITER > 3 ? ITER - 3 : 0)) "$ITER"); do echo "${DATA}/selfplay-it${K}"; done; } > "$DS"
     log "Train iter${NEXT} from $(basename "$DS")"
-    uv run "$EXP_DIR/train.py" $SIZE_ARGS --dataset-txt "$(basename "$DS")" --iteration "$NEXT" \
+    uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "$(basename "$DS")" --iteration "$NEXT" \
         --resume-from "$CKPT/iter${ITER}.pt" --time-budget "$TRAIN_BUDGET" $CPU_FLAG \
         2>&1 | tee "$LOGS/train-it${NEXT}.log"
     t2=$(date +%s)
     log "Arena: iter${NEXT} vs champion"
-    uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \
+    uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG \
         2>&1 | tee "$LOGS/arena-it${NEXT}.log"
     t3=$(date +%s)
