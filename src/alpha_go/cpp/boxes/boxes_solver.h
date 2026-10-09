@@ -19,6 +19,9 @@ namespace alpha_go {
 // table keyed on the symmetry-canonical mask (bounded, replace-always, so its byte size
 // is a constructor argument), one representative edge per independent chain or loop,
 // and the exact value of simple loony endgames by recursion over component sizes.
+// Move ordering (exactness unaffected): the table's remembered best move first, then safe
+// moves by a history heuristic, loony moves last; value() drives the search with MTD(f)
+// null windows around the table's last value.
 // value_within() stops after a node budget so the search can use it at every late leaf.
 // One instance per thread: the table is not synchronised.
 class BoxesSolver {
@@ -37,6 +40,7 @@ public:
 
     uint64_t canonical(uint64_t mask) const;
     int loony_value(std::vector<int> chains, std::vector<int> loops);
+    void set_mtdf(bool on) { use_mtdf_ = on; }  // value() by MTD(f) (default) or one full window
 
     std::size_t table_entries() const { return table_.size(); }
     std::size_t table_bytes() const { return table_.size() * sizeof(Entry); }
@@ -49,12 +53,15 @@ private:
         uint64_t key;
         int16_t value;
         int8_t flag;
+        int8_t move;  // best move at this node, -1 if none
     };
 
+    int mtdf(uint64_t mask);
     int search(uint64_t mask, int alpha, int beta);
     int child_after_take(uint64_t quiet, const chains::Decision& decision, int alpha, int beta);
     std::vector<int> moves(uint64_t quiet, const std::vector<int>& deg,
-                           const std::vector<chains::Component>& comps) const;
+                           const std::vector<chains::Component>& comps, int first) const;
+    void reward(int edge, uint64_t quiet);
     std::size_t index(uint64_t key) const {
         return static_cast<std::size_t>((key * 0x9E3779B97F4A7C15ULL) >> (64 - log2_size_));
     }
@@ -63,12 +70,14 @@ private:
     uint64_t full_;
     std::vector<std::vector<int>> perms_;  // edge permutation per lattice transform
     std::vector<Entry> table_;
+    std::vector<uint32_t> history_;  // per edge: weighted beta cutoffs (halved when large)
     int log2_size_ = 0;
     uint64_t nodes_ = 0;
     uint64_t budget_ = 0;
     bool aborted_ = false;
     bool use_leaf_ = true;
     bool use_equivalence_ = true;
+    bool use_mtdf_ = true;
     std::map<std::pair<std::vector<int>, std::vector<int>>, int> loony_cache_;
 };
 

@@ -247,6 +247,8 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         .def("best_edge_mask", &alpha_go::BoxesSolver::best_edge_mask, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
              "best_edge from an edge mask (works for Python boards too).")
         .def("canonical", &alpha_go::BoxesSolver::canonical, py::arg("mask"))
+        .def("set_mtdf", &alpha_go::BoxesSolver::set_mtdf, py::arg("on"),
+             "value() by MTD(f) null windows (default) or by one full-window search.")
         .def("loony_value", &alpha_go::BoxesSolver::loony_value, py::arg("chains"), py::arg("loops"),
              "Exact value of a simple loony endgame from its chain and loop sizes.")
         .def("table_entries", &alpha_go::BoxesSolver::table_entries)

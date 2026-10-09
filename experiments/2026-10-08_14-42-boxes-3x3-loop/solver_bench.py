@@ -58,6 +58,7 @@ def main() -> None:
     p.add_argument("--selfplay-only", action="store_true",
                    help="ignore bootstrap games (random play gives easy endgames)")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--mtdf", type=int, default=1, help="0: one full-window search per position")
     args = p.parse_args()
     size = re.match(r"(\d+)x(\d+)", args.tag or "")
     rows = args.rows or (int(size.group(1)) if size else 5)
@@ -77,6 +78,7 @@ def main() -> None:
             print(f"N={undrawn}: no positions")
             continue
         solver = alpha_go_cpp.BoxesSolver(rows, cols, args.table_entries)  # fresh table per N
+        solver.set_mtdf(bool(args.mtdf))
         ms, nodes = [], []
         for mask in masks:
             t0 = time.perf_counter()

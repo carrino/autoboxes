@@ -94,6 +94,22 @@ midgame value stayed at chance (sign 0.54-0.57) through three iterations of the 
 pipeline, so the earlier climb on its own games was memorisation; `solver_label.py` plus
 `EXTRA_DATA` give the value head exact supervision on positions the solver settles offline.
 
+Where strength comes from (oracle on 26..32 undrawn, positions from another run): every
+static evaluation reads the band at chance or close to it (the net 0.55, alpha-beta's own
+value 0.55 at depth 2 and 4, 0.61 at depth 6), the net's search alone picks the optimal move
+0.54 of the time, the same search with the solver two plies below 0.71, and 1000 instead of
+300 simulations adds only 0.03. The midgame is a lookahead problem; the net's useful output
+there is the policy that aims the search, and the exact horizon is the lever. The solver's
+cost on real self-play games grows about 2x per undrawn edge (bench on the solver run's own
+games: 29 settles 85% of positions within 20k nodes, 32 only 33%) and 8x from 32 to 34 on
+the local hard set; the table-move / history ordering and MTD(f) driver take 20-25% off at
+every depth. The next exact gain needs structure, not search tuning: Nimstring values of
+independent regions (the control fight, nim-sum over components) as the evaluation at the
+solver's frontier and as move ordering, which is what the strong 5x5 programs are built on.
+Goal set by the author: stronger than every 5x5 engine before moving to 7x7, which needs
+the engine bridge (§3) to measure, the Nimstring evaluation to match them, and the learned
+opening to beat them.
+
 ### 2.1 Commit plan
 
 | # | commit | new files | shared files touched |
