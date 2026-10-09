@@ -10,6 +10,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
+import alpha_go.boxes.nn_agent  # noqa: F401  (registers boxes-mcts-* alongside the baselines)
 from alpha_go.agents.base import Agent, register_agent
 from alpha_go.boxes.rules import BoxesGeometry, geometry
 
