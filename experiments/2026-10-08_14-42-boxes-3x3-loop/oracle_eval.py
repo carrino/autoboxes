@@ -8,7 +8,9 @@ with a forced capture are played without a search and would count as optimal for
 Per checkpoint this reports, on the same sampled positions:
 
   policy_optimal  the raw net's argmax over legal edges is an optimal edge
-  search_optimal  the MCTS agent's move (forced-move collapse, temperature 0) is optimal
+  search_optimal  the MCTS agent's move (forced-move collapse, temperature 0) is optimal;
+                  with --solver_max_undrawn the agent also has the solver, as in play, so the
+                  column measures the agent's midgame strength rather than the net's alone
   value_sign      the net's P(win) > 0.5 agrees with the sign of the oracle's final margin
   margin_mae      |E[margin] - oracle final margin|
 
@@ -126,6 +128,10 @@ def main() -> None:
     p.add_argument("--max-undrawn", type=int, default=24)
     p.add_argument("--num-positions", type=int, default=300)
     p.add_argument("--num_simulations", type=int, default=100)
+    p.add_argument("--solver_max_undrawn", type=int, default=0,
+                   help="give the scored search agent the exact solver at <= N undrawn edges, "
+                        "as in play; 0 scores the net's search alone")
+    p.add_argument("--solver_node_budget", type=int, default=20_000)
     p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4")
     p.add_argument("--value-depths", type=int, nargs="*", default=[2, 4],
                    help="also score the C++ alpha-beta's own value at these depths (value "
@@ -191,7 +197,8 @@ def main() -> None:
         argmax, win, expected = raw_net(model, device, boards)
         agent = BoxesMCTSAgent(BoxesLeafEvaluator(model, device, **evaluator_flags),
                                temperature=0.0, num_simulations=args.num_simulations,
-                               **mcts_flags)
+                               solver_max_undrawn=args.solver_max_undrawn,
+                               solver_node_budget=args.solver_node_budget, **mcts_flags)
         row = {
             "agent": f"iter{it}", "iteration": it,
             "policy_optimal": round(optimal_rate(argmax), 4),
@@ -208,7 +215,7 @@ def main() -> None:
     out.parent.mkdir(exist_ok=True)
     fields = ["agent", "iteration", "policy_optimal", "search_optimal", "value_sign", "margin_mae",
               "num_positions", "min_undrawn", "max_undrawn", "num_simulations", "search_flags",
-              "positions_tag"]
+              "positions_tag", "solver_max_undrawn"]
     with out.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
@@ -217,7 +224,8 @@ def main() -> None:
                              "min_undrawn": args.min_undrawn, "max_undrawn": args.max_undrawn,
                              "num_simulations": args.num_simulations,
                              "search_flags": json.dumps({**mcts_flags, **evaluator_flags}),
-                             "positions_tag": positions_tag})
+                             "positions_tag": positions_tag,
+                             "solver_max_undrawn": args.solver_max_undrawn})
     print(f"wrote {out}")
 
 
