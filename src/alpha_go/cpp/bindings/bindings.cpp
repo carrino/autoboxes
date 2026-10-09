@@ -7,6 +7,7 @@
 
 #include "boxes/boxes_game.h"
 #include "boxes/boxes_search.h"
+#include "boxes/boxes_alphabeta.h"
 #include "boxes/boxes_solver.h"
 #include "go/go_game.h"
 #include "mcts/mcts.h"
@@ -248,6 +249,21 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         .def("table_entries", &alpha_go::BoxesSolver::table_entries)
         .def("table_bytes", &alpha_go::BoxesSolver::table_bytes)
         .def("nodes", &alpha_go::BoxesSolver::nodes, "Nodes visited by the last call.");
+
+    // BoxesAlphaBeta binding: depth-limited alpha-beta baseline (port of agents.AlphaBeta)
+    py::class_<alpha_go::BoxesAlphaBeta>(m, "BoxesAlphaBeta")
+        .def(py::init<int, int, std::size_t>(), py::arg("rows"), py::arg("cols") = 0,
+             py::arg("table_entries") = std::size_t{1} << 20,
+             "Depth-limited negamax on the remaining margin with a greedy-haul leaf (one per thread).")
+        .def("value", &alpha_go::BoxesAlphaBeta::value, py::arg("mask"), py::arg("depth"),
+             "Exact depth-limited value for the side to move (captures do not consume depth).")
+        .def("best_edge", &alpha_go::BoxesAlphaBeta::best_edge, py::arg("mask"), py::arg("depth"),
+             py::arg("seed"), "Highest-valued edge; ties broken by the seeded move order.")
+        .def("greedy_haul", &alpha_go::BoxesAlphaBeta::greedy_haul, py::arg("mask"))
+        .def("classify", &alpha_go::BoxesAlphaBeta::classify, py::arg("mask"), py::arg("edge"),
+             "0 capture, 1 safe, 2 loony.")
+        .def("nodes", &alpha_go::BoxesAlphaBeta::nodes)
+        .def("table_bytes", &alpha_go::BoxesAlphaBeta::table_bytes);
 
     // BoxesSearchState binding: forced-move collapse around a BoxesBoard
     py::class_<alpha_go::BoxesSearchState>(m, "BoxesSearchState")

@@ -84,7 +84,8 @@ class AlphaBeta:
     moves keep the turn and do not consume depth (they shrink the board, so the search
     terminates). At the depth limit the position is scored by the greedy haul available
     to the side to move. The table is keyed on the edge mask alone, which identifies the
-    remaining game regardless of the score so far; `tt_entries` bounds its size.
+    remaining game regardless of the score so far; `tt_entries` bounds its size. This is
+    the Python reference for `alpha_go_cpp.BoxesAlphaBeta`, which the registered agents use.
     """
 
     EXACT, LOWER, UPPER = 0, 1, 2
@@ -116,7 +117,8 @@ class AlphaBeta:
             return greedy_haul(board, geo)
         key = int(board.edges())
         hit = self.tt.get(key)
-        if hit is not None and hit[0] >= depth:
+        if hit is not None and hit[0] == depth:  # exact depth only: the value is then
+            # the depth-limited minimax value, independent of move order (and of the C++ port)
             stored_depth, value, flag = hit
             if flag == self.EXACT:
                 return value
@@ -165,15 +167,19 @@ class AlphaBeta:
 
 
 class BoxesAlphaBetaAgent(Agent):
-    """Alpha-beta baseline; subclasses fix the depth for the registry."""
+    """Alpha-beta baseline on the C++ searcher (`alpha_go_cpp.BoxesAlphaBeta`, the port of
+    `AlphaBeta` above, which stays as its reference); subclasses fix the depth."""
 
     depth = 4
 
     def __init__(self) -> None:
-        self.searcher = AlphaBeta(self.depth)
+        self.searcher: Any = None  # built on first use (needs the board size)
 
     def select_move(self, board: Any, seed: int) -> tuple[int, int]:
-        return lattice(board, self.searcher.best_edge(board, random.Random(seed)))
+        if self.searcher is None:
+            self.searcher = alpha_go_cpp.BoxesAlphaBeta(int(board.rows()), int(board.cols()))
+        mask = int(board.edges() if callable(board.edges) else board.edges)
+        return lattice(board, int(self.searcher.best_edge(mask, self.depth, seed)))
 
 
 for _depth in (2, 4, 6):

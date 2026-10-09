@@ -89,7 +89,27 @@ class TestAgents:
         agent = get_agent(name)
         board = alpha_go_cpp.BoxesBoard(2, 3)
         assert board.is_legal(*agent.select_move(board, 1))
-        assert agent.searcher.depth == int(name[-1])
+        assert agent.depth == int(name[-1])
+
+    @pytest.mark.parametrize("rows,cols", [(2, 3), (3, 3)])
+    def test_cpp_alpha_beta_matches_python(self, rows: int, cols: int) -> None:
+        # Same depth-limited value (captures free, greedy-haul leaf), whatever the move order;
+        # and the same leaf and move classes.
+        rng = random.Random(rows * 7 + cols)
+        geo = geometry(rows, cols)
+        for _ in range(25):
+            board = alpha_go_cpp.BoxesBoard(rows, cols)
+            for _ in range(rng.randint(0, board.num_edges() - 2)):
+                board.play_edge(rng.choice(board.get_legal_moves_flat()))
+            cpp = alpha_go_cpp.BoxesAlphaBeta(rows, cols, 1 << 16)
+            assert cpp.greedy_haul(board.edges()) == greedy_haul(board, geo)
+            for e in board.get_legal_moves_flat():
+                assert cpp.classify(board.edges(), e) == classify(board, geo, e)
+            for depth in (1, 2, 3):
+                py = AlphaBeta(depth)
+                py.geo = geo
+                expected = py.search(board, depth, -AlphaBeta.INF, AlphaBeta.INF, random.Random(1))
+                assert cpp.value(board.edges(), depth) == expected, (board.render(), depth)
 
     @pytest.mark.parametrize("name", ["boxes-greedy-s24", "boxes-ab-d2-s24"])
     def test_solver_backed_baselines(self, name: str) -> None:
