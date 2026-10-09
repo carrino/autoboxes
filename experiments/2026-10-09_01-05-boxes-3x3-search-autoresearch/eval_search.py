@@ -8,7 +8,10 @@ runs are comparable. Positions with a forced capture are played without search, 
 game, so only positions where the search decides (quiet, or the take-all / keep-control
 choice) are sampled.
 
-  uv run eval_search.py            # prints ===RESULT=== {search_optimal, root_q_sign, ...}
+  uv run eval_search.py [--var '{"c_puct": 1.0}']   # prints ===RESULT=== {search_optimal, ...}
+
+run_loop.py drives the keep / discard loop by passing one change at a time through --var,
+so VAR below is the current best and every run is reproducible from runs.jsonl.
 """
 from __future__ import annotations
 
@@ -30,7 +33,7 @@ LOOP = Path(__file__).resolve().parents[1] / "2026-10-08_14-42-boxes-3x3-loop"
 sys.path.insert(0, str(LOOP))
 from oracle_eval import agent_moves, late_positions  # noqa: E402
 
-CKPT = LOOP / "checkpoints" / "3x3-cpu" / "iter0.pt"
+CKPT = LOOP / "checkpoints" / "3x3-cpu" / "iter5.pt"  # the CPU run's champion
 GAME_DATA_DIR = Path(os.environ.get("GAME_DATA_DIR", "/nfs/game_data_root"))
 GAMES = GAME_DATA_DIR / "experiments" / LOOP.name / "3x3-cpu"
 N_POSITIONS = 600
@@ -47,6 +50,10 @@ EVALUATOR_KEYS = ("policy_temperature", "margin_utility_lambda", "margin_utility
 
 
 def main() -> None:
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("--var", default="{}", help="JSON overrides of VAR for this run")
+    VAR.update(json.loads(p.parse_args().var))
     torch.set_num_threads(2)
     device = torch.device("cpu")
     rng = random.Random(SEED)
