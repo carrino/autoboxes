@@ -196,6 +196,18 @@ class TestAgent:
 
 
 class TestDataset:
+    def test_min_undrawn_keeps_a_prefix_of_every_game(self, tmp_path: Path) -> None:
+        for seed in range(2):
+            record = play_game(get_agent("boxes-random"), get_agent("boxes-random"),
+                               board_size=3, seed=seed, max_moves=24, game=get_game("boxes"))
+            save_game_data(record, tmp_path, seed, "t")
+        assert len(BoxesDataset([tmp_path])) == 48
+        ds = BoxesDataset([tmp_path], min_undrawn=10)  # positions 0..14 of each 24-edge game
+        assert ds.cumsum.tolist() == [0, 15, 30] and len(ds) == 30
+        train, val = ds.split(0.5, seed=0)
+        assert len(train) + len(val) == 30 and val.min_undrawn == 10
+        assert ds[14]["planes"].shape == (11, 7, 7)
+
     def test_samples_from_searched_and_unsearched_games(self, tmp_path: Path, monkeypatch) -> None:
         monkeypatch.setattr(self_play, "GAME_DATA_DIR", tmp_path)
         monkeypatch.setattr(sys, "argv", [

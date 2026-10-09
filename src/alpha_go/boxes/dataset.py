@@ -5,7 +5,9 @@ Each NPZ holds one game: `boards` (n, H, W) lattice grids before each move, `to_
 by 3), and, when the agents searched, `mcts_visits` (n, E) with `mcts_temperatures` and
 `mcts_root_values`. A sample is the encoded planes, the policy target (the normalised visit
 distribution, or a label-smoothed one-hot of the played edge without search data), the
-final margin for the side to move, and the root value for the z/Q mix option.
+final margin for the side to move, and the root value for the z/Q mix option. `min_undrawn`
+drops the positions with fewer undrawn edges than that: in a solver run those are the
+solver's in play, and the net's capacity is better spent above the solver zone.
 """
 from __future__ import annotations
 
@@ -24,8 +26,9 @@ from alpha_go.self_play import parse_score_from_result
 class BoxesDataset(Dataset[dict[str, Any]]):
     def __init__(self, data_dirs: list[str | Path], smooth_eps: float = 0.1,
                  games: list[dict[str, Any]] | None = None,
-                 like: BoxesDataset | None = None) -> None:
+                 like: BoxesDataset | None = None, min_undrawn: int = 0) -> None:
         self.smooth_eps = smooth_eps
+        self.min_undrawn: int = like.min_undrawn if like is not None else min_undrawn
         paths = [p for d in data_dirs for p in sorted(Path(d).rglob("*.npz"))]
         self.games = [dict(np.load(p)) for p in paths] if games is None else games
         assert self.games or like is not None, f"no .npz games under {data_dirs}"
@@ -35,7 +38,10 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             assert like is not None
             self.rows, self.cols = like.rows, like.cols
         self.geo = geometry(self.rows, self.cols)
-        self.cumsum = np.cumsum([0] + [int(g["num_moves"]) for g in self.games])
+        # Position k of a game has num_edges - k undrawn edges, so the kept positions of every
+        # game are a prefix of its moves.
+        keep = self.geo.num_edges - self.min_undrawn + 1
+        self.cumsum = np.cumsum([0] + [min(int(g["num_moves"]), keep) for g in self.games])
         self.num_with_mcts = sum("mcts_visits" in g for g in self.games)
 
     def split(self, val_fraction: float, seed: int = 0) -> tuple[BoxesDataset, BoxesDataset]:

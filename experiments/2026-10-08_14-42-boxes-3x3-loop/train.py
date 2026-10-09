@@ -100,6 +100,9 @@ def main() -> None:
                    help="share of games held out for validation metrics (0 = none)")
     p.add_argument("--q-mix", type=float, default=0.0,
                    help="weight of the root Q in the P(win) target (0 = pure outcome)")
+    p.add_argument("--min-undrawn", type=int, default=0,
+                   help="train only on positions with at least this many undrawn edges "
+                        "(a solver run's net never needs the solver zone)")
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
@@ -107,11 +110,11 @@ def main() -> None:
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
     rows, cols = args.rows, args.cols or args.rows
     t0 = time.time()
-    dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt))
+    dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt), min_undrawn=args.min_undrawn)
     assert (dataset.rows, dataset.cols) == (rows, cols), (dataset.rows, dataset.cols)
-    print(f"dataset: {len(dataset):,} positions from {len(dataset.games)} games "
-          f"({dataset.num_with_mcts} searched), {dataset.footprint_bytes() / 1e6:.1f} MB in RAM, "
-          f"loaded in {time.time() - t0:.1f}s")
+    print(f"dataset: {len(dataset):,} positions with >= {args.min_undrawn} undrawn edges from "
+          f"{len(dataset.games)} games ({dataset.num_with_mcts} searched), "
+          f"{dataset.footprint_bytes() / 1e6:.1f} MB in RAM, loaded in {time.time() - t0:.1f}s")
     train_set, val_set = dataset.split(args.val_fraction, seed=args.iteration)
     loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
                         drop_last=len(train_set) > BATCH_SIZE)
@@ -179,7 +182,7 @@ def main() -> None:
         "train_value_acc": round(train_eval["value_acc"], 4),
         "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),
         "val_value_acc": round(val_eval["value_acc"], 4), "val_positions": len(val_set),
-        "q_mix": args.q_mix, "steps_completed": step,
+        "q_mix": args.q_mix, "min_undrawn": args.min_undrawn, "steps_completed": step,
         "positions": len(train_set), "elapsed_seconds": round(elapsed), "n_params": n_params,
         "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2**20) if use_amp else 0,
         "checkpoint": str(ckpt_path), "resumed_from": args.resume_from or "",
