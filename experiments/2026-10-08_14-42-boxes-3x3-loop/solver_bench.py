@@ -16,11 +16,15 @@ import csv
 import os
 import random
 import re
+import sys
 import time
 from pathlib import Path
 
 import alpha_go_cpp
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from oracle_eval import game_moves  # noqa: E402
 
 EXP_DIR = Path(__file__).resolve().parent
 EXP_NAME = EXP_DIR.name
@@ -34,9 +38,7 @@ def positions_with(game_dir: Path, rows: int, cols: int, undrawn: int, n: int,
     pattern = "selfplay-*/**/*.npz" if selfplay_only else "**/*.npz"
     for path in sorted(game_dir.glob(pattern)):
         board = alpha_go_cpp.BoxesBoard(rows, cols)
-        for row, col in np.load(path)["moves"]:
-            if row < 0:
-                break
+        for row, col in game_moves(np.load(path)):
             if board.num_edges() - board.move_count() == undrawn:
                 masks.add(board.edges())
             board.play(int(row), int(col))

@@ -73,6 +73,8 @@ class GameRecord:
         white_checkpoint_path: Optional checkpoint path for white agent.
         game: Game name ("go" or "boxes"); "black"/"white" mean first/second player.
         to_play: Side to move (0 / 1) before each move, aligned with `boards`.
+        start_moves: Moves played before the first recorded position (a game branched from
+            a stored position); `moves` and `boards` cover only what was played after.
     """
     board_size: int
     black_agent: str
@@ -81,6 +83,7 @@ class GameRecord:
     boards: list[NDArray[Any]] = field(default_factory=list)
     game: str = "go"
     to_play: list[int] = field(default_factory=list)
+    start_moves: list[tuple[int, int]] = field(default_factory=list)
     move_metrics: list[MoveMetric] = field(default_factory=list)
     winner: int | None = None
     result: str = ""
@@ -177,6 +180,8 @@ def play_game(
     white_is_teacher: bool = False,
     game: Game | None = None,
     board_cols: int | None = None,
+    start_moves: list[tuple[int, int]] | None = None,
+    stop_when_solved: bool = False,
 ) -> GameRecord:
     """Play a single game between two agents.
 
@@ -194,6 +199,10 @@ def play_game(
         white_agent_name: Override name for white agent (defaults to class name).
         game: Game to play (default Go). Boards and dense action vectors come from it.
         board_cols: Columns for rectangular boards (Boxes); None means square.
+        start_moves: Moves to play before recording starts (branch from a stored position).
+        stop_when_solved: End the game, with the exact outcome, as soon as the agent to move
+            reports one (`last_search_result.final_margin`, the Boxes solver); the search
+            budget then goes to the undecided part of the game only.
 
     Returns:
         GameRecord with game data.
@@ -203,6 +212,8 @@ def play_game(
     """
     game = game or get_game("go")
     board = game.new_board(board_size, komi, board_cols)
+    for row, col in start_moves or []:
+        board.play(row, col)
 
     # Get agent names and checkpoint paths
     black_name = black_agent_name or type(black_agent).__name__
@@ -218,6 +229,7 @@ def play_game(
         white_checkpoint_path=white_ckpt,
         komi=komi,
         game=game.name,
+        start_moves=list(start_moves or []),
     )
 
     # Initialize agents
@@ -239,6 +251,9 @@ def play_game(
             _t0 = time.perf_counter()
             move = current_agent.select_move(board, seed + move_count)
             _dt = time.perf_counter() - _t0
+            # Exact final margin for the side to move when its solver settled the position.
+            solved_margin = getattr(getattr(current_agent, "last_search_result", None),
+                                    "final_margin", None)
             if current_player == BLACK:
                 record.black_move_seconds += _dt
                 record.black_move_count += 1
@@ -348,8 +363,17 @@ def play_game(
             record.moves.append(move)
             move_count += 1
 
-        # Score the game (unless already decided by resignation)
-        if record.termination != "resign":
+            if stop_when_solved and solved_margin is not None:
+                record.num_moves = move_count
+                record.termination = "solved"
+                score = solved_margin if current_player == BLACK else -solved_margin
+                record.winner = BLACK if score > 0 else (WHITE if score < 0 else None)
+                record.result = ("Draw" if score == 0
+                                 else f"{'B' if score > 0 else 'W'}+{abs(score):.1f}")
+                break
+
+        # Score the game (unless already decided by resignation or the solver)
+        if not record.termination:
             record.num_moves = move_count
             record.termination = game.terminal_label() if board.is_game_over() else "max_moves"
             score = board.score()
@@ -408,6 +432,7 @@ def save_game_data(
         code_version="v5-mcts-stats",
         game=record.game,
         to_play=np.array(record.to_play, dtype=np.int8),
+        start_moves=np.array(record.start_moves, dtype=np.int16).reshape(-1, 2),
     )
 
     # Add MCTS search statistics if available
@@ -417,7 +442,10 @@ def save_game_data(
     )
     if has_mcts:
         n_moves = len(record.move_metrics)
-        n_actions = len(record.move_metrics[0].visit_counts) if record.move_metrics[0].visit_counts is not None else record.board_size ** 2 + 1
+        # From the first searched move: a game may open with an unsearched one (a forced
+        # capture at a branch point, a search-free opponent).
+        n_actions = next(len(m.visit_counts) for m in record.move_metrics
+                         if m.visit_counts is not None)
 
         all_visits = np.zeros((n_moves, n_actions), dtype=np.int16)
         all_q = np.zeros((n_moves, n_actions), dtype=np.float32)

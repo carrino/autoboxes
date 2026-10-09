@@ -65,6 +65,13 @@ EXP_NAME = EXP_DIR.name
 GAME_DATA_DIR = Path(os.environ.get("GAME_DATA_DIR", "/nfs/game_data_root")).resolve()
 
 
+def game_moves(game: Any) -> list[tuple[int, int]]:
+    """Every move of a stored game in order: the branch prefix of a game that started from
+    a stored position (`start_moves`), then its own moves (padding rows excluded)."""
+    prefix = game["start_moves"] if "start_moves" in game else np.zeros((0, 2), dtype=np.int16)
+    return [(int(r), int(c)) for r, c in np.concatenate([prefix, game["moves"]]) if r >= 0]
+
+
 def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_undrawn: int,
                    n: int, rng: random.Random) -> list[Any]:
     """Replay every game (C++ boards, which the agents expect) and sample n distinct
@@ -73,9 +80,7 @@ def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_u
     for path in sorted(game_dir.rglob("*.npz")):
         game = np.load(path)
         board = alpha_go_cpp.BoxesBoard(rows, cols)
-        for row, col in game["moves"]:
-            if row < 0:
-                break
+        for row, col in game_moves(game):
             undrawn = board.num_edges() - board.move_count()
             decided = not alpha_go_cpp.BoxesSearchState(board).prefix()
             if min_undrawn <= undrawn <= max_undrawn and decided:

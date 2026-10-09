@@ -55,6 +55,13 @@ the arena pick it up on their own, and a chains run starts from iteration 0.
 `solver_label.py` to every iteration's training set: exact final margins and uniform optimal
 policies for midgame positions the solver can settle offline, a supervised foothold for the
 value head where self-play outcomes alone taught it nothing.
+`START_FROM=experiments/<this folder>/5x5-solver START_UNDRAWN="36 40" STOP_WHEN_SOLVED=1`
+branches self-play games from stored positions and ends each one with the exact outcome once
+the solver settles it: a full game spends two thirds of its search on the opening and yields
+about ten positions in the band that decides the result, so a branched game delivers roughly
+three times the decisive-band data per hour, with more variety. `START_FRACTION` (default
+0.75) keeps a share of games opening from the empty board so the opening still gets data; the
+NPZ records the branch prefix in `start_moves` and `oracle_eval.game_moves` replays it.
 Solver-played moves (positions at or below `SOLVER_N` undrawn edges) record one visit per
 optimal edge, so their policy target is uniform over the exact optimal set rather than a
 one-hot of an arbitrary optimal edge, and their root value is the exact outcome.

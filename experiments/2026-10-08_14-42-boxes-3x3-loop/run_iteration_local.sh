@@ -28,6 +28,10 @@ FEATURES=${FEATURES:-basic}  # net input planes: basic (11) or chains (+10 chain
                              # fixed per checkpoint, so a chains run starts from iter0
 EXTRA_DATA=${EXTRA_DATA:-}  # extra dataset directories (under $GAME_DATA_DIR, space-separated) added to every
                             # iteration's training set, e.g. solver-labelled midgame positions from solver_label.py
+START_FROM=${START_FROM:-}  # branch self-play games from stored ones (a games directory under $GAME_DATA_DIR)
+START_UNDRAWN=${START_UNDRAWN:-36 40}  # ... cut where this many edges remain undrawn (min max)
+START_FRACTION=${START_FRACTION:-0.75}  # share of games that branch; the rest open from the empty board
+STOP_WHEN_SOLVED=${STOP_WHEN_SOLVED:-0}  # 1: a self-play game ends with the exact outcome once the solver settles it
 SEARCH_ARGS=${SEARCH_ARGS:-}  # extra search flags for self-play and the arena, e.g.
                               # "--policy_temperature 0.7 --margin_utility_lambda 0.5" (see nn_agent.add_search_flags)
 SIZE_ARGS="--rows $ROWS --cols $COLS"
@@ -57,7 +61,14 @@ echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x
      "solver N=$SOLVER_N (budget $SOLVER_BUDGET nodes; arena N=$ARENA_SOLVER_N), merge equivalent $MERGE_EQ, "\
      "self-play processes $SP_PROCS, "\
      "search args '$SEARCH_ARGS', "\
-     "features $FEATURES, extra data '$EXTRA_DATA'"
+     "features $FEATURES, extra data '$EXTRA_DATA', branch from '$START_FROM' at $START_UNDRAWN undrawn "\
+     "($START_FRACTION of games), stop when solved $STOP_WHEN_SOLVED"
+BRANCH_ARGS=""
+if [ -n "$START_FROM" ]; then
+    set -- $START_UNDRAWN
+    BRANCH_ARGS="--start-positions $START_FROM --start-undrawn-min $1 --start-undrawn-max $2 --start-fraction $START_FRACTION"
+fi
+[ "$STOP_WHEN_SOLVED" = "1" ] && BRANCH_ARGS="$BRANCH_ARGS --stop-when-solved"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
 
@@ -90,7 +101,7 @@ for ITER in $(seq "$START" "$END"); do
         uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
             --num_games "$PER_PROC" --game_index_offset "$((P * PER_PROC))" \
             --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" \
-            --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
+            --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS $BRANCH_ARGS \
             --save-name "${DATA}/selfplay-it${ITER}" --seed "$((ITER * 100000 + P * 1000))" $CPU_FLAG \
             > "$LOGS/collect-it${ITER}-p${P}.log" 2>&1 &
     done

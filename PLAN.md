@@ -106,6 +106,9 @@ the local hard set; the table-move / history ordering and MTD(f) driver take 20-
 every depth. The next exact gain needs structure, not search tuning: Nimstring values of
 independent regions (the control fight, nim-sum over components) as the evaluation at the
 solver's frontier and as move ordering, which is what the strong 5x5 programs are built on.
+Self-play can now branch from stored positions and stop at the solver's exact outcome
+(`START_FROM`, `STOP_WHEN_SOLVED`; shared `play_game(start_moves=, stop_when_solved=)`),
+which spends the search budget on the decisive band instead of the opening.
 Goal set by the author: stronger than every 5x5 engine before moving to 7x7, which needs
 the engine bridge (§3) to measure, the Nimstring evaluation to match them, and the learned
 opening to beat them.
