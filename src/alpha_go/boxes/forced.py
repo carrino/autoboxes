@@ -89,17 +89,19 @@ class Collapsed:
     decision: Decision | None = None
 
 
-def collapse(board: Any) -> Collapsed:
-    """Auto-capture for the side to move until nothing is forced; see module docstring."""
-    geo = box_geometry(board)
-    board = board.copy()
+def collapse_mask(mask: int, geo: BoxesGeometry) -> tuple[int, list[int], Decision | None]:
+    """Auto-capture for the side to move until nothing is forced (see module docstring).
+
+    Pure function of the edge mask: returns (mask after the forced edges, those edges in
+    order, pending decision or None). Shared by the search state and the endgame solver.
+    """
+    full = (1 << geo.num_edges) - 1
     prefix: list[int] = []
-    while not board.is_game_over():
-        mask = edge_mask(board)
+    while mask != full:
         deg = degrees(mask, geo)
         opened = [c for c in components(mask, geo) if c.opened]
         if not opened:
-            return Collapsed(board, prefix)
+            return mask, prefix, None
         # Keep for last the component that offers control at its remainder (cheapest
         # sacrifice first: a chain gives 2, a loop 4); everything else is taken in full.
         with_control = [c for c in opened if c.size >= remainder_size(c)
@@ -110,27 +112,29 @@ def collapse(board: Any) -> Collapsed:
         for comp in opened:
             if comp is last:
                 continue
-            for e in take_sequence(mask, geo, open_end_first(comp, deg)):
-                board.play_edge(e)
-                prefix.append(e)
+            taken = take_sequence(mask, geo, open_end_first(comp, deg))
             break  # positions changed: recompute components
         else:
             assert last is not None
             boxes = open_end_first(last, deg)
             surplus = last.size - remainder_size(last)
-            if surplus > 0:
-                for e in take_sequence(mask, geo, boxes[:surplus]):
-                    board.play_edge(e)
-                    prefix.append(e)
-                continue
-            control = control_edge(mask, geo, last, deg)
-            if control is None:
-                for e in take_sequence(mask, geo, boxes):
-                    board.play_edge(e)
-                    prefix.append(e)
-                continue
-            return Collapsed(board, prefix, Decision(take_sequence(mask, geo, boxes), control))
-    return Collapsed(board, prefix)
+            control = None if surplus > 0 else control_edge(mask, geo, last, deg)
+            if surplus <= 0 and control is not None:
+                return mask, prefix, Decision(take_sequence(mask, geo, boxes), control)
+            taken = take_sequence(mask, geo, boxes[:surplus] if surplus > 0 else boxes)
+        for e in taken:
+            mask |= 1 << e
+        prefix += taken
+    return mask, prefix, None
+
+
+def collapse(board: Any) -> Collapsed:
+    """`collapse_mask` applied to a board: plays the forced edges on a copy."""
+    _, prefix, decision = collapse_mask(edge_mask(board), box_geometry(board))
+    board = board.copy()
+    for e in prefix:
+        assert board.play_edge(e)
+    return Collapsed(board, prefix, decision)
 
 
 class BoxesSearchState:
