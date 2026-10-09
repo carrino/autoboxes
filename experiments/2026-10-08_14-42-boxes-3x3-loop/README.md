@@ -37,7 +37,15 @@ solver on in self-play and the arena at 24 undrawn edges (see `solver_bench.py`)
 (BoxesZero's equivalent edges; value-preserving, tested against the oracle). `BASELINES`
 picks the arena's absolute-scale opponents (default `boxes-greedy,boxes-ab-d4`, both C++).
 `SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5"` passes extra search
-flags (`nn_agent.add_search_flags`) to self-play and the arena.
+flags (`nn_agent.add_search_flags`) to self-play and the arena. `WINDOW=8` widens the replay
+window (self-play iterations per training set, default 4) and `TRAIN_EPOCHS=2` caps the
+passes over it per iteration: the 5x5 solver run at the defaults made about eight passes
+per iteration over a window it had mostly trained on already, and its held-out loss stopped
+falling at iteration 12 while the train loss kept falling (`analyze.py` shows both).
+
+Solver-played moves (positions at or below `SOLVER_N` undrawn edges) record one visit per
+optimal edge, so their policy target is uniform over the exact optimal set rather than a
+one-hot of an arbitrary optimal edge, and their root value is the exact outcome.
 Resume by passing the last trained iteration as `<start>`; the script refuses to start from
 a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iteration and scale
 `SP_GAMES` / `SP_SIMS` / `ARENA_GAMES` so one iteration fits your night.

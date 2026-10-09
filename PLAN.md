@@ -74,6 +74,16 @@ leaves (today 1/0.5/0 vs `P(win) + lambda * tanh(E[margin]/k)`, which is why the
 hurt with lambda > 0), check that the 3x3 findings transfer to 5x5 with `oracle_eval.py`
 before changing the training arm, then the 5x5 comparison runs.
 
+Day 2 findings from the 5x5 solver run (31 iterations, N=28): the oracle on 8..24 undrawn
+edges, which is inside the solver zone, shows the net's own endgame move choice flat at
+0.72-0.78 optimal from iteration 1 (alpha-beta depth 4 scores 0.81 there) because
+solver-played positions gave it a one-hot of an arbitrary optimal edge as the policy
+target; now they record the uniform optimal set (`BoxesSolvedResult`). The held-out loss
+stopped falling at iteration 12 while the train loss kept falling (about eight passes per
+iteration over a replay window three quarters of which was already trained on); `WINDOW`
+and `TRAIN_EPOCHS` in the loop script address that. Baselines greedy and alpha-beta depth 4
+were saturated by iteration 5; the next run uses depth 6 and the solver-backed baseline.
+
 ### 2.1 Commit plan
 
 | # | commit | new files | shared files touched |

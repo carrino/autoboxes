@@ -134,6 +134,9 @@ checkpoint. Two more knobs matter on 5x5:
   `margin_utility_lambda`, `margin_utility_k`; the same flags work on `oracle_eval.py` and
   `alpha_go.boxes.arena`). The values come from the autoresearch folder's report
   (`experiments/2026-10-09_01-05-boxes-3x3-search-autoresearch/report.md`).
+- `WINDOW=8 TRAIN_EPOCHS=2` widens the replay window and caps the passes over it per
+  iteration. Watch the train / held-out loss columns of `analyze.py`: when the held-out loss
+  stops falling while the train loss keeps falling, the net is memorising the window.
 
 After any run, `uv run $EXP/oracle_eval.py --tag <tag>` scores every checkpoint against the
 exact oracle on late positions from the run's own games; the raw-policy and searched-move
