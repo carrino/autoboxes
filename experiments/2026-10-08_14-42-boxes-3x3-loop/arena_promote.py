@@ -1,6 +1,7 @@
 """Arena promotion for one iteration.
 
-Plays the iter N checkpoint against the current champion (alternating first player),
+Plays the iter N checkpoint against the current champion (alternating first player, the
+first --opening_moves moves sampled at temperature 1 so the games differ),
 promotes it on a win rate >= --threshold, and also scores it against the fixed baselines
 boxes-greedy and boxes-ab-d4 so progress is visible on an absolute scale. Checkpoints are
 read from checkpoints/<tag>/ and state lives in league_state-<tag>.json next to this file
@@ -36,12 +37,16 @@ def main() -> None:
     p.add_argument("--num_simulations", type=int, default=200)
     p.add_argument("--num_workers", type=int, default=4)
     p.add_argument("--threshold", type=float, default=0.55)
+    p.add_argument("--opening_moves", type=int, default=4,
+                   help="moves sampled at temperature 1 before greedy play, for game variety")
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
     device = "cpu" if args.cpu else None
-    mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=0.0,
-                leaf_batch_size=8)
+    # Sample the first few moves from the visit distribution: at temperature 0 both nets are
+    # deterministic and a 100-game match is the same two games played 50 times each.
+    mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=1.0,
+                temperature_cutoff=args.opening_moves, leaf_batch_size=8)
     tag = args.tag or f"{args.rows}x{args.cols or args.rows}"
     ckpt_dir = EXP_DIR / "checkpoints" / tag
     state_file = EXP_DIR / f"league_state-{tag}.json"

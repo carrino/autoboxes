@@ -44,8 +44,9 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   cosine, all lattice symmetries as augmentation, policy CE against visit distributions + CE
   over final margins, time budget, `===RESULT===` JSON line, checkpoint
   `checkpoints/<tag>/iter{N}.pt`.
-- `arena_promote.py` — candidate vs champion (alternating first player, Wilson CI),
-  promote at >= 55% (`--threshold`); also reports candidate vs `boxes-greedy` and
+- `arena_promote.py` — candidate vs champion (alternating first player, first 4 moves
+  sampled at temperature 1 so games differ, Wilson CI), promote at >= 55%
+  (`--threshold`); also reports candidate vs `boxes-greedy` and
   `boxes-ab-d4`; appends to `league_state-<tag>.json`.
 - `run_iteration_local.sh <start> <end> [--cpu]` — the loop; `ROWS`/`COLS` pick the board,
   `TAG` the output name, `--cpu` switches to smoke budgets so the pipeline runs anywhere.
