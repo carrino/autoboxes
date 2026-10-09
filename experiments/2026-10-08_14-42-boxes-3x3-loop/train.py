@@ -55,10 +55,14 @@ def manifest_dirs(path: Path) -> list[Path]:
 
 def schedule(optimizer: torch.optim.Optimizer, total_steps: int
              ) -> torch.optim.lr_scheduler.LambdaLR:
+    """Linear warmup then cosine decay; the warmup never exceeds a tenth of the steps (a
+    small replay window with TRAIN_EPOCHS=2 is only ~100 steps per iteration)."""
+    warmup = min(WARMUP_STEPS, total_steps // 10)
+
     def lr_lambda(step: int) -> float:
-        if step < WARMUP_STEPS:
-            return step / max(1, WARMUP_STEPS)
-        progress = (step - WARMUP_STEPS) / max(1, total_steps - WARMUP_STEPS)
+        if step < warmup:
+            return step / max(1, warmup)
+        progress = (step - warmup) / max(1, total_steps - warmup)
         return 0.5 * (1 + math.cos(math.pi * min(1.0, progress)))
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
