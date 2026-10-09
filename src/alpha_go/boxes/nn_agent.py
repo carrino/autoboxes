@@ -38,6 +38,7 @@ def save_boxes_net(model: BoxesNet, path: str | Path, **extra: Any) -> None:
     config = dict(
         rows=model.rows, cols=model.cols, channels=model.channels, n_blocks=model.n_blocks,
         value_hidden=model.value_hidden, norm_type=model.norm_type, use_se=model.use_se,
+        features=model.features,
     )
     torch.save({"model_state_dict": model.state_dict(), "config": config, **extra}, path)
 
@@ -115,7 +116,7 @@ class BoxesLeafEvaluator:
 
     @torch.no_grad()
     def batch_evaluate(self, boards: list[Any]) -> list[Evaluation]:
-        planes_BKHW = torch.from_numpy(encode_batch(boards)).to(self.device)
+        planes_BKHW = torch.from_numpy(encode_batch(boards, self.model.features)).to(self.device)
         with torch.autocast(self.device.type, dtype=torch.float16, enabled=self.use_fp16):
             policy_BE, margin_BM = self.model(planes_BKHW)
         logits = policy_BE.float().cpu().numpy()
@@ -155,7 +156,8 @@ class BoxesEngineEvaluator:
         return self.batch_evaluate([board])[0]
 
     def batch_evaluate(self, boards: list[Any]) -> list[Evaluation]:
-        logits_NE, win_N, expected_N = self.engine.submit(encode_batch(boards)).result()
+        planes_NKHW = encode_batch(boards, self.engine.model.features)
+        logits_NE, win_N, expected_N = self.engine.submit(planes_NKHW).result()
         return [
             (
                 policy_dict(logits_NE[i], b.get_legal_moves_flat(), self.policy_temperature),

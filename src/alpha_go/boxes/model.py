@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from alpha_go.boxes.encode import NUM_PLANES, edge_flat_index
+from alpha_go.boxes.encode import edge_flat_index, num_planes
 from alpha_go.model import MaskedBatchNorm2d, MaskedGroupNorm2d, MaskedResBlock
 
 
@@ -30,16 +30,17 @@ class BoxesNet(nn.Module):
         value_hidden: int = 64,
         norm_type: str = "bn",
         use_se: bool = False,
+        features: str = "basic",
     ) -> None:
         super().__init__()
         cols = cols or rows
         self.rows, self.cols = rows, cols
         self.channels, self.n_blocks, self.value_hidden = channels, n_blocks, value_hidden
-        self.norm_type, self.use_se = norm_type, use_se
+        self.norm_type, self.use_se, self.features = norm_type, use_se, features
         self.num_boxes = rows * cols
         self.num_margins = 2 * self.num_boxes + 1
         norm_cls: type[nn.Module] = MaskedGroupNorm2d if norm_type == "gn" else MaskedBatchNorm2d
-        self.input_conv = nn.Conv2d(NUM_PLANES, channels, 3, padding=1, bias=False)
+        self.input_conv = nn.Conv2d(num_planes(features), channels, 3, padding=1, bias=False)
         self.input_bn = norm_cls(channels)
         self.blocks = nn.ModuleList(
             [MaskedResBlock(channels, norm_cls=norm_cls, use_se=use_se) for _ in range(n_blocks)]

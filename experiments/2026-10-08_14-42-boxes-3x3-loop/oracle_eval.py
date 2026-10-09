@@ -85,7 +85,7 @@ def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_u
 def raw_net(model: BoxesNet, device: torch.device, boards: list[Any]
             ) -> tuple[list[int], np.ndarray, np.ndarray]:
     """Argmax legal edge, P(win) and E[margin] for every board in one forward pass."""
-    planes_BKHW = torch.from_numpy(encode_batch(boards)).to(device)
+    planes_BKHW = torch.from_numpy(encode_batch(boards, model.features)).to(device)
     with torch.autocast(device.type, dtype=torch.float16, enabled=device.type == "cuda"):
         policy_BE, margin_BM = model(planes_BKHW)
     logits_BE = policy_BE.float().cpu().numpy()

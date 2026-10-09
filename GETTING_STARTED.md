@@ -137,6 +137,9 @@ checkpoint. Two more knobs matter on 5x5:
 - `WINDOW=8 TRAIN_EPOCHS=2` widens the replay window and caps the passes over it per
   iteration. Watch the train / held-out loss columns of `analyze.py`: when the held-out loss
   stops falling while the train loss keeps falling, the net is memorising the window.
+- `TRAIN_MIN_UNDRAWN=24` trains only on positions above the solver zone, and
+  `FEATURES=chains` gives the net the chain / loop structure as input planes (new run from
+  iteration 0; the feature set lives in the checkpoint).
 
 After any run, `uv run $EXP/oracle_eval.py --tag <tag>` scores every checkpoint against the
 exact oracle on late positions from the run's own games; the raw-policy and searched-move

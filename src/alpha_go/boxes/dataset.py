@@ -26,9 +26,11 @@ from alpha_go.self_play import parse_score_from_result
 class BoxesDataset(Dataset[dict[str, Any]]):
     def __init__(self, data_dirs: list[str | Path], smooth_eps: float = 0.1,
                  games: list[dict[str, Any]] | None = None,
-                 like: BoxesDataset | None = None, min_undrawn: int = 0) -> None:
+                 like: BoxesDataset | None = None, min_undrawn: int = 0,
+                 features: str = "basic") -> None:
         self.smooth_eps = smooth_eps
         self.min_undrawn: int = like.min_undrawn if like is not None else min_undrawn
+        self.features: str = like.features if like is not None else features
         paths = [p for d in data_dirs for p in sorted(Path(d).rglob("*.npz"))]
         self.games = [dict(np.load(p)) for p in paths] if games is None else games
         assert self.games or like is not None, f"no .npz games under {data_dirs}"
@@ -66,7 +68,7 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         local = idx - int(self.cumsum[game_idx])
         game = self.games[game_idx]
         to_play = int(game["to_play"][local]) + 1
-        planes = encode_grid(game["boards"][local], to_play)
+        planes = encode_grid(game["boards"][local], to_play, self.features)
         score_p1 = parse_score_from_result(str(game["result"]))
         margin = int(score_p1) if to_play == 1 else -int(score_p1)
         # Positions the agent played without a search (forced captures, solver-played

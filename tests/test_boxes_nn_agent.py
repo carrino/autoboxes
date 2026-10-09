@@ -207,6 +207,9 @@ class TestDataset:
         train, val = ds.split(0.5, seed=0)
         assert len(train) + len(val) == 30 and val.min_undrawn == 10
         assert ds[14]["planes"].shape == (11, 7, 7)
+        chains = BoxesDataset([tmp_path], features="chains")
+        assert chains[0]["planes"].shape == (21, 7, 7)
+        assert chains.split(0.5, seed=0)[1].features == "chains"
 
     def test_samples_from_searched_and_unsearched_games(self, tmp_path: Path, monkeypatch) -> None:
         monkeypatch.setattr(self_play, "GAME_DATA_DIR", tmp_path)

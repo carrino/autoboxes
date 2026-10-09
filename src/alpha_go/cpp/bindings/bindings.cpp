@@ -195,8 +195,11 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
     m.def("boxes_perft", &alpha_go::boxes_perft, py::arg("board"), py::arg("depth"),
           "(sequences, PLAYER_1 boxes summed over leaves, PLAYER_2 boxes summed over leaves).");
 
-    m.def("encode_planes", [](const py::sequence& states) {
-        // Feature planes (B, 11, H, W) for a batch of BoxesBoard / BoxesSearchState of one size.
+    m.def("encode_planes", [](const py::sequence& states, bool chains) {
+        // Feature planes (B, K, H, W) for a batch of BoxesBoard / BoxesSearchState of one size;
+        // K = 11, or 21 with the chain / loop planes.
+        const int num_planes = alpha_go::BoxesBoard::kNumPlanes
+            + (chains ? alpha_go::BoxesBoard::kNumChainPlanes : 0);
         const auto board_of = [](py::handle h) -> const alpha_go::BoxesBoard& {
             if (py::isinstance<alpha_go::BoxesSearchState>(h)) {
                 return h.cast<const alpha_go::BoxesSearchState&>().board();
@@ -208,22 +211,22 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
             throw std::invalid_argument("encode_planes: empty batch");
         }
         const auto& geo = board_of(states[0]).geometry();
-        auto arr = py::array_t<float>({n, static_cast<py::ssize_t>(alpha_go::BoxesBoard::kNumPlanes),
+        auto arr = py::array_t<float>({n, static_cast<py::ssize_t>(num_planes),
                                        static_cast<py::ssize_t>(geo.lattice_rows()),
                                        static_cast<py::ssize_t>(geo.lattice_cols())});
-        const py::ssize_t stride = alpha_go::BoxesBoard::kNumPlanes * geo.lattice_rows() * geo.lattice_cols();
+        const py::ssize_t stride = num_planes * geo.lattice_rows() * geo.lattice_cols();
         float* out = arr.mutable_data();
         for (py::ssize_t i = 0; i < n; ++i) {
             const alpha_go::BoxesBoard& board = board_of(states[i]);
             if (board.rows() != geo.rows || board.cols() != geo.cols) {
                 throw std::invalid_argument("encode_planes: boards of different sizes");
             }
-            board.encode_planes(out + i * stride);
+            board.encode_planes(out + i * stride, chains);
         }
         return arr;
-    }, py::arg("states"),
-    "Feature planes (B, 11, H, W) float32 for BoxesBoard / BoxesSearchState objects of one size; "
-    "identical to alpha_go.boxes.encode.encode_batch.");
+    }, py::arg("states"), py::arg("chains") = false,
+    "Feature planes (B, K, H, W) float32 for BoxesBoard / BoxesSearchState objects of one size "
+    "(K = 11, or 21 with chains=True); identical to alpha_go.boxes.encode.encode_batch.");
 
     // BoxesSolver binding: exact endgame solver (PLAN.md §4.1)
     py::class_<alpha_go::BoxesSolver, std::shared_ptr<alpha_go::BoxesSolver>>(m, "BoxesSolver")

@@ -83,6 +83,12 @@ stopped falling at iteration 12 while the train loss kept falling (about eight p
 iteration over a replay window three quarters of which was already trained on); `WINDOW`
 and `TRAIN_EPOCHS` in the loop script address that. Baselines greedy and alpha-beta depth 4
 were saturated by iteration 5; the next run uses depth 6 and the solver-backed baseline.
+The oracle on 26..32 undrawn edges, just above the solver zone and the only band where the
+net's search decides moves in play, was flat for all 31 iterations (searched moves 0.40-0.49
+optimal, alpha-beta depth 4 0.53, value sign 0.55-0.65): the net never learned the midgame.
+`TRAIN_MIN_UNDRAWN` trains only above the solver zone, and §4.2's chain / loop input planes
+are implemented behind `FEATURES=chains` (`encode.py` planes 11..20, C++ parity-tested,
+stored in the checkpoint) so the net is handed the structure instead of counting it.
 
 ### 2.1 Commit plan
 

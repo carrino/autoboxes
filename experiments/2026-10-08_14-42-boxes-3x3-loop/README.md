@@ -43,6 +43,10 @@ passes over it per iteration: the 5x5 solver run at the defaults made about eigh
 per iteration over a window it had mostly trained on already, and its held-out loss stopped
 falling at iteration 12 while the train loss kept falling (`analyze.py` shows both).
 
+`FEATURES=chains` trains the net on the 21-plane input (the 11 basic planes plus the chain /
+loop structure of `encode.py`: chain lengths, loops, opened components, safe edges and the
+long-chain count and parity); the feature set is stored in the checkpoint, so self-play and
+the arena pick it up on their own, and a chains run starts from iteration 0.
 Solver-played moves (positions at or below `SOLVER_N` undrawn edges) record one visit per
 optimal edge, so their policy target is uniform over the exact optimal set rather than a
 one-hot of an arbitrary optimal edge, and their root value is the exact outcome.

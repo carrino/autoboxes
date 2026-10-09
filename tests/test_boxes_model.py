@@ -9,8 +9,16 @@ import numpy as np
 import pytest
 import torch
 
-from alpha_go.boxes.encode import NUM_PLANES, edge_flat_index, encode, encode_batch, encode_grid
+from alpha_go.boxes.encode import (
+    NUM_PLANES,
+    edge_flat_index,
+    encode,
+    encode_batch,
+    encode_grid,
+    num_planes,
+)
 from alpha_go.boxes.model import BoxesNet
+from alpha_go.boxes.nn_agent import load_boxes_net, save_boxes_net
 from alpha_go.boxes.rules import BoxesBoard, geometry
 from alpha_go.boxes.symmetry import apply, edge_permutation, transforms
 
@@ -87,6 +95,62 @@ class TestEncode:
                     mirror.play_edge(int(perm[e]))
                 assert np.array_equal(apply(encode(board), k), encode(mirror))
 
+    def test_chain_planes_describe_the_structure(self) -> None:
+        """2x2: edges 0..5 horizontal (h(r,c) = 2r + c), 6..11 vertical (v(r,c) = 6 + 3r + c)."""
+        def planes_after(drawn: list[int]) -> np.ndarray:
+            board = BoxesBoard(2, 2)
+            for e in drawn:
+                board.play_edge(e)
+            return encode_grid(board.to_numpy(), 1, "chains")
+
+        box_cells = (slice(1, None, 2), slice(1, None, 2))
+        empty = planes_after([])  # every box has 4 undrawn sides: no chains, every edge safe
+        assert empty.shape == (num_planes("chains"), 5, 5)
+        assert empty[11:16].sum() == 0 and empty[16].sum() == 12 and empty[19, 0, 0] == 1.0
+        loop = planes_after([0, 1, 4, 5, 6, 8, 9, 11])  # border drawn: the 4 boxes form a loop
+        assert np.array_equal(loop[14][box_cells], np.ones((2, 2))) and loop[11:14].sum() == 0
+        assert loop[15].sum() == 0 and loop[16].sum() == 0  # not opened; no safe edge left
+        assert loop[17, 0, 0] == 0 and loop[18, 0, 0] == 0.25 and loop[20, 0, 0] == 0
+        # A 4-chain ground-6-(0,0)-7-(0,1)-3-(1,1)-10-(1,0)-4-ground.
+        snake = planes_after([0, 1, 2, 5, 8, 9, 11])
+        assert np.array_equal(snake[13][box_cells], np.ones((2, 2))) and snake[14].sum() == 0
+        assert snake[15].sum() == 0 and snake[17, 0, 0] == 0.25 and snake[20, 0, 0] == 1
+        opened = planes_after([0, 1, 2, 5, 8, 9, 11, 6])  # one end taken: capturable chain
+        assert np.array_equal(opened[15][box_cells], np.ones((2, 2)))
+        assert np.array_equal(opened[13][box_cells], np.ones((2, 2)))
+        assert np.array_equal(empty[:NUM_PLANES], encode_grid(BoxesBoard(2, 2).to_numpy(), 1))
+
+    @pytest.mark.parametrize("rows,cols", [(3, 3), (2, 3), (5, 5)])
+    def test_cpp_chain_planes_match_python(self, rows: int, cols: int) -> None:
+        rng = random.Random(23)
+        boards = []
+        for _ in range(40):
+            board = alpha_go_cpp.BoxesBoard(rows, cols)
+            for _ in range(rng.randint(0, board.num_edges() - 1)):
+                board.play_edge(rng.choice(board.get_legal_moves_flat()))
+            boards.append(board)
+        planes = alpha_go_cpp.encode_planes(boards, True)
+        assert planes.shape == (40, num_planes("chains"), 2 * rows + 1, 2 * cols + 1)
+        assert np.array_equal(planes, np.stack([encode(b, "chains") for b in boards]))
+        assert np.array_equal(encode_batch(boards, "chains"), planes)
+        states = [alpha_go_cpp.BoxesSearchState(b) for b in boards if not b.is_game_over()]
+        assert np.array_equal(alpha_go_cpp.encode_planes(states, True),
+                              np.stack([encode(s, "chains") for s in states]))
+        assert np.array_equal(alpha_go_cpp.encode_planes(boards), planes[:, :NUM_PLANES])
+
+    @pytest.mark.parametrize("rows,cols", [(2, 3), (3, 3)])
+    def test_chain_planes_equivariant_under_symmetries(self, rows: int, cols: int) -> None:
+        rng = random.Random(rows * cols)
+        geo = geometry(rows, cols)
+        for _ in range(5):
+            board, moves = random_board(rows, cols, rng)
+            for k in transforms(rows, cols):
+                perm = edge_permutation(geo, k)
+                mirror = BoxesBoard(rows, cols)
+                for e in moves:
+                    mirror.play_edge(int(perm[e]))
+                assert np.array_equal(apply(encode(board, "chains"), k), encode(mirror, "chains"))
+
     def test_edge_gather_matches_permutation(self) -> None:
         """Gathering a transformed logit map equals permuting the gathered logits."""
         rows, cols = 3, 3
@@ -115,6 +179,18 @@ class TestBoxesNet:
         assert win.shape == (3,) and torch.all((win >= 0) & (win <= 1))
         assert torch.allclose(win, torch.full((3,), 0.5))  # zero-init value head
         assert torch.allclose(net.expected_margin(margin_BM), torch.zeros(3), atol=1e-6)
+
+    def test_chain_features_net_round_trips(self, tmp_path) -> None:
+        torch.manual_seed(0)
+        net = BoxesNet(2, 3, channels=16, n_blocks=2, value_hidden=8, features="chains")
+        boards = [alpha_go_cpp.BoxesBoard(2, 3) for _ in range(2)]
+        boards[1].play_edge(4)
+        planes = torch.from_numpy(encode_batch(boards, net.features))
+        assert planes.shape[1] == 21 and net(planes)[0].shape == (2, 17)
+        save_boxes_net(net, tmp_path / "chains.pt")
+        loaded = load_boxes_net(tmp_path / "chains.pt", torch.device("cpu"))
+        assert loaded.features == "chains"
+        assert torch.allclose(net(planes)[0], loaded(planes)[0])
 
     def test_loss_and_gradients(self) -> None:
         net = BoxesNet(3, channels=16, n_blocks=2, value_hidden=8)
