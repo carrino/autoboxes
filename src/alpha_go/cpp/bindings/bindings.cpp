@@ -7,6 +7,7 @@
 
 #include "boxes/boxes_game.h"
 #include "boxes/boxes_search.h"
+#include "boxes/boxes_solver.h"
 #include "go/go_game.h"
 #include "mcts/mcts.h"
 
@@ -223,10 +224,39 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
     "Feature planes (B, 11, H, W) float32 for BoxesBoard / BoxesSearchState objects of one size; "
     "identical to alpha_go.boxes.encode.encode_batch.");
 
+    // BoxesSolver binding: exact endgame solver (PLAN.md §4.1)
+    py::class_<alpha_go::BoxesSolver, std::shared_ptr<alpha_go::BoxesSolver>>(m, "BoxesSolver")
+        .def(py::init<int, int, std::size_t>(), py::arg("rows"), py::arg("cols") = 0,
+             py::arg("table_entries") = std::size_t{1} << 20,
+             "Exact remaining-margin solver with a bounded transposition table (one per thread).")
+        .def("value", &alpha_go::BoxesSolver::value, py::arg("mask"),
+             "Remaining box margin for the side to move under optimal play (unbounded search).")
+        .def("value_within", &alpha_go::BoxesSolver::value_within, py::arg("mask"),
+             py::arg("max_nodes"), "Like value(), or None once max_nodes nodes were visited.")
+        .def("remaining", &alpha_go::BoxesSolver::remaining, py::arg("board"))
+        .def("final_margin", &alpha_go::BoxesSolver::final_margin, py::arg("board"),
+             "Final margin for the side to move under optimal play from `board`.")
+        .def("best_edge", &alpha_go::BoxesSolver::best_edge, py::arg("board"),
+             "An optimal edge for the side to move (forced captures first).")
+        .def("canonical", &alpha_go::BoxesSolver::canonical, py::arg("mask"))
+        .def("loony_value", &alpha_go::BoxesSolver::loony_value, py::arg("chains"), py::arg("loops"),
+             "Exact value of a simple loony endgame from its chain and loop sizes.")
+        .def("table_entries", &alpha_go::BoxesSolver::table_entries)
+        .def("table_bytes", &alpha_go::BoxesSolver::table_bytes)
+        .def("nodes", &alpha_go::BoxesSolver::nodes, "Nodes visited by the last call.");
+
     // BoxesSearchState binding: forced-move collapse around a BoxesBoard
     py::class_<alpha_go::BoxesSearchState>(m, "BoxesSearchState")
         .def(py::init<const alpha_go::BoxesBoard&>(), py::arg("board"),
              "Collapse the side to move's forced captures; see get_legal_moves_flat().")
+        .def(py::init<const alpha_go::BoxesBoard&, std::shared_ptr<alpha_go::BoxesSolver>, int,
+                      uint64_t>(),
+             py::arg("board"), py::arg("solver"), py::arg("max_undrawn"), py::arg("node_budget"),
+             "As above, and positions with <= max_undrawn undrawn edges that the solver settles "
+             "within node_budget nodes are terminal with the exact outcome.")
+        .def("solved", &alpha_go::BoxesSearchState::solved)
+        .def("solved_margin", &alpha_go::BoxesSearchState::solved_margin,
+             "Exact final margin for the side to move when solved().")
         .def("get_legal_moves_flat", &alpha_go::BoxesSearchState::get_legal_moves_flat,
              "Macro-actions by first edge (take-all / keep-control at a decision, else edges).")
         .def("prefix", &alpha_go::BoxesSearchState::prefix,

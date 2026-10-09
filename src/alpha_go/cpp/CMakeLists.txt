@@ -55,6 +55,8 @@ target_include_directories(go_game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # Boxes (Dots and Boxes) game library
 add_library(boxes_game STATIC
     boxes/boxes_game.cpp
+    boxes/boxes_chains.cpp
+    boxes/boxes_solver.cpp
     boxes/boxes_search.cpp
 )
 target_include_directories(boxes_game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
