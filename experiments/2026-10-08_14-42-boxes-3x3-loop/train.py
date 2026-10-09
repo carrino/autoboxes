@@ -1,7 +1,10 @@
 """Train BoxesNet for one iteration on a manifest of game directories.
 
 Policy loss: cross-entropy against the MCTS visit distribution (every position, both
-players); value loss: cross-entropy over the final margin for the side to move. Every batch
+players); value loss: cross-entropy over the final margin for the side to move, plus with
+--q-mix q > 0 a binary cross-entropy on P(win) against (1 - q) * outcome + q * root Q
+(BoxesZero uses q = 0.25). A held-out split by game (--val-fraction) reports validation
+loss and accuracies next to the training ones so overfitting is visible. Every batch
 is augmented with a random lattice symmetry (8 for square boards; `alpha_go.boxes.augment`,
 tested in tests/test_boxes_augment.py). Prints a ===RESULT===
 JSON line and saves checkpoints/<tag>/iter{N}.pt next to this file (tag = <rows>x<cols>).
@@ -67,7 +70,7 @@ def evaluate(model: BoxesNet, loader: DataLoader, device: torch.device,
     policy_hits = value_hits = n = 0
     loss_sum = 0.0
     for i, batch in enumerate(loader):
-        if i >= max_batches:
+        if i >= max_batches or len(loader) == 0:
             break
         planes = batch["planes"].to(device)
         policy, margin = batch["policy"].to(device), batch["margin"].to(device)
@@ -93,6 +96,10 @@ def main() -> None:
     p.add_argument("--cols", type=int, default=None)
     p.add_argument("--tag", default=None, help="checkpoint subdir; default <rows>x<cols>")
     p.add_argument("--lr", type=float, default=LEARNING_RATE)
+    p.add_argument("--val-fraction", type=float, default=0.1,
+                   help="share of games held out for validation metrics (0 = none)")
+    p.add_argument("--q-mix", type=float, default=0.0,
+                   help="weight of the root Q in the P(win) target (0 = pure outcome)")
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
@@ -105,8 +112,12 @@ def main() -> None:
     print(f"dataset: {len(dataset):,} positions from {len(dataset.games)} games "
           f"({dataset.num_with_mcts} searched), {dataset.footprint_bytes() / 1e6:.1f} MB in RAM, "
           f"loaded in {time.time() - t0:.1f}s")
-    loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
-                        drop_last=len(dataset) > BATCH_SIZE)
+    train_set, val_set = dataset.split(args.val_fraction, seed=args.iteration)
+    loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
+                        drop_last=len(train_set) > BATCH_SIZE)
+    val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+    print(f"split: {len(train_set):,} training / {len(val_set):,} validation positions "
+          f"({len(val_set.games)} held-out games); q-mix {args.q_mix}")
     steps_per_epoch = max(1, len(loader))
     max_steps = args.max_epochs * steps_per_epoch
 
@@ -134,8 +145,13 @@ def main() -> None:
             planes = batch["planes"].to(device)
             policy, margin = batch["policy"].to(device), batch["margin"].to(device)
             planes, policy = augment(planes, policy, rows, cols, inverse_perms, rng)
+            target_win = None
+            if args.q_mix > 0:
+                target_win = ((1 - args.q_mix) * batch["win"]
+                              + args.q_mix * batch["root_value"]).to(device)
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=use_amp):
-                total, policy_loss, value_loss = model.compute_loss(planes, policy, margin)
+                total, policy_loss, value_loss = model.compute_loss(planes, policy, margin,
+                                                                    target_win)
             optimizer.zero_grad()
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -147,19 +163,24 @@ def main() -> None:
                       f"value={value_loss.item():.4f} ({time.time() - start:.0f}s)")
     elapsed = time.time() - start
     train_eval = evaluate(model, loader, device)
+    val_eval = evaluate(model, val_loader, device, max_batches=10**9)
     ckpt_dir = EXP_DIR / "checkpoints" / (args.tag or f"{rows}x{cols}")
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = ckpt_dir / f"iter{args.iteration}.pt"
     save_boxes_net(model, ckpt_path, iteration=args.iteration, step=step)
     print(f"saved {ckpt_path} after {step} steps in {elapsed:.0f}s; train loss "
           f"{train_eval['loss']:.4f} policy_acc {train_eval['policy_acc']:.3f} "
-          f"value_acc {train_eval['value_acc']:.3f}")
+          f"value_acc {train_eval['value_acc']:.3f}; val loss {val_eval['loss']:.4f} "
+          f"policy_acc {val_eval['policy_acc']:.3f} value_acc {val_eval['value_acc']:.3f}")
     print("\n===RESULT===")
     print(json.dumps({
         "iteration": args.iteration, "train_loss": round(train_eval["loss"], 6),
         "train_policy_acc": round(train_eval["policy_acc"], 4),
-        "train_value_acc": round(train_eval["value_acc"], 4), "steps_completed": step,
-        "positions": len(dataset), "elapsed_seconds": round(elapsed), "n_params": n_params,
+        "train_value_acc": round(train_eval["value_acc"], 4),
+        "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),
+        "val_value_acc": round(val_eval["value_acc"], 4), "val_positions": len(val_set),
+        "q_mix": args.q_mix, "steps_completed": step,
+        "positions": len(train_set), "elapsed_seconds": round(elapsed), "n_params": n_params,
         "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2**20) if use_amp else 0,
         "checkpoint": str(ckpt_path), "resumed_from": args.resume_from or "",
     }))

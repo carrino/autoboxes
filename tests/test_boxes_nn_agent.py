@@ -155,3 +155,9 @@ class TestDataset:
         score_p1 = float(record.result[2:]) * (1 if record.result.startswith("B") else -1)
         assert plain["margin"].item() == (score_p1 if record.to_play[-1] == 0 else -score_p1)
         assert plain["win"].item() == float(plain["margin"].item() > 0)
+        # Held-out split by game: one game each way, positions never straddle the sets.
+        train, val = ds.split(0.5, seed=1)
+        assert len(train.games) == 1 and len(val.games) == 1
+        assert len(train) + len(val) == 48 and train.games[0] is not val.games[0]
+        empty_train, _ = ds.split(0.0)
+        assert len(empty_train) == 48

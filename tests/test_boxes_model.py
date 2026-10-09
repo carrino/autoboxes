@@ -127,6 +127,17 @@ class TestBoxesNet:
         total.backward()
         for name, param in net.named_parameters():
             assert param.grad is not None and torch.isfinite(param.grad).all(), name
+        # Optional P(win) target: adds a finite binary cross-entropy, zero when it is met.
+        target_win = torch.tensor([1.0, 0.0, 0.5, 1.0])
+        _, _, mixed = net.compute_loss(planes, target_policy, target_margin, target_win)
+        assert torch.isfinite(mixed) and mixed.item() > value_loss.item()
+        with torch.no_grad():
+            _, margin_BM = net(planes)
+            win = net.win_prob(margin_BM)
+        _, _, exact = net.compute_loss(planes, target_policy, target_margin, win)
+        assert exact.item() == pytest.approx(
+            value_loss.item() - float((win * win.log() + (1 - win) * (1 - win).log()).mean()),
+            abs=1e-5)
 
     def test_win_prob_from_a_peaked_distribution(self) -> None:
         net = BoxesNet(2, 2)

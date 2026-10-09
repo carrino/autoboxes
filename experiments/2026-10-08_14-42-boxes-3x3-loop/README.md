@@ -42,8 +42,10 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   `PlaneBatchedEngine` batches leaves across game threads on the GPU.
 - `train.py` — `BoxesDataset` -> `BoxesNet` (size picked from `MODELS` by rows), AdamW +
   cosine, all lattice symmetries as augmentation, policy CE against visit distributions + CE
-  over final margins, time budget, `===RESULT===` JSON line, checkpoint
-  `checkpoints/<tag>/iter{N}.pt`.
+  over final margins (`--q-mix 0.25` adds BoxesZero's P(win) target mixing the outcome with
+  the root Q), a held-out split by game (`--val-fraction`, default 0.1) whose loss and
+  accuracies sit next to the training ones in the `===RESULT===` JSON line, time budget,
+  checkpoint `checkpoints/<tag>/iter{N}.pt`.
 - `arena_promote.py` — candidate vs champion (alternating first player, first 4 moves
   sampled at temperature 1 so games differ, Wilson CI), promote at >= 55%
   (`--threshold`); also reports candidate vs `boxes-greedy` and

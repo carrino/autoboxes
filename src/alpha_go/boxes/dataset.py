@@ -22,15 +22,30 @@ from alpha_go.self_play import parse_score_from_result
 
 
 class BoxesDataset(Dataset[dict[str, Any]]):
-    def __init__(self, data_dirs: list[str | Path], smooth_eps: float = 0.1) -> None:
+    def __init__(self, data_dirs: list[str | Path], smooth_eps: float = 0.1,
+                 games: list[dict[str, Any]] | None = None,
+                 like: BoxesDataset | None = None) -> None:
         self.smooth_eps = smooth_eps
         paths = [p for d in data_dirs for p in sorted(Path(d).rglob("*.npz"))]
-        self.games = [dict(np.load(p)) for p in paths]
-        assert self.games, f"no .npz games under {data_dirs}"
-        self.rows, self.cols = lattice_rows_cols(self.games[0]["boards"].shape)
+        self.games = [dict(np.load(p)) for p in paths] if games is None else games
+        assert self.games or like is not None, f"no .npz games under {data_dirs}"
+        if self.games:
+            self.rows, self.cols = lattice_rows_cols(self.games[0]["boards"].shape)
+        else:
+            assert like is not None
+            self.rows, self.cols = like.rows, like.cols
         self.geo = geometry(self.rows, self.cols)
         self.cumsum = np.cumsum([0] + [int(g["num_moves"]) for g in self.games])
         self.num_with_mcts = sum("mcts_visits" in g for g in self.games)
+
+    def split(self, val_fraction: float, seed: int = 0) -> tuple[BoxesDataset, BoxesDataset]:
+        """Held-out split by game (positions of one game never straddle the two sets)."""
+        order = np.random.default_rng(seed).permutation(len(self.games))
+        n_val = int(round(val_fraction * len(self.games)))
+        val = [self.games[i] for i in order[:n_val]]
+        train = [self.games[i] for i in order[n_val:]]
+        return (BoxesDataset([], self.smooth_eps, games=train, like=self),
+                BoxesDataset([], self.smooth_eps, games=val, like=self))
 
     def footprint_bytes(self) -> int:
         return sum(

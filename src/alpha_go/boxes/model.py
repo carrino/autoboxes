@@ -99,9 +99,18 @@ class BoxesNet(nn.Module):
         planes_BKHW: torch.Tensor,
         target_policy_BE: torch.Tensor,
         target_margin_B: torch.Tensor,
+        target_win_B: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Policy CE against a distribution over edges + CE over the final margin class."""
+        """Policy CE against a distribution over edges + CE over the final margin class.
+
+        With `target_win_B` (e.g. BoxesZero's 0.75 outcome + 0.25 root-Q mix) a binary
+        cross-entropy on the derived P(win) is added to the value loss.
+        """
         policy_BE, margin_BM = self.forward(planes_BKHW)
         policy_loss = -(target_policy_BE * F.log_softmax(policy_BE, dim=-1)).sum(dim=-1).mean()
         value_loss = F.cross_entropy(margin_BM, (target_margin_B + self.num_boxes).long())
+        if target_win_B is not None:
+            win_B = self.win_prob(margin_BM).clamp(1e-6, 1 - 1e-6)
+            value_loss = value_loss - (target_win_B * win_B.log()
+                                       + (1 - target_win_B) * (1 - win_B).log()).mean()
         return policy_loss + value_loss, policy_loss, value_loss
