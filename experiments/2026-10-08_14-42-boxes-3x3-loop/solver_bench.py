@@ -15,6 +15,7 @@ import argparse
 import csv
 import os
 import random
+import re
 import time
 from pathlib import Path
 
@@ -47,7 +48,8 @@ def positions_with(game_dir: Path, rows: int, cols: int, undrawn: int, n: int,
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--tag", default=None)
-    p.add_argument("--rows", type=int, default=5)
+    p.add_argument("--rows", type=int, default=None,
+                   help="board rows; default from a tag like 5x5-solver, else 5")
     p.add_argument("--cols", type=int, default=None)
     p.add_argument("--undrawn", type=int, nargs="+", default=[20, 24, 28, 32])
     p.add_argument("--num-positions", type=int, default=200)
@@ -57,7 +59,9 @@ def main() -> None:
                    help="ignore bootstrap games (random play gives easy endgames)")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
-    rows, cols = args.rows, args.cols or args.rows
+    size = re.match(r"(\d+)x(\d+)", args.tag or "")
+    rows = args.rows or (int(size.group(1)) if size else 5)
+    cols = args.cols or (int(size.group(2)) if size and not args.rows else rows)
     tag = args.tag or f"{rows}x{cols}"
     game_dir = GAME_DATA_DIR / "experiments" / EXP_NAME / tag
     rng = random.Random(args.seed)

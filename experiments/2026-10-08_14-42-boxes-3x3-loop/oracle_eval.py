@@ -24,6 +24,7 @@ import argparse
 import csv
 import os
 import random
+import re
 import sys
 import time
 from pathlib import Path
@@ -97,7 +98,8 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--tag", default=None,
                    help="checkpoint subdir and data subdir; default <rows>x<cols>")
-    p.add_argument("--rows", type=int, default=3)
+    p.add_argument("--rows", type=int, default=None,
+                   help="board rows; default from a tag like 5x5-solver, else 3")
     p.add_argument("--cols", type=int, default=None)
     p.add_argument("--iterations", type=int, nargs="*", default=None,
                    help="checkpoint iterations to score; default every iter*.pt found")
@@ -112,7 +114,9 @@ def main() -> None:
 
     device = pick_device("cpu" if args.cpu else None)
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
-    rows, cols = args.rows, args.cols or args.rows
+    size = re.match(r"(\d+)x(\d+)", args.tag or "")
+    rows = args.rows or (int(size.group(1)) if size else 3)
+    cols = args.cols or (int(size.group(2)) if size and not args.rows else rows)
     tag = args.tag or f"{rows}x{cols}"
     ckpt_dir = EXP_DIR / "checkpoints" / tag
     iterations = args.iterations
