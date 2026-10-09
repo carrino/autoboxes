@@ -154,6 +154,18 @@ class TestDataset:
         # temperature was (the first game's first position is searched by the NN agent).
         visits = ds.games[0]["mcts_visits"][0].astype(float)
         assert np.allclose(searched["policy"].numpy(), visits / visits.sum())
+        # Positions of the searched game that were played without a search (the greedy
+        # opponent's moves, forced captures) carry a zero visit row: their target is the
+        # played move, label-smoothed, never a zero vector or a one-hot at edge 0.
+        game = ds.games[0]
+        unsearched = [i for i in range(int(game["num_moves"])) if game["mcts_visits"][i].sum() == 0]
+        assert unsearched
+        for i in unsearched[:5]:
+            sample = ds[i]
+            r, c = (int(x) for x in game["moves"][i])
+            assert not sample["has_mcts"]
+            assert sample["policy"].argmax().item() == int(ds.geo.lattice_edge[r, c])
+            assert sample["policy"].max() == pytest.approx(0.9 + 0.1 / 24)
         assert not plain["has_mcts"] and plain["policy"].max() == pytest.approx(0.9 + 0.1 / 24)
         # Margin target is the final box difference for the side to move at that position.
         score_p1 = float(record.result[2:]) * (1 if record.result.startswith("B") else -1)

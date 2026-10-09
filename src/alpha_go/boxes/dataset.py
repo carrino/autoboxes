@@ -63,12 +63,17 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         planes = encode_grid(game["boards"][local], to_play)
         score_p1 = parse_score_from_result(str(game["result"]))
         margin = int(score_p1) if to_play == 1 else -int(score_p1)
-        if "mcts_visits" in game:
+        # Positions the agent played without a search (forced captures, solver-played
+        # endgames, or a search-free opponent) have an all-zero visit row in a searched
+        # game, and no row at all in an unsearched one: their target is the played move.
+        visits = (game["mcts_visits"][local].astype(np.float32) if "mcts_visits" in game
+                  else np.zeros(self.geo.num_edges, dtype=np.float32))
+        searched = bool(visits.sum() > 0)
+        if searched:
             # The policy target is the search's visit distribution regardless of the
             # temperature the move was sampled with (AlphaZero): a one-hot of the chosen
             # move would discard the search's ranking of the other moves.
-            visits = game["mcts_visits"][local].astype(np.float32)
-            policy = visits / max(visits.sum(), 1e-8)
+            policy = visits / visits.sum()
             root_value = float(game["mcts_root_values"][local])
         else:
             r, c = (int(x) for x in game["moves"][local])
@@ -82,5 +87,5 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             "margin": torch.tensor(margin, dtype=torch.long),
             "win": torch.tensor(float(margin > 0) + 0.5 * float(margin == 0)),
             "root_value": torch.tensor(root_value, dtype=torch.float32),
-            "has_mcts": "mcts_visits" in game,
+            "has_mcts": searched,
         }
