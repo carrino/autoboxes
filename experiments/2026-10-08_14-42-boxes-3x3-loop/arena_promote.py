@@ -3,8 +3,9 @@
 Plays the iter N checkpoint against the current champion (alternating first player, the
 first --opening_moves moves sampled at temperature 1 so the games differ),
 promotes it on a win rate >= --threshold, and also scores it against --baselines (default
-boxes-greedy and boxes-ab-d4; boxes-greedy-s24 / boxes-ab-d2-s24 are the fast solver-backed
-ones) so progress is visible on an absolute scale. Checkpoints are
+boxes-greedy and boxes-ab-d4; boxes-ab-d4-s28 plays the endgame exactly from the loop's
+default solver depth, so beating it is the net's midgame) so progress is visible on an
+absolute scale. Checkpoints are
 read from checkpoints/<tag>/ and state lives in league_state-<tag>.json next to this file
 (tag = <rows>x<cols>), so runs on different boards never collide.
 """

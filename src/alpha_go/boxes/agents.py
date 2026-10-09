@@ -189,31 +189,33 @@ for _depth in (2, 4, 6):
 
 class BoxesSolverBackedAgent(Agent):
     """Fast baseline with a perfect endgame: greedy (depth 0) or alpha-beta until `undrawn`
-    edges remain, then the exact C++ solver plays the rest. Registered as
-    boxes-greedy-s<N> and boxes-ab-d<depth>-s<N>."""
+    edges remain, then the exact C++ solver plays the rest. Registered as boxes-greedy-s24,
+    boxes-ab-d2-s24, boxes-ab-d2-s28 and boxes-ab-d4-s28; the s28 ones share the training
+    loop's default solver depth, so beating them is the net's midgame, not the solver's."""
 
     undrawn = 24
     depth = 0
 
     def __init__(self) -> None:
-        self.searcher = AlphaBeta(self.depth) if self.depth else None
+        self.searcher: Any = None  # C++ alpha-beta, built on first use (needs the board size)
         self.solver: Any = None
 
     def select_move(self, board: Any, seed: int) -> tuple[int, int]:
+        rows, cols = int(board.rows()), int(board.cols())
+        mask = int(board.edges() if callable(board.edges) else board.edges)
         if int(board.num_edges()) - int(board.move_count()) <= self.undrawn:
             if self.solver is None:
-                self.solver = alpha_go_cpp.BoxesSolver(int(board.rows()), int(board.cols()),
-                                                       1 << 20)
-            mask = int(board.edges() if callable(board.edges) else board.edges)
+                self.solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 20)
             return lattice(board, int(self.solver.best_edge_mask(mask)))
-        rng = random.Random(seed)
+        if self.depth == 0:
+            return lattice(board, greedy_edge(board, geometry(rows, cols), random.Random(seed)))
         if self.searcher is None:
-            return lattice(board, greedy_edge(board, geometry(board.rows(), board.cols()), rng))
-        return lattice(board, self.searcher.best_edge(board, rng))
+            self.searcher = alpha_go_cpp.BoxesAlphaBeta(rows, cols)
+        return lattice(board, int(self.searcher.best_edge(mask, self.depth, seed)))
 
 
-for _depth in (0, 2):
-    _name = f"boxes-{'greedy' if _depth == 0 else f'ab-d{_depth}'}-s24"
-    _cls = type(f"BoxesSolverBacked{_depth}", (BoxesSolverBackedAgent,),
-                {"depth": _depth, "undrawn": 24})
+for _depth, _undrawn in ((0, 24), (2, 24), (2, 28), (4, 28)):
+    _name = f"boxes-{'greedy' if _depth == 0 else f'ab-d{_depth}'}-s{_undrawn}"
+    _cls = type(f"BoxesSolverBacked{_depth}s{_undrawn}", (BoxesSolverBackedAgent,),
+                {"depth": _depth, "undrawn": _undrawn})
     register_agent(_name)(_cls)
