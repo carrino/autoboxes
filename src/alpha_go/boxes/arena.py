@@ -127,16 +127,46 @@ def play_match(
     )
 
 
+def register_checkpoint(name: str, args: argparse.Namespace) -> None:
+    """`ckpt:<path>` names become MCTS agents on that checkpoint, one shared GPU engine
+    per checkpoint across the game threads, with the search flags of the CLI."""
+    from alpha_go.boxes.inference import PlaneBatchedEngine
+    from alpha_go.boxes.nn_agent import load_boxes_net, pick_device, register_boxes_mcts_agent
+    device = pick_device("cpu" if args.cpu else None)
+    path = name[len("ckpt:"):]
+    engine = PlaneBatchedEngine(load_boxes_net(path, device), device, batch_size=64)
+    engine.start()
+    register_boxes_mcts_agent(name, path, args.rows, args.cols, engine=engine,
+                              num_simulations=args.sims, c_puct=1.5, temperature=1.0,
+                              temperature_cutoff=args.opening_moves, leaf_batch_size=16,
+                              solver_max_undrawn=args.solver,
+                              solver_node_budget=args.solver_budget,
+                              merge_equivalent=bool(args.merge_eq))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Boxes arena: agent A vs agent B")
-    parser.add_argument("--a", required=True, help="Registered agent name for A")
-    parser.add_argument("--b", required=True, help="Registered agent name for B")
+    parser.add_argument("--a", required=True,
+                        help="Registered agent name, or ckpt:<path> for an MCTS agent on it")
+    parser.add_argument("--b", required=True, help="Registered agent name or ckpt:<path>")
     parser.add_argument("--rows", type=int, default=5)
     parser.add_argument("--cols", type=int, default=None)
     parser.add_argument("--num_games", type=int, default=20)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--num_workers", type=int, default=1)
+    parser.add_argument("--sims", type=int, default=400, help="ckpt agents: simulations per move")
+    parser.add_argument("--opening_moves", type=int, default=4,
+                        help="ckpt agents: moves sampled at temperature 1 so games differ")
+    parser.add_argument("--solver", type=int, default=0,
+                        help="ckpt agents: exact endgame solver at <= N undrawn edges")
+    parser.add_argument("--solver_budget", type=int, default=20_000)
+    parser.add_argument("--merge_eq", type=int, default=0,
+                        help="ckpt agents: equivalent-edge merge")
+    parser.add_argument("--cpu", action="store_true")
     args = parser.parse_args()
+    for name in (args.a, args.b):
+        if name.startswith("ckpt:"):
+            register_checkpoint(name, args)
     result = play_match(
         args.a, args.b, args.rows, args.cols, args.num_games, args.seed, args.num_workers
     )

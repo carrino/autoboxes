@@ -140,6 +140,7 @@ uv run ruff check src/alpha_go/boxes tests/test_boxes_*.py
 # Boxes self-play / arena (Phase 1 targets; see PLAN.md for the exact flags)
 uv run -m alpha_go.self_play --game boxes --board_size 3 --black boxes-random --white boxes-greedy --num_games 100
 uv run -m alpha_go.boxes.arena --rows 5 --cols 5 --a boxes-ab-d6 --b boxes-greedy --num_games 200
+uv run -m alpha_go.boxes.arena --rows 5 --a ckpt:$EXP/checkpoints/5x5-solver/iter12.pt --b boxes-ab-d6 --sims 400 --solver 28 --num_games 100 --num_workers 8   # a checkpoint vs anything (or two ckpt: agents)
 EXP=experiments/2026-10-08_14-42-boxes-3x3-loop && bash $EXP/run_iteration_local.sh 0 5   # 3x3; add --cpu for a smoke run
 ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # 5x5 overnight; outputs tagged 5x5 (checkpoints/5x5, league_state-5x5.json)
 SOLVER_N=24 SP_PROCS=4 TAG=5x5-solver ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # solver arm, 4 self-play processes
