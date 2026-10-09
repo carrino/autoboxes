@@ -18,6 +18,7 @@ from alpha_go.boxes.nn_agent import (
     BoxesEngineEvaluator,
     BoxesLeafEvaluator,
     BoxesMCTSAgent,
+    BoxesSolvedResult,
     add_search_flags,
     load_boxes_net,
     register_boxes_mcts_agent,
@@ -132,6 +133,44 @@ class TestAgent:
         assert agent.checkpoint_path == str(path)
         board = alpha_go_cpp.BoxesBoard(2, 3)
         assert board.is_legal(*agent.select_move(board, 0))
+
+    def test_solver_played_moves_record_uniform_optimal_targets(self) -> None:
+        """With the whole 2x3 game inside the solver zone every non-forced move is solver-played:
+        the chosen edge is optimal and the recorded "visits" are one per optimal edge, so the
+        policy target is uniform over the oracle's best edges, with Q the exact outcome."""
+        agent = BoxesMCTSAgent(BoxesLeafEvaluator(small_net(2, 3), CPU), num_simulations=2,
+                               temperature=0.0, solver_max_undrawn=17,
+                               solver_node_budget=1 << 20)  # the empty 2x3 board solves too
+        oracle = Oracle(2, 3)
+        py, cpp = BoxesBoard(2, 3), alpha_go_cpp.BoxesBoard(2, 3)
+        solved_moves = 0
+        for seed in range(17):
+            edge = cpp.edge_index(*agent.select_move(cpp, seed))
+            result = agent.last_search_result
+            if result is not None:  # None: a forced capture played without the solver
+                assert isinstance(result, BoxesSolvedResult)
+                best = oracle.best_edges(py)
+                assert edge in best and sorted(result.optimal) == sorted(best)
+                assert result.final_margin == oracle.final_margin(py)
+                assert result.get_child_visit_counts() == {e: 1 for e in best}
+                assert result.get_root_q_value() == 1.0 - (result.final_margin > 0)
+                assert result.N == len(best)
+                solved_moves += 1
+            py.play_edge(edge)
+            cpp.play_edge(edge)
+        assert cpp.is_game_over() and solved_moves >= 5
+
+    def test_solver_played_moves_reach_the_game_record(self) -> None:
+        name = register_boxes_mcts_agent("boxes-mcts-test-solved-2x2", None, 2, device="cpu",
+                                         net_kwargs=dict(channels=8, n_blocks=1),
+                                         num_simulations=2, solver_max_undrawn=12)
+        record = play_game(get_agent(name), get_agent(name), board_size=2, seed=0,
+                           max_moves=12, game=get_game("boxes"), collect_metrics=True)
+        solved = [m for m in record.move_metrics if m.visit_counts is not None]
+        assert record.num_moves == 12 and len(solved) >= 5
+        for m in solved:
+            assert set(np.unique(m.visit_counts)) <= {0, 1} and m.visit_counts.sum() >= 1
+            assert m.root_value in (0.0, 0.5, 1.0)
 
     def test_search_flags_reach_the_agent_and_its_evaluator(self, tmp_path: Path) -> None:
         import argparse

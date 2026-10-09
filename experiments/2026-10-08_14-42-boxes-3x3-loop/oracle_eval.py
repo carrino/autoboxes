@@ -46,6 +46,7 @@ from alpha_go.boxes.nn_agent import (
     BoxesMCTSAgent,
     add_search_flags,
     load_boxes_net,
+    optimal_edges,
     pick_device,
     search_flags,
 )
@@ -143,16 +144,8 @@ def main() -> None:
                             args.min_undrawn, args.max_undrawn, args.num_positions, rng)
     solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
     geo = geometry(rows, cols)
-
-    def child_value(mask: int, e: int) -> int:
-        gained = sum(1 for b in geo.edge_boxes[e]
-                     if all(((mask | 1 << e) >> s) & 1 for s in geo.box_edges[b]))
-        rest = solver.value(mask | 1 << e)
-        return gained + rest if gained else -rest
-
     values = [solver.value(b.edges()) for b in boards]  # remaining margin, side to move
-    best = [{e for e in b.get_legal_moves_flat() if child_value(b.edges(), e) == v}
-            for b, v in zip(boards, values)]
+    best = [set(optimal_edges(solver, b, geo)) for b in boards]
     final = np.array([b.margin() + v for b, v in zip(boards, values)])
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
           f"(mean undrawn {np.mean([b.num_edges() - b.move_count() for b in boards]):.1f}), "

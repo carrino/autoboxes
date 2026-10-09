@@ -24,6 +24,7 @@ from alpha_go.agents.base import Agent, register_agent
 from alpha_go.boxes.encode import encode_batch
 from alpha_go.boxes.inference import PlaneBatchedEngine
 from alpha_go.boxes.model import BoxesNet
+from alpha_go.boxes.rules import BoxesGeometry, geometry
 
 Evaluation = tuple[dict[int, float], float]
 
@@ -168,6 +169,24 @@ class BoxesEngineEvaluator:
         pass
 
 
+def optimal_edges(solver: Any, board: Any, geo: BoxesGeometry) -> list[int]:
+    """Every legal edge whose exact child value equals the position's value (C++ solver).
+
+    A capturing edge keeps the move: child value = boxes gained + value after; otherwise the
+    opponent moves: child value = -value after.
+    """
+    mask = int(board.edges())
+    value = int(solver.value(mask))
+
+    def child(e: int) -> int:
+        after = mask | 1 << e
+        gained = sum(all(after >> s & 1 for s in geo.box_edges[b]) for b in geo.edge_boxes[e])
+        rest = int(solver.value(after))
+        return gained + rest if gained else -rest
+
+    return [e for e in board.get_legal_moves_flat() if child(e) == value]
+
+
 @dataclass
 class BoxesSearchResult:
     """Wraps the C++ tree; `gameplay.play_game` reads `.tree` for move metrics."""
@@ -181,6 +200,46 @@ class BoxesSearchResult:
     @property
     def Q(self) -> float:  # noqa: N802
         return float(self.tree.get_root_q_value())
+
+
+@dataclass
+class BoxesSolvedResult:
+    """A solver-played move, in the shape `gameplay.play_game` reads from a search tree: one
+    visit per optimal edge, so the policy target is uniform over the optimal set instead of
+    a one-hot of an arbitrary optimal edge; Q is the exact outcome."""
+
+    optimal: list[int]
+    final_margin: int  # exact final margin for the side to move (score so far + remaining)
+
+    @property
+    def tree(self) -> BoxesSolvedResult:
+        return self
+
+    @property
+    def N(self) -> int:  # noqa: N802
+        return len(self.optimal)
+
+    @property
+    def Q(self) -> float:  # noqa: N802
+        return float(self.get_root_q_value())
+
+    def win(self) -> float:
+        return 1.0 if self.final_margin > 0 else 0.5 if self.final_margin == 0 else 0.0
+
+    def get_child_visit_counts(self) -> dict[int, int]:
+        return {e: 1 for e in self.optimal}
+
+    def get_child_q_values(self) -> dict[int, float]:
+        return {e: self.win() for e in self.optimal}
+
+    def get_root_policy_priors(self) -> dict[int, float]:
+        return {e: 1.0 / len(self.optimal) for e in self.optimal}
+
+    def get_root_q_value(self) -> float:  # from the parent's (opponent's) perspective, as a tree
+        return 1.0 - self.win()
+
+    def get_root_visit_count(self) -> int:
+        return len(self.optimal)
 
 
 class BoxesMCTSAgent(Agent):
@@ -218,6 +277,7 @@ class BoxesMCTSAgent(Agent):
         self.solver_node_budget = solver_node_budget
         self.solver_table_entries = solver_table_entries
         self.solver: Any = None  # built on first use, one per agent (tables are per thread)
+        self.geo: Any = None  # geometry tables for the solver's optimal-edge sets
         # One action per independent chain or loop in quiet positions (BoxesZero's
         # equivalent edges); visits and policy targets land on the representative edge.
         self.merge_equivalent = merge_equivalent
@@ -227,7 +287,7 @@ class BoxesMCTSAgent(Agent):
         self.resign_threshold = resign_threshold
         self.resign_consec_turns = resign_consec_turns
         self._consec_below = 0
-        self.last_search_result: BoxesSearchResult | None = None
+        self.last_search_result: BoxesSearchResult | BoxesSolvedResult | None = None
         self.cpp_config = alpha_go_cpp.MCTSConfig()
         self.cpp_config.c_puct = c_puct
         self.cpp_config.dirichlet_alpha = noise_alpha if add_noise else 0.0
@@ -266,6 +326,7 @@ class BoxesMCTSAgent(Agent):
         if self.solver is None:
             self.solver = alpha_go_cpp.BoxesSolver(int(board.rows()), int(board.cols()),
                                                    self.solver_table_entries)
+            self.geo = geometry(int(board.rows()), int(board.cols()))
             if not BoxesMCTSAgent._solver_announced:  # footprint once per process
                 BoxesMCTSAgent._solver_announced = True
                 print(f"BoxesSolver: max_undrawn={self.solver_max_undrawn} "
@@ -283,8 +344,12 @@ class BoxesMCTSAgent(Agent):
             if state.prefix():  # a forced capture: play it, no search needed
                 row, col = board.row_col(state.prefix()[0])
                 return int(row), int(col)
-            if state.solved():  # exact endgame: play the solver's move, no search needed
-                row, col = board.row_col(self.solver.best_edge(state.board()))
+            if state.solved():  # exact endgame: one of the optimal edges, no search needed
+                solved = BoxesSolvedResult(optimal_edges(self.solver, board, self.geo),
+                                           int(state.solved_margin()))
+                self.last_search_result = solved
+                edge = solved.optimal[np.random.default_rng(seed).integers(len(solved.optimal))]
+                row, col = board.row_col(edge)
                 return int(row), int(col)
             result = self.search(state)
         else:
