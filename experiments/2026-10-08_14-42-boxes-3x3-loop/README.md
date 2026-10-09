@@ -34,6 +34,9 @@ seeds, threads and GPU engines), which is the remedy when `nvidia-smi` shows the
 while the game threads sit on the interpreter lock. `SOLVER_N=24` turns the exact endgame
 solver on in self-play and the arena at 24 undrawn edges (see `solver_bench.py`);
 `SOLVER_BUDGET=50000` lets it spend more nodes per position, which is what a larger N needs.
+`ARENA_SOLVER_N=0` keeps the solver out of the arena only: with it on, two nets of any quality
+tie (the search reaches the solver's exact leaves whichever net steers it), so promotion
+cannot see the net; with it off the nets' own midgame and endgame knowledge decides.
 `MERGE_EQ=1` gives the search one action per independent chain or loop in quiet positions
 (BoxesZero's equivalent edges; value-preserving, tested against the oracle). `BASELINES`
 picks the arena's absolute-scale opponents (default `boxes-greedy,boxes-ab-d4`, both C++).
