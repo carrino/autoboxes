@@ -1,5 +1,7 @@
 #include "boxes_game.h"
 
+#include <algorithm>
+
 #include <stdexcept>
 
 namespace alpha_go {
@@ -109,6 +111,28 @@ std::vector<int8_t> BoxesBoard::to_lattice() const {
         grid[(2 * (b / geo_->cols) + 1) * lc + 2 * (b % geo_->cols) + 1] = owner_[b];
     }
     return grid;
+}
+
+void BoxesBoard::encode_planes(float* out) const {
+    const int lr = geo_->lattice_rows();
+    const int lc = geo_->lattice_cols();
+    const int plane = lr * lc;
+    std::fill(out, out + kNumPlanes * plane, 0.0f);
+    for (int e = 0; e < geo_->num_edges; ++e) {
+        const int cell = geo_->edge_rc[e].first * lc + geo_->edge_rc[e].second;
+        out[cell] = static_cast<float>((edges_ >> e) & 1);  // plane 0: edge drawn
+        out[8 * plane + cell] = 1.0f;                        // plane 8: is-edge-cell
+    }
+    const int8_t mover = to_play_;
+    for (int b = 0; b < geo_->num_boxes; ++b) {
+        const int cell = (2 * (b / geo_->cols) + 1) * lc + 2 * (b % geo_->cols) + 1;
+        out[1 * plane + cell] = owner_[b] == mover ? 1.0f : 0.0f;            // mine
+        out[2 * plane + cell] = owner_[b] == 3 - mover ? 1.0f : 0.0f;        // theirs
+        out[(3 + sides_[b]) * plane + cell] = 1.0f;                           // side count one-hot
+        out[9 * plane + cell] = 1.0f;                                         // is-box-cell
+    }
+    const float margin = static_cast<float>(this->margin()) / static_cast<float>(geo_->num_boxes);
+    std::fill(out + 10 * plane, out + 11 * plane, margin);
 }
 
 std::string BoxesBoard::render() const {

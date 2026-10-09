@@ -46,7 +46,7 @@ def main() -> None:
     # Sample the first few moves from the visit distribution: at temperature 0 both nets are
     # deterministic and a 100-game match is the same two games played 50 times each.
     mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=1.0,
-                temperature_cutoff=args.opening_moves, leaf_batch_size=8)
+                temperature_cutoff=args.opening_moves, leaf_batch_size=16)
     tag = args.tag or f"{args.rows}x{args.cols or args.rows}"
     ckpt_dir = EXP_DIR / "checkpoints" / tag
     state_file = EXP_DIR / f"league_state-{tag}.json"

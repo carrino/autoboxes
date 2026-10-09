@@ -20,7 +20,7 @@ import torch
 from numpy.typing import NDArray
 
 from alpha_go.agents.base import Agent, register_agent
-from alpha_go.boxes.encode import encode, encode_batch
+from alpha_go.boxes.encode import encode_batch
 from alpha_go.boxes.inference import PlaneBatchedEngine
 from alpha_go.boxes.model import BoxesNet
 
@@ -54,7 +54,7 @@ def policy_dict(
     scaled = logits_E[legal] / temperature
     probs = np.exp(scaled - scaled.max())
     probs /= probs.sum()
-    return {int(e): float(p) for e, p in zip(legal, probs)}
+    return dict(zip(legal, probs.tolist()))
 
 
 def shaped_value(win: float, expected_margin: float, lam: float, k: float) -> float:
@@ -127,15 +127,15 @@ class BoxesEngineEvaluator:
         return self.batch_evaluate([board])[0]
 
     def batch_evaluate(self, boards: list[Any]) -> list[Evaluation]:
-        futures = [self.engine.submit(encode(b)) for b in boards]
-        results = []
-        for b, future in zip(boards, futures):
-            logits, win, expected = future.result()
-            results.append((
-                policy_dict(logits, b.get_legal_moves_flat(), self.policy_temperature),
-                shaped_value(win, expected, self.margin_utility_lambda, self.margin_utility_k),
-            ))
-        return results
+        logits_NE, win_N, expected_N = self.engine.submit(encode_batch(boards)).result()
+        return [
+            (
+                policy_dict(logits_NE[i], b.get_legal_moves_flat(), self.policy_temperature),
+                shaped_value(float(win_N[i]), float(expected_N[i]),
+                             self.margin_utility_lambda, self.margin_utility_k),
+            )
+            for i, b in enumerate(boards)
+        ]
 
     def close(self) -> None:
         pass

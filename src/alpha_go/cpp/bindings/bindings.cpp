@@ -193,6 +193,36 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
     m.def("boxes_perft", &alpha_go::boxes_perft, py::arg("board"), py::arg("depth"),
           "(sequences, PLAYER_1 boxes summed over leaves, PLAYER_2 boxes summed over leaves).");
 
+    m.def("encode_planes", [](const py::sequence& states) {
+        // Feature planes (B, 11, H, W) for a batch of BoxesBoard / BoxesSearchState of one size.
+        const auto board_of = [](py::handle h) -> const alpha_go::BoxesBoard& {
+            if (py::isinstance<alpha_go::BoxesSearchState>(h)) {
+                return h.cast<const alpha_go::BoxesSearchState&>().board();
+            }
+            return h.cast<const alpha_go::BoxesBoard&>();
+        };
+        const py::ssize_t n = py::len(states);
+        if (n == 0) {
+            throw std::invalid_argument("encode_planes: empty batch");
+        }
+        const auto& geo = board_of(states[0]).geometry();
+        auto arr = py::array_t<float>({n, static_cast<py::ssize_t>(alpha_go::BoxesBoard::kNumPlanes),
+                                       static_cast<py::ssize_t>(geo.lattice_rows()),
+                                       static_cast<py::ssize_t>(geo.lattice_cols())});
+        const py::ssize_t stride = alpha_go::BoxesBoard::kNumPlanes * geo.lattice_rows() * geo.lattice_cols();
+        float* out = arr.mutable_data();
+        for (py::ssize_t i = 0; i < n; ++i) {
+            const alpha_go::BoxesBoard& board = board_of(states[i]);
+            if (board.rows() != geo.rows || board.cols() != geo.cols) {
+                throw std::invalid_argument("encode_planes: boards of different sizes");
+            }
+            board.encode_planes(out + i * stride);
+        }
+        return arr;
+    }, py::arg("states"),
+    "Feature planes (B, 11, H, W) float32 for BoxesBoard / BoxesSearchState objects of one size; "
+    "identical to alpha_go.boxes.encode.encode_batch.");
+
     // BoxesSearchState binding: forced-move collapse around a BoxesBoard
     py::class_<alpha_go::BoxesSearchState>(m, "BoxesSearchState")
         .def(py::init<const alpha_go::BoxesBoard&>(), py::arg("board"),

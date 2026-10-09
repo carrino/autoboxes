@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import alpha_go_cpp  # type: ignore[import-not-found]
 import numpy as np
 from numpy.typing import NDArray
 
@@ -77,5 +78,8 @@ def encode(board: Any) -> NDArray[np.float32]:
 
 
 def encode_batch(boards: list[Any]) -> NDArray[np.float32]:
-    """Planes (B, K, H, W) for same-size boards."""
+    """Planes (B, K, H, W) for same-size boards; C++ boards and search states are encoded
+    in C++ (`alpha_go_cpp.encode_planes`, parity-tested against `encode`)."""
+    if isinstance(boards[0], (alpha_go_cpp.BoxesBoard, alpha_go_cpp.BoxesSearchState)):
+        return np.asarray(alpha_go_cpp.encode_planes(boards), dtype=np.float32)
     return np.stack([encode(b) for b in boards])

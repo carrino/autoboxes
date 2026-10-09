@@ -15,7 +15,7 @@ from alpha_go.boxes.inference import PlaneBatchedEngine
 from alpha_go.boxes.nn_agent import load_boxes_net, pick_device, register_boxes_mcts_agent
 
 C_PUCT = 1.5
-LEAF_BATCH_SIZE = 8
+LEAF_BATCH_SIZE = 16
 DIRICHLET_ALPHA = 0.5  # ~10 / branching factor on 3x3; noise keeps openings diverse
 DIRICHLET_WEIGHT = 0.25
 

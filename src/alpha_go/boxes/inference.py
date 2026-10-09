@@ -20,17 +20,23 @@ from numpy.typing import NDArray
 
 from alpha_go.boxes.model import BoxesNet
 
-Result = tuple[NDArray[np.float32], float, float]  # edge logits, win prob, expected margin
+Result = tuple[NDArray[np.float32], NDArray[np.float32], NDArray[np.float32]]
+# per chunk: edge logits (N, E), win prob (N,), expected margin (N,)
 
 
 @dataclass
 class _Request:
-    planes_KHW: NDArray[np.float32]
+    planes_NKHW: NDArray[np.float32]  # one chunk (a tree's leaf batch)
     future: Future[Result]
 
 
 class PlaneBatchedEngine:
-    """Batches plane stacks across threads into single forward passes."""
+    """Batches plane chunks across threads into single forward passes.
+
+    A chunk is one tree's leaf batch (N, K, H, W); the engine concatenates chunks from
+    many game threads up to `batch_size` positions per forward and answers each chunk
+    with one future, so the per-leaf Python work is a few array slices.
+    """
 
     def __init__(
         self,
@@ -71,9 +77,10 @@ class PlaneBatchedEngine:
         if self.thread is not None:
             self.thread.join(timeout=5.0)
 
-    def submit(self, planes_KHW: NDArray[np.float32]) -> Future[Result]:
+    def submit(self, planes_NKHW: NDArray[np.float32]) -> Future[Result]:
+        """Queue one chunk; the future resolves to (logits_NE, win_N, expected_margin_N)."""
         future: Future[Result] = Future()
-        self.queue.put(_Request(planes_KHW, future))
+        self.queue.put(_Request(planes_NKHW, future))
         return future
 
     def _loop(self) -> None:
@@ -84,13 +91,15 @@ class PlaneBatchedEngine:
                 continue
             batch.append(first)
             deadline = time.perf_counter() + self.batch_timeout
-            while len(batch) < self.batch_size:
+            size = len(first.planes_NKHW)
+            while size < self.batch_size:
                 request = self._get(max(0.0, deadline - time.perf_counter()))
                 if request is None:
                     break
                 batch.append(request)
+                size += len(request.planes_NKHW)
             self._process(batch)
-            self.total_requests += len(batch)
+            self.total_requests += size
             self.total_batches += 1
 
     def _get(self, timeout: float) -> _Request | None:
@@ -100,14 +109,18 @@ class PlaneBatchedEngine:
 
     @torch.no_grad()
     def _process(self, batch: list[_Request]) -> None:
-        planes_BKHW = torch.from_numpy(np.stack([r.planes_KHW for r in batch])).to(self.device)
+        planes_BKHW = torch.from_numpy(np.concatenate([r.planes_NKHW for r in batch]))
+        planes_BKHW = planes_BKHW.to(self.device)
         with torch.autocast(self.device.type, dtype=torch.float16, enabled=self.use_fp16):
             policy_BE, margin_BM = self.model(planes_BKHW)
         policy = policy_BE.float().cpu().numpy()
         win = self.model.win_prob(margin_BM).cpu().numpy()
         expected = self.model.expected_margin(margin_BM).cpu().numpy()
-        for i, request in enumerate(batch):
-            request.future.set_result((policy[i], float(win[i]), float(expected[i])))
+        start = 0
+        for request in batch:
+            end = start + len(request.planes_NKHW)
+            request.future.set_result((policy[start:end], win[start:end], expected[start:end]))
+            start = end
 
 
 def _queue_get(q: queue.Queue[_Request], timeout: float) -> _Request | None:

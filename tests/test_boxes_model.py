@@ -54,6 +54,26 @@ class TestEncode:
         assert np.array_equal(encode(py), encode(cpp))
         assert encode_batch([py, cpp]).shape == (2, NUM_PLANES, 7, 7)
 
+    @pytest.mark.parametrize("rows,cols", [(3, 3), (2, 3), (5, 5)])
+    def test_cpp_encode_planes_matches_python(self, rows: int, cols: int) -> None:
+        # alpha_go_cpp.encode_planes (used for every search leaf) must equal the Python
+        # reference on boards and on collapsed search states.
+        rng = random.Random(11)
+        boards = []
+        for _ in range(40):
+            board = alpha_go_cpp.BoxesBoard(rows, cols)
+            for _ in range(rng.randint(0, board.num_edges() - 1)):
+                board.play_edge(rng.choice(board.get_legal_moves_flat()))
+            boards.append(board)
+        planes = alpha_go_cpp.encode_planes(boards)
+        assert planes.shape == (40, NUM_PLANES, 2 * rows + 1, 2 * cols + 1)
+        assert planes.dtype == np.float32
+        assert np.array_equal(planes, np.stack([encode(b) for b in boards]))
+        states = [alpha_go_cpp.BoxesSearchState(b) for b in boards if not b.is_game_over()]
+        assert np.array_equal(alpha_go_cpp.encode_planes(states),
+                              np.stack([encode(s) for s in states]))
+        assert np.array_equal(encode_batch(boards), planes)
+
     @pytest.mark.parametrize("rows,cols", [(2, 3), (3, 3)])
     def test_equivariance_under_symmetries(self, rows: int, cols: int) -> None:
         rng = random.Random(rows + cols)

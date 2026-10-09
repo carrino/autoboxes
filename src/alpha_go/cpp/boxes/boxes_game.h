@@ -79,6 +79,10 @@ public:
 
     // Export: lattice grid, drawn edges 1, captured boxes their owner's code
     std::vector<int8_t> to_lattice() const;
+    // Feature planes for the net, float32 (kNumPlanes, lattice_rows, lattice_cols) row-major,
+    // identical to alpha_go.boxes.encode.encode_grid (see that docstring for the plane list).
+    static constexpr int kNumPlanes = 11;
+    void encode_planes(float* out) const;
     std::string render() const;
 
 private:
