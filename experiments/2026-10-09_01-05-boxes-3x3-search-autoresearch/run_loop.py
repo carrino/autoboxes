@@ -2,12 +2,15 @@
 
 Each candidate is the current best VAR plus one change (one variable at a time, then the
 near-misses combined). A run that beats the running best on `search_optimal` is kept and
-becomes the base for later candidates; anything else is discarded, which is the skill's
-"revert" without touching git. Every run appends to results.tsv (metric, memory, status,
-description) and runs.jsonl (the full VAR and ===RESULT=== line), so any run can be repeated
-with `eval_search.py --var '<json>'`. Ends with analyze_runs.py.
+becomes the base for later candidates; a tie is kept only when it is cheaper (`sec_per_move`,
+the skill's "simpler at equal metric wins"); anything else is discarded, which is the
+skill's "revert" without touching git. Every run appends to results.tsv (metric, memory,
+status, description) and runs.jsonl (the full VAR and ===RESULT=== line), so any run can be
+repeated with `eval_search.py --var '<json>'`. Re-running resumes: candidates already in
+runs.jsonl are skipped and the running best is restored from its last kept run, so later
+rounds are appended to CANDIDATES. Ends with analyze_runs.py.
 
-  uv run run_loop.py            # ~1 min per run on CPU
+  uv run run_loop.py            # ~1-3 min per run on CPU
 """
 from __future__ import annotations
 
@@ -42,6 +45,16 @@ CANDIDATES: list[tuple[str, dict[str, object]]] = [
     ("solver_max_undrawn=10", {"solver_max_undrawn": 10}),
     ("sims=200 (double budget; cost in sec_per_move)", {"num_simulations": 200}),
     ("sims=50 (half budget)", {"num_simulations": 50}),
+    # Round 2: push the winners further, and re-test the cheap near-ties on top of the best.
+    ("margin_utility_lambda=0.75 (k=6)", {"margin_utility_lambda": 0.75}),
+    ("margin_utility_lambda=1.0 (k=6)", {"margin_utility_lambda": 1.0}),
+    ("margin_utility_k=10 at the best lambda", {"margin_utility_k": 10.0}),
+    ("policy_temperature=0.5", {"policy_temperature": 0.5}),
+    ("solver_max_undrawn=10 on top of the best (tied round 1 at a third of the time)",
+     {"solver_max_undrawn": 10}),
+    ("leaf_batch_size=16 on top of the best (is leaf=4's gain worth 2x the time?)",
+     {"leaf_batch_size": 16}),
+    ("c_puct=1.5 on top of the best (was c_puct=2.5's gain real?)", {"c_puct": 1.5}),
 ]
 
 
@@ -58,19 +71,25 @@ def run(var: dict[str, object]) -> dict[str, object] | None:
 def main() -> None:
     if not RESULTS.exists():
         RESULTS.write_text(f"{METRIC}\tmemory_gb\tstatus\tdescription\n")
-    best_var: dict[str, object] = {}
-    best = -1.0
+    past = [json.loads(line) for line in RUNS.read_text().splitlines()] if RUNS.exists() else []
+    done = {r["description"] for r in past}
+    kept = [r for r in past if r["status"] == "keep"]
+    best_var: dict[str, object] = kept[-1]["var"] if kept else {}
+    best = float(kept[-1]["result"][METRIC]) if kept else -1.0
+    best_sec = float(kept[-1]["result"]["sec_per_move"]) if kept else float("inf")
     for description, change in CANDIDATES:
+        if description in done:
+            continue
         var = {**best_var, **change}
         t0 = time.time()
         result = run(var)
         if result is None:
-            status, value = "crash", 0.0
+            status, value, sec = "crash", 0.0, float("inf")
         else:
-            value = float(result[METRIC])
-            status = "keep" if value > best else "discard"
+            value, sec = float(result[METRIC]), float(result["sec_per_move"])
+            status = "keep" if value > best or (value == best and sec < best_sec) else "discard"
         if status == "keep":
-            best, best_var = value, var
+            best, best_var, best_sec = value, var, sec
         with RESULTS.open("a") as f:
             f.write(f"{value:.4f}\t0.0\t{status}\t{description}\n")
         with RUNS.open("a") as f:
