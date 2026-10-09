@@ -127,6 +127,10 @@ def main() -> None:
     p.add_argument("--num-positions", type=int, default=300)
     p.add_argument("--num_simulations", type=int, default=100)
     p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4")
+    p.add_argument("--value-depths", type=int, nargs="*", default=[2, 4],
+                   help="also score the C++ alpha-beta's own value at these depths (value "
+                        "sign and margin error): how visible the band's value is to a "
+                        "shallow hand-written evaluation")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--cpu", action="store_true")
     add_search_flags(p)
@@ -164,6 +168,18 @@ def main() -> None:
         return float(np.mean([m in s for m, s in zip(moves, best)]))
 
     rows_out: list[dict[str, object]] = []
+    decided = final != 0
+    alphabeta = alpha_go_cpp.BoxesAlphaBeta(rows, cols)
+    for depth in args.value_depths:
+        t1 = time.time()
+        # The alpha-beta's remaining margin for the mover, as the net's value head is scored.
+        expected = np.array([b.margin() + alphabeta.value(b.edges(), depth) for b in boards])
+        sign = np.mean((expected[decided] > 0) == (final[decided] > 0))
+        row = {"agent": f"ab-d{depth} value", "iteration": "", "value_sign": round(float(sign), 4),
+               "margin_mae": round(float(np.mean(np.abs(expected - final))), 3)}
+        rows_out.append(row)
+        print(f"{row['agent']:>14}: value sign {row['value_sign']:.3f}  margin MAE "
+              f"{row['margin_mae']:.2f} ({time.time() - t1:.0f}s)")
     for name in [n for n in args.baselines.split(",") if n]:
         t1 = time.time()
         rate = optimal_rate(agent_moves(get_agent(name), boards, args.seed))
@@ -176,7 +192,6 @@ def main() -> None:
         agent = BoxesMCTSAgent(BoxesLeafEvaluator(model, device, **evaluator_flags),
                                temperature=0.0, num_simulations=args.num_simulations,
                                **mcts_flags)
-        decided = final != 0
         row = {
             "agent": f"iter{it}", "iteration": it,
             "policy_optimal": round(optimal_rate(argmax), 4),
