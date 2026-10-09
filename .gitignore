@@ -38,3 +38,11 @@ htmlcov/
 
 # Secrets
 .secrets
+# experiment artifacts
+experiments/**/checkpoints/
+experiments/**/logs/
+experiments/**/timing/
+*.pt
+*.npz
+results.tsv
+experiments/**/dataset-*-it*.txt

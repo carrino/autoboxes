@@ -33,6 +33,7 @@ struct MCTSConfig {
 
 // Node in the MCTS tree
 // Stored in a flat vector with indices instead of pointers
+template <class State>
 struct MCTSNode {
     int N = 0;                     // Visit count (real backups)
     int N_virt = 0;                // Virtual-loss pending visits (leaves in-flight through this node)
@@ -56,24 +57,31 @@ struct MCTSNode {
     std::unordered_map<int, float> logP_A;
 
     // Game state at this node
-    GoBoard state;
+    State state;
 
-    explicit MCTSNode(const GoBoard& s) : state(s) {}
-    MCTSNode() : state(9) {}
+    explicit MCTSNode(const State& s) : state(s) {}
 };
 
+// Templated over the game state so one search serves every game. State must be
+// copyable and provide is_game_over(), player() -> 0/1 (side to move),
+// apply(int action), and outcome(int player) -> 1/0.5/0 at terminal positions.
+// Values are backed up from the perspective of the player who moved into a node
+// and are flipped only where the mover changes, so games with extra moves (a
+// capture in Dots and Boxes) work; in Go the mover changes every ply.
+// Instantiated for GoBoard and BoxesBoard in mcts.cpp.
+template <class State>
 class MCTSTree {
 public:
     // Policy/value callback type
     // Returns (policy_dict: action -> probability, value: float)
-    using EvaluatorFn = std::function<std::pair<std::unordered_map<int, float>, float>(const GoBoard&)>;
+    using EvaluatorFn = std::function<std::pair<std::unordered_map<int, float>, float>(const State&)>;
 
     // Batched evaluator: takes a vector of boards, returns per-board (policy, value).
     using BatchedEvaluatorFn = std::function<
         std::vector<std::pair<std::unordered_map<int, float>, float>>
-        (const std::vector<GoBoard>&)>;
+        (const std::vector<State>&)>;
 
-    MCTSTree(const GoBoard& root_state, const MCTSConfig& config);
+    MCTSTree(const State& root_state, const MCTSConfig& config);
 
     // Run simulations
     void run_simulations(int num_simulations, EvaluatorFn evaluator);
@@ -90,7 +98,7 @@ public:
     int select_action(float temperature = 1.0f) const;
 
     // Access
-    const MCTSNode& root() const { return nodes_[0]; }
+    const MCTSNode<State>& root() const { return nodes_[0]; }
     size_t tree_size() const { return nodes_.size(); }
     int get_root_visit_count() const { return nodes_[0].N; }
     float get_root_q_value() const { return nodes_[0].Q; }
@@ -112,7 +120,7 @@ public:
 
 private:
     // Core MCTS operations
-    int create_node(const GoBoard& state, int parent_idx, int8_t player_at_parent);
+    int create_node(const State& state, int parent_idx, int8_t player_at_parent);
 
     // Single playout (recursive)
     float perform_playout(int node_idx, EvaluatorFn& evaluator);
@@ -128,7 +136,7 @@ private:
     // Returns rollout_value from perspective of player_perspective (0=BLACK, 1=WHITE)
     // remaining_depth: how many more moves can be made (tree + rollout combined limit)
     float fast_rollout(
-        const GoBoard& start_state,
+        const State& start_state,
         int8_t player_perspective,
         int remaining_depth,
         EvaluatorFn& evaluator);
@@ -138,11 +146,13 @@ private:
         const std::unordered_map<int, float>& policy,
         float temperature);
 
-    std::vector<MCTSNode> nodes_;
+    std::vector<MCTSNode<State>> nodes_;
     MCTSConfig config_;
 
     // Random number generator for action selection
     mutable std::mt19937 rng_;
 };
+
+using GoMCTSTree = MCTSTree<GoBoard>;
 
 }  // namespace alpha_go

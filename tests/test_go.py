@@ -16,7 +16,7 @@ def gnugo_available() -> bool:
             timeout=5,
         )
         return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired):  # missing, or a non-executable 'gnugo' on PATH
         return False
 
 

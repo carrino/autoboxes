@@ -15,7 +15,7 @@ fi
 # Detect Python paths
 PYTHON_ROOT=$($VENV_PYTHON -c "import sys; print(sys.base_prefix)")
 PYTHON_INCLUDE=$($VENV_PYTHON -c "import sysconfig; print(sysconfig.get_path('include'))")
-PYTHON_LIBRARY=$($VENV_PYTHON -c "import sysconfig, os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), 'libpython3.10.so'))")
+PYTHON_LIBRARY=$($VENV_PYTHON -c "import sysconfig, os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))")
 
 # Build
 rm -rf "$BUILD_DIR"

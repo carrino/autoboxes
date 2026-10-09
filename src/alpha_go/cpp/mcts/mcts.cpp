@@ -1,5 +1,8 @@
 #include "mcts.h"
 
+#include "boxes/boxes_game.h"
+#include "boxes/boxes_search.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -8,15 +11,17 @@
 
 namespace alpha_go {
 
-MCTSTree::MCTSTree(const GoBoard& root_state, const MCTSConfig& config)
+template <class State>
+MCTSTree<State>::MCTSTree(const State& root_state, const MCTSConfig& config)
     : config_(config), rng_(std::random_device{}()) {
     // Create root node
     nodes_.emplace_back(root_state);
     // Root's player_at_parent is the opponent (who made the "last" move)
-    nodes_[0].player_at_parent = (root_state.to_play() == GoBoard::BLACK) ? 1 : 0;
+    nodes_[0].player_at_parent = static_cast<int8_t>(1 - root_state.player());
 }
 
-int MCTSTree::create_node(const GoBoard& state, int parent_idx, int8_t player_at_parent) {
+template <class State>
+int MCTSTree<State>::create_node(const State& state, int parent_idx, int8_t player_at_parent) {
     int idx = static_cast<int>(nodes_.size());
     nodes_.emplace_back(state);
     nodes_[idx].parent_idx = parent_idx;
@@ -26,8 +31,9 @@ int MCTSTree::create_node(const GoBoard& state, int parent_idx, int8_t player_at
     return idx;
 }
 
-std::unordered_map<int, float> MCTSTree::compute_puct_scores(int node_idx) const {
-    const MCTSNode& node = nodes_[node_idx];
+template <class State>
+std::unordered_map<int, float> MCTSTree<State>::compute_puct_scores(int node_idx) const {
+    const MCTSNode<State>& node = nodes_[node_idx];
 
     // Total visits to children
     int total_visits = 0;
@@ -60,7 +66,8 @@ std::unordered_map<int, float> MCTSTree::compute_puct_scores(int node_idx) const
     return scores;
 }
 
-int MCTSTree::select_action_puct(int node_idx) const {
+template <class State>
+int MCTSTree<State>::select_action_puct(int node_idx) const {
     auto scores = compute_puct_scores(node_idx);
 
     int best_action = -1;
@@ -76,7 +83,8 @@ int MCTSTree::select_action_puct(int node_idx) const {
     return best_action;
 }
 
-float MCTSTree::perform_playout(int node_idx, EvaluatorFn& evaluator) {
+template <class State>
+float MCTSTree<State>::perform_playout(int node_idx, EvaluatorFn& evaluator) {
     // IMPORTANT: Don't store references to nodes_ elements - vector may reallocate!
     // Always access via index.
 
@@ -87,15 +95,7 @@ float MCTSTree::perform_playout(int node_idx, EvaluatorFn& evaluator) {
 
     // Case 1: Terminal node - game is over
     if (nodes_[node_idx].state.is_game_over()) {
-        // Get reward from player_perspective
-        int8_t winner = nodes_[node_idx].state.get_winner();
-        if (winner == 0) {
-            U = 0.5f;  // Draw
-        } else {
-            // player_perspective: 0 = BLACK, 1 = WHITE
-            int8_t player_color = (player_perspective == 0) ? GoBoard::BLACK : GoBoard::WHITE;
-            U = (winner == player_color) ? 1.0f : 0.0f;
-        }
+        U = nodes_[node_idx].state.outcome(player_perspective);
     }
     // Case 2: Leaf node not yet visited - evaluate and expand
     else if (nodes_[node_idx].N == 0) {
@@ -109,7 +109,7 @@ float MCTSTree::perform_playout(int node_idx, EvaluatorFn& evaluator) {
 
         // Value network gives value from current player's perspective
         // We need to convert to parent player's perspective
-        int8_t current_player = (nodes_[node_idx].state.to_play() == GoBoard::BLACK) ? 0 : 1;
+        int8_t current_player = static_cast<int8_t>(nodes_[node_idx].state.player());
         if (current_player != player_perspective) {
             v_theta = 1.0f - v_theta;
         }
@@ -148,15 +148,10 @@ float MCTSTree::perform_playout(int node_idx, EvaluatorFn& evaluator) {
         // Expand if child doesn't exist
         auto it = nodes_[node_idx].children.find(action);
         if (it == nodes_[node_idx].children.end()) {
-            GoBoard new_state = nodes_[node_idx].state;
-            if (action == PASS_ACTION) {
-                new_state.pass();
-            } else {
-                auto [row, col] = new_state.row_col(action);
-                new_state.play(row, col);
-            }
+            State new_state = nodes_[node_idx].state;
+            new_state.apply(action);
 
-            int8_t current_player = (nodes_[node_idx].state.to_play() == GoBoard::BLACK) ? 0 : 1;
+            int8_t current_player = static_cast<int8_t>(nodes_[node_idx].state.player());
             int child_idx = create_node(new_state, node_idx, current_player);
             // Note: create_node may reallocate, so we need to access nodes_ again
             nodes_[node_idx].children[action] = child_idx;
@@ -167,8 +162,10 @@ float MCTSTree::perform_playout(int node_idx, EvaluatorFn& evaluator) {
         // Recurse - get value from child's perspective
         float child_value = perform_playout(child_idx, evaluator);
 
-        // Child value is from current player's perspective, we need parent's perspective
-        U = 1.0f - child_value;
+        // Child value is from the perspective of the player who moved at this node; flip
+        // only if that differs from this node's own mover (a capture in Boxes keeps the turn).
+        U = (nodes_[child_idx].player_at_parent == nodes_[node_idx].player_at_parent)
+            ? child_value : 1.0f - child_value;
     }
 
     // Backup: Update visit count and action value
@@ -179,7 +176,8 @@ float MCTSTree::perform_playout(int node_idx, EvaluatorFn& evaluator) {
     return U;
 }
 
-int MCTSTree::sample_action_from_policy(
+template <class State>
+int MCTSTree<State>::sample_action_from_policy(
     const std::unordered_map<int, float>& policy,
     float temperature) {
 
@@ -220,57 +218,36 @@ int MCTSTree::sample_action_from_policy(
     return actions[dist(rng_)];
 }
 
-float MCTSTree::fast_rollout(
-    const GoBoard& start_state,
+template <class State>
+float MCTSTree<State>::fast_rollout(
+    const State& start_state,
     int8_t player_perspective,
     int remaining_depth,
     EvaluatorFn& evaluator) {
 
-    GoBoard current = start_state;
+    State current = start_state;
     int depth = 0;
 
     while (!current.is_game_over() && depth < remaining_depth) {
         // Get policy from evaluator
         auto [policy, _] = evaluator(current);
 
-        int action;
-        if (policy.empty()) {
-            // No legal moves, pass
-            current.pass();
-            action = PASS_ACTION;
-        } else {
-            // Sample action from policy
-            action = sample_action_from_policy(policy, config_.rollout_temperature);
-
-            if (action == PASS_ACTION) {
-                current.pass();
-            } else {
-                auto [row, col] = current.row_col(action);
-                if (!current.play(row, col)) {
-                    // Illegal move - shouldn't happen but fallback to pass
-                    current.pass();
-                    action = PASS_ACTION;
-                }
-            }
-        }
+        // No legal moves -> pass; an illegal sample falls back to a pass inside apply().
+        int action = policy.empty()
+            ? PASS_ACTION : sample_action_from_policy(policy, config_.rollout_temperature);
+        current.apply(action);
         ++depth;
     }
 
     // Compute rollout value
     float rollout_value;
     if (current.is_game_over()) {
-        int8_t winner = current.get_winner();
-        if (winner == 0) {
-            rollout_value = 0.5f;
-        } else {
-            int8_t player_color = (player_perspective == 0) ? GoBoard::BLACK : GoBoard::WHITE;
-            rollout_value = (winner == player_color) ? 1.0f : 0.0f;
-        }
+        rollout_value = current.outcome(player_perspective);
     } else {
         // Hit depth limit - use value estimate from current position
         auto [_, v] = evaluator(current);
         // v is from current player's perspective
-        int8_t current_player = (current.to_play() == GoBoard::BLACK) ? 0 : 1;
+        int8_t current_player = static_cast<int8_t>(current.player());
         if (current_player != player_perspective) {
             v = 1.0f - v;
         }
@@ -280,8 +257,9 @@ float MCTSTree::fast_rollout(
     return rollout_value;
 }
 
-void MCTSTree::add_dirichlet_noise(float alpha, float weight) {
-    MCTSNode& root = nodes_[0];
+template <class State>
+void MCTSTree<State>::add_dirichlet_noise(float alpha, float weight) {
+    MCTSNode<State>& root = nodes_[0];
     if (root.logP_A.empty()) {
         return;
     }
@@ -314,7 +292,8 @@ void MCTSTree::add_dirichlet_noise(float alpha, float weight) {
     }
 }
 
-void MCTSTree::run_simulations(int num_simulations, EvaluatorFn evaluator) {
+template <class State>
+void MCTSTree<State>::run_simulations(int num_simulations, EvaluatorFn evaluator) {
     // Playout cap randomization: sample sim count from categorical distribution
     if (!config_.pcr_sims.empty()) {
         std::discrete_distribution<int> dist(config_.pcr_probs.begin(), config_.pcr_probs.end());
@@ -350,7 +329,8 @@ struct PendingLeaf {
 };
 }  // namespace
 
-void MCTSTree::run_simulations_batched(
+template <class State>
+void MCTSTree<State>::run_simulations_batched(
     int num_simulations, int leaf_batch_size, BatchedEvaluatorFn evaluator) {
 
     if (!config_.pcr_sims.empty()) {
@@ -360,7 +340,7 @@ void MCTSTree::run_simulations_batched(
 
     // Evaluate root synchronously (single-item batch) if not already evaluated.
     if (nodes_[0].logP_A.empty()) {
-        auto results = evaluator(std::vector<GoBoard>{nodes_[0].state});
+        auto results = evaluator(std::vector<State>{nodes_[0].state});
         auto& [policy_dict, _v] = results[0];
         for (const auto& [action, prob] : policy_dict) {
             nodes_[0].logP_A[action] = std::log(prob + 1e-8f);
@@ -375,7 +355,7 @@ void MCTSTree::run_simulations_batched(
         int target = std::min(leaf_batch_size, num_simulations - completed);
 
         std::vector<PendingLeaf> pending;
-        std::vector<GoBoard> eval_states;
+        std::vector<State> eval_states;
         pending.reserve(target);
         eval_states.reserve(target);
 
@@ -388,14 +368,7 @@ void MCTSTree::run_simulations_batched(
             while (true) {
                 // Terminal leaf
                 if (nodes_[node_idx].state.is_game_over()) {
-                    int8_t winner = nodes_[node_idx].state.get_winner();
-                    int8_t persp = nodes_[node_idx].player_at_parent;
-                    float U;
-                    if (winner == 0) U = 0.5f;
-                    else {
-                        int8_t pc = (persp == 0) ? GoBoard::BLACK : GoBoard::WHITE;
-                        U = (winner == pc) ? 1.0f : 0.0f;
-                    }
+                    float U = nodes_[node_idx].state.outcome(nodes_[node_idx].player_at_parent);
                     PendingLeaf pl{path, node_idx, true, U, -1};
                     pending.push_back(pl);
                     for (int idx : path) nodes_[idx].N_virt += 1;
@@ -443,31 +416,18 @@ void MCTSTree::run_simulations_batched(
                 int child_idx;
                 if (it == nodes_[node_idx].children.end()) {
                     // Create new child — unevaluated leaf
-                    GoBoard new_state = nodes_[node_idx].state;
-                    if (action == PASS_ACTION) {
-                        new_state.pass();
-                    } else {
-                        auto [row, col] = new_state.row_col(action);
-                        new_state.play(row, col);
-                    }
-                    int8_t current_player =
-                        (nodes_[node_idx].state.to_play() == GoBoard::BLACK) ? 0 : 1;
+                    State new_state = nodes_[node_idx].state;
+                    new_state.apply(action);
+                    int8_t current_player = static_cast<int8_t>(nodes_[node_idx].state.player());
                     child_idx = create_node(new_state, node_idx, current_player);
                     nodes_[node_idx].children[action] = child_idx;
                     path.push_back(child_idx);
                     PendingLeaf pl{path, child_idx, false, 0.0f, (int)eval_states.size()};
                     // Terminal short-circuit if the just-created state is game over.
                     if (nodes_[child_idx].state.is_game_over()) {
-                        int8_t winner = nodes_[child_idx].state.get_winner();
-                        int8_t persp = nodes_[child_idx].player_at_parent;
-                        float U;
-                        if (winner == 0) U = 0.5f;
-                        else {
-                            int8_t pc = (persp == 0) ? GoBoard::BLACK : GoBoard::WHITE;
-                            U = (winner == pc) ? 1.0f : 0.0f;
-                        }
                         pl.is_terminal = true;
-                        pl.terminal_U = U;
+                        pl.terminal_U =
+                            nodes_[child_idx].state.outcome(nodes_[child_idx].player_at_parent);
                         pl.eval_slot = -1;
                     } else {
                         eval_states.push_back(nodes_[child_idx].state);
@@ -502,7 +462,7 @@ void MCTSTree::run_simulations_batched(
                     }
                 }
                 int8_t persp = nodes_[pl.leaf_idx].player_at_parent;
-                int8_t curp = (nodes_[pl.leaf_idx].state.to_play() == GoBoard::BLACK) ? 0 : 1;
+                int8_t curp = static_cast<int8_t>(nodes_[pl.leaf_idx].state.player());
                 U = (curp != persp) ? (1.0f - v_theta) : v_theta;
                 // Cache the flipped v_theta on the leaf for teacher-mode. Only
                 // set on the first eval to match the non-batched path.
@@ -511,21 +471,24 @@ void MCTSTree::run_simulations_batched(
                     nodes_[pl.leaf_idx].has_eval = true;
                 }
             }
-            // Backup along path, flipping perspective at each parent.
+            // Backup along path, flipping perspective wherever the mover changes.
             for (int k = (int)pl.path.size() - 1; k >= 0; --k) {
                 int idx = pl.path[k];
                 nodes_[idx].N_virt -= 1;
                 nodes_[idx].N += 1;
                 nodes_[idx].Q += (U - nodes_[idx].Q) / (float)nodes_[idx].N;
-                U = 1.0f - U;
+                if (k > 0 && nodes_[pl.path[k - 1]].player_at_parent != nodes_[idx].player_at_parent) {
+                    U = 1.0f - U;
+                }
             }
             completed++;
         }
     }
 }
 
-std::unordered_map<int, float> MCTSTree::get_action_probabilities(float temperature) const {
-    const MCTSNode& root = nodes_[0];
+template <class State>
+std::unordered_map<int, float> MCTSTree<State>::get_action_probabilities(float temperature) const {
+    const MCTSNode<State>& root = nodes_[0];
 
     if (root.children.empty()) {
         // No children expanded - return uniform over legal actions
@@ -584,7 +547,8 @@ std::unordered_map<int, float> MCTSTree::get_action_probabilities(float temperat
     return visits_temp;
 }
 
-int MCTSTree::select_action(float temperature) const {
+template <class State>
+int MCTSTree<State>::select_action(float temperature) const {
     auto probs = get_action_probabilities(temperature);
 
     std::vector<int> actions;
@@ -605,7 +569,8 @@ int MCTSTree::select_action(float temperature) const {
     return actions[dist(rng_)];
 }
 
-std::unordered_map<int, int> MCTSTree::get_child_visit_counts() const {
+template <class State>
+std::unordered_map<int, int> MCTSTree<State>::get_child_visit_counts() const {
     std::unordered_map<int, int> counts;
     for (const auto& [action, child_idx] : nodes_[0].children) {
         counts[action] = nodes_[child_idx].N;
@@ -613,7 +578,8 @@ std::unordered_map<int, int> MCTSTree::get_child_visit_counts() const {
     return counts;
 }
 
-std::unordered_map<int, float> MCTSTree::get_root_policy_priors() const {
+template <class State>
+std::unordered_map<int, float> MCTSTree<State>::get_root_policy_priors() const {
     std::unordered_map<int, float> out;
     out.reserve(nodes_[0].logP_A.size());
     for (const auto& [action, log_prior] : nodes_[0].logP_A) {
@@ -622,7 +588,8 @@ std::unordered_map<int, float> MCTSTree::get_root_policy_priors() const {
     return out;
 }
 
-std::unordered_map<int, float> MCTSTree::get_child_q_values() const {
+template <class State>
+std::unordered_map<int, float> MCTSTree<State>::get_child_q_values() const {
     std::unordered_map<int, float> values;
     for (const auto& [action, child_idx] : nodes_[0].children) {
         values[action] = nodes_[child_idx].Q;
@@ -630,7 +597,8 @@ std::unordered_map<int, float> MCTSTree::get_child_q_values() const {
     return values;
 }
 
-std::unordered_map<int, float> MCTSTree::get_child_first_eval_values() const {
+template <class State>
+std::unordered_map<int, float> MCTSTree<State>::get_child_first_eval_values() const {
     std::unordered_map<int, float> values;
     for (const auto& [action, child_idx] : nodes_[0].children) {
         if (nodes_[child_idx].has_eval) {
@@ -640,7 +608,8 @@ std::unordered_map<int, float> MCTSTree::get_child_first_eval_values() const {
     return values;
 }
 
-std::unordered_map<int, int> MCTSTree::get_child_max_subtree_depths() const {
+template <class State>
+std::unordered_map<int, int> MCTSTree<State>::get_child_max_subtree_depths() const {
     // For each root child, walk its subtree and record the deepest node.
     // Subtrees are disjoint so total work across children is O(tree_size).
     std::unordered_map<int, int> out;
@@ -663,5 +632,10 @@ std::unordered_map<int, int> MCTSTree::get_child_max_subtree_depths() const {
     }
     return out;
 }
+
+// Explicit instantiations: one search implementation for both games.
+template class MCTSTree<GoBoard>;
+template class MCTSTree<BoxesBoard>;
+template class MCTSTree<BoxesSearchState>;
 
 }  // namespace alpha_go

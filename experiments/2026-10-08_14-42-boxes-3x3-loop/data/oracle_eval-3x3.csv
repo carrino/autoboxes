@@ -1,0 +1,7 @@
+agent,iteration,policy_optimal,search_optimal,value_sign,margin_mae,num_positions,min_undrawn,max_undrawn,num_simulations
+boxes-greedy,,,0.7433,,,300,6,14,100
+boxes-ab-d4,,,0.9133,,,300,6,14,100
+iter0,0,0.5867,0.8,0.6033,4.546,300,6,14,100
+iter1,1,0.44,0.8567,0.5667,2.951,300,6,14,100
+iter2,2,0.4267,0.88,0.8033,2.189,300,6,14,100
+iter3,3,0.49,0.9167,0.79,2.042,300,6,14,100
