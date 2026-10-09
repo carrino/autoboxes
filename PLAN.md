@@ -55,8 +55,12 @@ board), 7 (templated C++ search, Go byte-identical), 8 (baselines + arena), 9 (e
 net), 10 (play loop / CLI / NPZ `to_play` / dataset), 11 (NN MCTS agent + batched
 engine), 12 (3x3 loop, smoke-tested on CPU), 5b (forced-move collapse, Python reference +
 C++ `BoxesSearchState`, used by the NN agent), 13a (the same loop folder runs 5x5 via
-`ROWS=5`, size-tagged outputs, 128ch x 10-block net). Open: 13b (the 5x5 overnight run
-itself and its report, which need the GPU box), the text engine protocol (§3) and Phase 2.
+`ROWS=5`, size-tagged outputs, 128ch x 10-block net), and from Phase 2 the exact endgame
+solver (§4.1: `boxes/solver.py` reference, C++ `BoxesSolver` with a bounded canonical
+table, solver-terminated `BoxesSearchState`, `--solver_max_undrawn` in the agent and loop,
+`solver_bench.py`). Open: 13b (the 5x5 overnight runs, baseline and solver arm, which need
+the GPU box), the solver benchmark on real 5x5 endgames that sets the default N, the text
+engine protocol (§3) and the rest of Phase 2.
 
 ### 2.1 Commit plan
 

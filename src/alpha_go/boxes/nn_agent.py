@@ -175,10 +175,19 @@ class BoxesMCTSAgent(Agent):
         pcr_sims: list[int] | None = None,
         pcr_probs: list[float] | None = None,
         forced_collapse: bool = True,
+        solver_max_undrawn: int = 0,
+        solver_node_budget: int = 20_000,
+        solver_table_entries: int = 1 << 20,
     ) -> None:
         self.evaluator = evaluator
         self.num_simulations = num_simulations
         self.forced_collapse = forced_collapse
+        # Exact endgame solver (PLAN.md §4.1): positions with <= solver_max_undrawn undrawn
+        # edges that it settles within solver_node_budget nodes are terminal for the search.
+        self.solver_max_undrawn = solver_max_undrawn
+        self.solver_node_budget = solver_node_budget
+        self.solver_table_entries = solver_table_entries
+        self.solver: Any = None  # built on first use, one per agent (tables are per thread)
         self.temperature = temperature
         self.temperature_cutoff = temperature_cutoff
         self.leaf_batch_size = leaf_batch_size
@@ -217,13 +226,29 @@ class BoxesMCTSAgent(Agent):
             tree.run_simulations(self.num_simulations, self.evaluator.evaluate)
         return BoxesSearchResult(tree)
 
+    def search_state(self, board: Any) -> Any:
+        """Collapsed position, solver-terminated when a solver is configured."""
+        if self.solver_max_undrawn <= 0:
+            return alpha_go_cpp.BoxesSearchState(board)
+        if self.solver is None:
+            self.solver = alpha_go_cpp.BoxesSolver(int(board.rows()), int(board.cols()),
+                                                   self.solver_table_entries)
+            print(f"BoxesSolver: max_undrawn={self.solver_max_undrawn} "
+                  f"node_budget={self.solver_node_budget} table={self.solver.table_entries()} "
+                  f"entries = {self.solver.table_bytes() / 1e6:.1f} MB", flush=True)
+        return alpha_go_cpp.BoxesSearchState(board, self.solver, self.solver_max_undrawn,
+                                             self.solver_node_budget)
+
     def select_move(self, board: Any, seed: int) -> tuple[int, int]:
         torch.manual_seed(seed)
         self.last_search_result = None
         if self.forced_collapse:
-            state = alpha_go_cpp.BoxesSearchState(board)
+            state = self.search_state(board)
             if state.prefix():  # a forced capture: play it, no search needed
                 row, col = board.row_col(state.prefix()[0])
+                return int(row), int(col)
+            if state.solved():  # exact endgame: play the solver's move, no search needed
+                row, col = board.row_col(self.solver.best_edge(state.board()))
                 return int(row), int(col)
             result = self.search(state)
         else:

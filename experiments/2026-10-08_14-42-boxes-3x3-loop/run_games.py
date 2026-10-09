@@ -33,6 +33,9 @@ def main() -> None:
     p.add_argument("--batch_size", type=int, default=64, help="shared engine batch size")
     p.add_argument("--save-name", required=True)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--solver_max_undrawn", type=int, default=0,
+                   help="exact endgame solver at <= N undrawn edges (0 = off)")
+    p.add_argument("--solver_node_budget", type=int, default=20_000)
     p.add_argument("--cpu", action="store_true")
     args, remaining = p.parse_known_args()
 
@@ -45,6 +48,7 @@ def main() -> None:
         num_simulations=args.num_simulations, c_puct=C_PUCT, temperature=args.temperature,
         temperature_cutoff=args.temperature_cutoff, add_noise=True,
         noise_alpha=DIRICHLET_ALPHA, noise_weight=DIRICHLET_WEIGHT, leaf_batch_size=LEAF_BATCH_SIZE,
+        solver_max_undrawn=args.solver_max_undrawn, solver_node_budget=args.solver_node_budget,
     )
     black = register_boxes_mcts_agent("sp-black", args.checkpoint, args.rows, args.cols,
                                       engine=engine, **mcts)

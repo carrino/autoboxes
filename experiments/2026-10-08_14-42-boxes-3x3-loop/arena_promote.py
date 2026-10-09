@@ -39,6 +39,9 @@ def main() -> None:
     p.add_argument("--threshold", type=float, default=0.55)
     p.add_argument("--opening_moves", type=int, default=4,
                    help="moves sampled at temperature 1 before greedy play, for game variety")
+    p.add_argument("--solver_max_undrawn", type=int, default=0,
+                   help="exact endgame solver at <= N undrawn edges for the candidate and champion")
+    p.add_argument("--solver_node_budget", type=int, default=20_000)
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
@@ -46,7 +49,9 @@ def main() -> None:
     # Sample the first few moves from the visit distribution: at temperature 0 both nets are
     # deterministic and a 100-game match is the same two games played 50 times each.
     mcts = dict(num_simulations=args.num_simulations, c_puct=1.5, temperature=1.0,
-                temperature_cutoff=args.opening_moves, leaf_batch_size=16)
+                temperature_cutoff=args.opening_moves, leaf_batch_size=16,
+                solver_max_undrawn=args.solver_max_undrawn,
+                solver_node_budget=args.solver_node_budget)
     tag = args.tag or f"{args.rows}x{args.cols or args.rows}"
     ckpt_dir = EXP_DIR / "checkpoints" / tag
     state_file = EXP_DIR / f"league_state-{tag}.json"

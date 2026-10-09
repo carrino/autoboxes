@@ -12,6 +12,7 @@ START=${1:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 END=${2:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 CPU_FLAG=${3:-}
 ROWS=${ROWS:-3}; COLS=${COLS:-$ROWS}; TAG=${TAG:-${ROWS}x${COLS}}
+SOLVER_N=${SOLVER_N:-0}  # exact endgame solver at <= N undrawn edges in self-play and arena (0 = off)
 SIZE_ARGS="--rows $ROWS --cols $COLS"
 TAG_ARGS="--tag $TAG"
 CKPT="$EXP_DIR/checkpoints/$TAG"
@@ -34,7 +35,8 @@ BOOT_GAMES=${BOOT_GAMES:-$D_BOOT}; SP_GAMES=${SP_GAMES:-$D_SP}; SP_SIMS=${SP_SIM
 SP_WORKERS=${SP_WORKERS:-$D_WORKERS}; TRAIN_BUDGET=${TRAIN_BUDGET:-$D_TRAIN}; ARENA_GAMES=${ARENA_GAMES:-$D_ARENA}
 BASE_GAMES=${BASE_GAMES:-$D_BASE}; ARENA_SIMS=${ARENA_SIMS:-$D_ASIMS}
 echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x $SP_SIMS sims ($SP_WORKERS workers), "\
-     "train ${TRAIN_BUDGET}s, arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims"
+     "train ${TRAIN_BUDGET}s, arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
+     "solver N=$SOLVER_N"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
 
@@ -51,7 +53,8 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
         --time-budget "$TRAIN_BUDGET" $CPU_FLAG 2>&1 | tee "$LOGS/train-it0.log"
     log "Arena: iter0 becomes the first champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
-        --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
+        --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$SOLVER_N" \
+        $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
 fi
 
 for ITER in $(seq "$START" "$END"); do
@@ -60,6 +63,7 @@ for ITER in $(seq "$START" "$END"); do
     t0=$(date +%s)
     uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
         --num_games "$SP_GAMES" --num_simulations "$SP_SIMS" --num_workers "$SP_WORKERS" \
+        --solver_max_undrawn "$SOLVER_N" \
         --save-name "${DATA}/selfplay-it${ITER}" --seed "$((ITER * 100000))" $CPU_FLAG \
         2>&1 | tee "$LOGS/collect-it${ITER}.log"
     t1=$(date +%s)
@@ -74,6 +78,7 @@ for ITER in $(seq "$START" "$END"); do
     log "Arena: iter${NEXT} vs champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG \
+        --solver_max_undrawn "$SOLVER_N" \
         2>&1 | tee "$LOGS/arena-it${NEXT}.log"
     t3=$(date +%s)
     echo "{\"iteration\": $NEXT, \"collect\": $((t1 - t0)), \"train\": $((t2 - t1)), \"arena\": $((t3 - t2))}" \

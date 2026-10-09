@@ -51,6 +51,10 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
 - `run_iteration_local.sh <start> <end> [--cpu]` — the loop; `ROWS`/`COLS` pick the board,
   `TAG` the output name, `--cpu` switches to smoke budgets so the pipeline runs anywhere.
 - `analyze.py <tag>` — tabulates `league_state-<tag>.json` and `timing/<tag>/` into `report-<tag>.md`.
+- `solver_bench.py --tag <tag>` — solve-time distribution (p50/p99/max ms and nodes, share
+  solved within each node budget) of the exact endgame solver on positions with N undrawn
+  edges taken from the run's own games; sets `SOLVER_N` for a solver arm
+  (`SOLVER_N=28 TAG=5x5-solver ROWS=5 bash run_iteration_local.sh 0 20`).
 - `oracle_eval.py --tag <tag>` — the exact check that training works: samples late positions
   (6..14 undrawn edges by default) from the run's own games, solves them with the oracle, and
   reports per checkpoint the share of oracle-optimal moves for the raw policy and for the
