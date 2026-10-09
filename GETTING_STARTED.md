@@ -120,7 +120,19 @@ uv run $EXP/analyze.py 5x5
 Every budget can be set from the environment and the script prints what it uses. `TAG`
 (default `<rows>x<cols>`) names every output, so probes never touch a real run. Resume by
 passing the last trained iteration as `<start>`; the script refuses to start from a missing
-checkpoint.
+checkpoint. Two more knobs matter on 5x5:
+
+- `SP_PROCS=4` splits each self-play phase over four processes with their own GPU engines.
+  Use it when `nvidia-smi` shows the GPU mostly idle during self-play: the game threads of
+  one process share the Python interpreter lock.
+- `SOLVER_N=24` turns the exact endgame solver on in self-play and the arena once 24 or
+  fewer edges are undrawn (`TAG=5x5-solver` keeps that run apart from the baseline). Pick N
+  from `uv run $EXP/solver_bench.py --tag 5x5-probe --undrawn 20 24 28 32 --selfplay-only`:
+  the largest N whose `solved_within_20000` column is close to 1.0.
+
+After any run, `uv run $EXP/oracle_eval.py --tag <tag>` scores every checkpoint against the
+exact oracle on late positions from the run's own games; the raw-policy and searched-move
+columns must rise with the iteration, which is the real check that training learns.
 
 ## 7. Troubleshooting
 
