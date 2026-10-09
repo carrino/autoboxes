@@ -62,6 +62,18 @@ table, solver-terminated `BoxesSearchState`, `--solver_max_undrawn` in the agent
 the GPU box), the solver benchmark on real 5x5 endgames that sets the default N, the text
 engine protocol (§3) and the rest of Phase 2.
 
+Update 2026-10-09: the 3x3 loop ran end to end on CPU and on the GPU box; the 5x5 solver arm
+(N=28) is running on the GPU box. `experiments/2026-10-09_01-05-boxes-3x3-search-autoresearch`
+tuned the search knobs against the exact oracle (0.823 -> 0.917 oracle-optimal searched
+moves): the §6.4 margin-utility term is the dominant knob (lambda 1.0, not yet saturated),
+sharper priors (policy temperature 0.7) and leaf batch 4 follow, c_puct and the
+equivalent-edge merge are noise. The knobs are CLI flags on every Boxes entry point
+(`nn_agent.add_search_flags`, `SEARCH_ARGS` in the loop). Next: shape terminal and
+solver-terminated outcomes with the exact margin on the same scale as the shaped net
+leaves (today 1/0.5/0 vs `P(win) + lambda * tanh(E[margin]/k)`, which is why the solver
+hurt with lambda > 0), check that the 3x3 findings transfer to 5x5 with `oracle_eval.py`
+before changing the training arm, then the 5x5 comparison runs.
+
 ### 2.1 Commit plan
 
 | # | commit | new files | shared files touched |
