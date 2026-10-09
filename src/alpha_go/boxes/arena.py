@@ -12,6 +12,7 @@ import argparse
 import json
 import math
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -105,8 +106,16 @@ def play_match(
 ) -> MatchResult:
     """Play `num_games` games between registered agents `a` and `b`, alternating first move."""
     cols = cols or rows
+    start = time.time()
+    every = max(1, num_games // 10)
     with ThreadPoolExecutor(max_workers=num_workers) as pool:
-        results = list(pool.map(lambda i: _one_game(a, b, rows, cols, i, seed), range(num_games)))
+        results = []
+        for r in pool.map(lambda i: _one_game(a, b, rows, cols, i, seed), range(num_games)):
+            results.append(r)
+            if len(results) % every == 0:
+                wins = sum(x[0] > 0 for x in results)
+                print(f"  {a} vs {b}: {len(results)}/{num_games} games, {wins} A wins, "
+                      f"{time.time() - start:.0f}s", flush=True)
     margins = [r[0] for r in results]
     a_sec = sum(r[1] for r in results) / max(1, sum(r[2] for r in results))
     b_sec = sum(r[3] for r in results) / max(1, sum(r[4] for r in results))
