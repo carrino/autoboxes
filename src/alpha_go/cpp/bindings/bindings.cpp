@@ -53,6 +53,12 @@ void bind_mcts_tree(py::module_& m, const char* name) {
              "time as dict[action, value]. Same perspective as Q (root player).")
         .def("get_child_max_subtree_depths", &Tree::get_child_max_subtree_depths,
              "Get max subtree depth under each root child as dict[action, depth].")
+        .def("is_root_proven", &Tree::is_root_proven,
+             "prove_terminals: whether the root's exact value is known.")
+        .def("get_root_proven_value", &Tree::get_root_proven_value,
+             "prove_terminals: the root's exact value (player_at_parent perspective, like Q).")
+        .def("get_child_proven_values", &Tree::get_child_proven_values,
+             "prove_terminals: exact values of the proven root children as dict[action, value].")
         .def("run_simulations_batched", &Tree::run_simulations_batched, py::call_guard<py::gil_scoped_release>(),
              py::arg("num_simulations"), py::arg("leaf_batch_size"), py::arg("batched_evaluator"),
              "Leaf-parallel MCTS with virtual loss.\n"
@@ -337,6 +343,8 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
                       "Maximum total depth from game start (tree + rollout combined, default: 100)")
         .def_readwrite("rollout_temperature", &alpha_go::MCTSConfig::rollout_temperature,
                       "Temperature for sampling during fast rollouts (default: 1.0)")
+        .def_readwrite("prove_terminals", &alpha_go::MCTSConfig::prove_terminals,
+                      "MCTS-Solver: back up exact subtree values by minimax, not by averaging (default: False)")
         .def_readwrite("pcr_sims", &alpha_go::MCTSConfig::pcr_sims,
                       "Playout cap randomization: list of sim counts to sample from.")
         .def_readwrite("pcr_probs", &alpha_go::MCTSConfig::pcr_probs,

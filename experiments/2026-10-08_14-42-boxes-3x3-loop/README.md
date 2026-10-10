@@ -41,7 +41,10 @@ cannot see the net; with it off the nets' own midgame and endgame knowledge deci
 (BoxesZero's equivalent edges; value-preserving, tested against the oracle). `BASELINES`
 picks the arena's absolute-scale opponents (default `boxes-greedy,boxes-ab-d4`, both C++).
 `SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5"` passes extra search
-flags (`nn_agent.add_search_flags`) to self-play and the arena. `WINDOW=8` widens the replay
+flags (`nn_agent.add_search_flags`) to self-play and the arena; `--prove_terminals 1` among
+them is MCTS-Solver proof propagation: terminal and solver-settled leaves are proven, their
+exact values back up by minimax instead of averaging, and a proven root keeps only its
+optimal moves (so the policy targets there are exact). `WINDOW=8` widens the replay
 window (self-play iterations per training set, default 4) and `TRAIN_EPOCHS=2` caps the
 passes over it per iteration: the 5x5 solver run at the defaults made about eight passes
 per iteration over a window it had mostly trained on already, and its held-out loss stopped

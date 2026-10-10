@@ -79,12 +79,15 @@ def add_search_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--margin_utility_lambda", type=float, default=0.0,
                         help="leaf value = P(win) + lambda * tanh(E[margin] / k)")
     parser.add_argument("--margin_utility_k", type=float, default=6.0)
+    parser.add_argument("--prove_terminals", type=int, default=0,
+                        help="1: MCTS-Solver, exact subtree values back up by minimax")
 
 
 def search_flags(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     """(MCTS kwargs, evaluator kwargs) from `add_search_flags` arguments."""
     return (
-        dict(c_puct=args.c_puct, leaf_batch_size=args.leaf_batch_size),
+        dict(c_puct=args.c_puct, leaf_batch_size=args.leaf_batch_size,
+             prove_terminals=bool(args.prove_terminals)),
         dict(policy_temperature=args.policy_temperature,
              margin_utility_lambda=args.margin_utility_lambda,
              margin_utility_k=args.margin_utility_k),
@@ -269,6 +272,7 @@ class BoxesMCTSAgent(Agent):
         solver_node_budget: int = 20_000,
         solver_table_entries: int = 1 << 20,
         merge_equivalent: bool = False,
+        prove_terminals: bool = False,
     ) -> None:
         self.evaluator = evaluator
         self.num_simulations = num_simulations
@@ -295,6 +299,9 @@ class BoxesMCTSAgent(Agent):
         self.cpp_config.dirichlet_alpha = noise_alpha if add_noise else 0.0
         self.cpp_config.dirichlet_weight = noise_weight
         self.cpp_config.temperature = temperature
+        # MCTS-Solver: terminal and solver-settled leaves are proven and their exact values
+        # back up by minimax instead of averaging (PLAN.md, "high/low vs average").
+        self.cpp_config.prove_terminals = prove_terminals
         if pcr_sims is not None and pcr_probs is not None:
             assert len(pcr_sims) == len(pcr_probs) and abs(sum(pcr_probs) - 1.0) < 1e-4
             self.cpp_config.pcr_sims = list(pcr_sims)

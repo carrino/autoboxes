@@ -179,6 +179,49 @@ Changed: the solver stays at 28 with a 50k budget for now (29 or 30 cost two to 
 times the self-play for one or two edges); the next exact gain is structural (Nimstring
 values of independent regions), not search tuning.
 
+## 8. Proof propagation in the search (MCTS-Solver), 2026-10-10
+
+The "high/low versus average" question: with the solver two plies below the midgame band,
+the search reaches exact leaves, but it backs them up by averaging, so one exact loss among
+many 0.5 estimates barely moves a child's value. `--prove_terminals 1` (shared
+`MCTSConfig.prove_terminals`, off by default, Go byte-identical with it off) makes
+terminal and solver-settled leaves proven, proves a node once a child is a proven win for
+its mover or every child is proven (minimax over them), hands proven values up unchanged in
+place of the simulation result, and keeps only optimal moves at a proven root, which also
+makes the policy targets exact there. Python reference and C++ agree on tiny boards against
+the exact oracle (`tests/test_boxes_mcts_sign.py`, `tests/test_boxes_cpp_mcts.py`).
+
+To measure (iteration 15 of the chains run, clean positions, the solver at 28), the flag off
+against on at the oracle's 100 simulations and at the self-play budget:
+
+```bash
+for P in 0 1; do for S in 100 400; do
+  uv run $EXP/oracle_eval.py --tag 5x5-chains --positions-tag 5x5-mid --min-undrawn 29 --max-undrawn 34 \
+      --solver_max_undrawn 28 --solver_node_budget 50000 --num_simulations $S --prove_terminals $P --iterations 15
+done; done
+```
+
+Result on 5x5: pending. The number to beat is the searched-move column; the policy and
+value columns do not depend on the flag.
+
+CPU probe first (`proof_probe.py` in the loop folder: 3x3, a uniform evaluator with no net,
+solver at 8, 300 random positions at 11..14 undrawn edges, so the exact leaves sit 3 to 6
+plies down as they do in the 5x5 band; a random move is margin-optimal 0.27 of the time):
+
+| simulations | flag | margin-optimal move | keeps the exact outcome | roots proven |
+|---|---|---|---|---|
+| 100 | off | 0.350 | 0.817 | 0.00 |
+| 100 | on | 0.377 | 0.837 | 0.17 |
+| 400 | off | 0.453 | 0.917 | 0.00 |
+| 400 | on | 0.453 | 0.927 | 0.51 |
+
+Two to three points at 100 simulations and none at 400, inside the noise of 300 positions,
+while half the roots are proven at 400. So the averaging backup was not what held the
+searched move at 0.50: once the tree reaches the exact leaves the average already orders
+the moves right, and the loss is in which children get explored at all, which is the
+policy prior's job. The flag is free (proven roots also make the policy targets exact there)
+and stays available; the 5x5 read above says whether a real net changes the picture.
+
 ## What we believe now
 
 1. The endgame (from 28 undrawn) is exact and cheap. The midgame fight (29 to about 36)

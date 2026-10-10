@@ -146,6 +146,7 @@ EXP=experiments/2026-10-08_14-42-boxes-3x3-loop && bash $EXP/run_iteration_local
 ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # 5x5 overnight; outputs tagged 5x5 (checkpoints/5x5, league_state-5x5.json)
 SOLVER_N=24 SP_PROCS=4 TAG=5x5-solver ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # solver arm, 4 self-play processes
 SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5" TAG=5x5-tuned ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # tuned search knobs
+SEARCH_ARGS="--policy_temperature 0.7 --prove_terminals 1" TAG=5x5-proof ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # MCTS-Solver: exact leaves back up by minimax
 FEATURES=chains TRAIN_MIN_UNDRAWN=24 WINDOW=8 TRAIN_EPOCHS=2 SOLVER_N=28 TAG=5x5-chains ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # chain planes, train above the solver zone
 uv run $EXP/analyze.py 5x5                     # report-5x5.md
 uv run $EXP/oracle_eval.py --tag 3x3           # checkpoints vs the exact oracle on late positions
@@ -183,6 +184,12 @@ interpreter uv picks works (the upstream script hard-coded 3.10).
   matters = (edge bitmask, score margin for the side to move); 64-bit mask when `E ≤ 64`.
 - Symmetries: 8 for square boards, 4 for rectangular; actions are permuted by the same
   lattice transform as the board (derived from the transform applied to an index grid).
+- MCTS-Solver proof propagation (`MCTSConfig.prove_terminals`, `--prove_terminals 1`):
+  terminal and solver-settled leaves are proven, a node with a proven winning child for its
+  mover (or only proven children) takes the exact minimax value, proven values replace
+  averages on the way up, and a proven root keeps only its optimal moves. Off by default;
+  with it off the Go search is byte-identical. Tests on tiny boards against the exact oracle
+  in `tests/test_boxes_mcts_sign.py` (Python) and `tests/test_boxes_cpp_mcts.py` (C++).
 - MCTS backup: negate the value **only when the mover changes**. After a capture the same
   player moves again → no sign flip. This is the most likely bug; it has explicit tests in
   both the Python and the C++ search and must never be "simplified" away.
