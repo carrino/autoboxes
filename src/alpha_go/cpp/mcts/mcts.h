@@ -23,6 +23,11 @@ struct MCTSConfig {
     float temperature = 1.0f;
     int max_depth = 100;           // Max total depth from game start (tree + rollout combined)
     float rollout_temperature = 1.0f;  // Temperature for sampling during rollouts
+    // MCTS-Solver (Winands et al. 2008): terminal (and solver-settled) leaves are proven, a
+    // node with a proven winning child for its mover, or only proven children, takes the
+    // exact minimax value, and proven values replace averages on the way up. Off, the
+    // search is byte-identical to the plain one.
+    bool prove_terminals = false;
 
     // Playout Cap Randomization (PCR): if non-empty, each call to run_simulations
     // samples num_simulations from this categorical distribution, overriding the
@@ -49,6 +54,8 @@ struct MCTSNode {
     int parent_idx = -1;           // -1 for root
     int8_t player_at_parent = 0;   // Which player made the move to reach this node
     int depth = 0;                 // Depth from root (root has depth 0)
+    bool proven = false;           // Exact value known (MCTSConfig::prove_terminals)
+    float proven_value = 0.0f;     // That value, from player_at_parent perspective like Q
 
     // Children stored as sparse map: action -> node_index
     std::unordered_map<int, int> children;
@@ -117,8 +124,15 @@ public:
     // Root policy priors (exp of logP_A), as recorded from the evaluator at
     // the start of run_simulations. Includes Dirichlet noise if it was applied.
     std::unordered_map<int, float> get_root_policy_priors() const;
+    // Proof propagation (prove_terminals): the root's exact value when known, and the exact
+    // values of its proven children (root player's perspective, like Q).
+    bool is_root_proven() const { return nodes_[0].proven; }
+    float get_root_proven_value() const { return nodes_[0].proven_value; }
+    std::unordered_map<int, float> get_child_proven_values() const;
 
 private:
+    // MCTS-Solver step after a backup through node_idx; true if it just became proven.
+    bool try_prove(int node_idx);
     // Core MCTS operations
     int create_node(const State& state, int parent_idx, int8_t player_at_parent);
 

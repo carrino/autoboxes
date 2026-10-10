@@ -55,10 +55,14 @@ def manifest_dirs(path: Path) -> list[Path]:
 
 def schedule(optimizer: torch.optim.Optimizer, total_steps: int
              ) -> torch.optim.lr_scheduler.LambdaLR:
+    """Linear warmup then cosine decay; the warmup never exceeds a tenth of the steps (a
+    small replay window with TRAIN_EPOCHS=2 is only ~100 steps per iteration)."""
+    warmup = min(WARMUP_STEPS, total_steps // 10)
+
     def lr_lambda(step: int) -> float:
-        if step < WARMUP_STEPS:
-            return step / max(1, WARMUP_STEPS)
-        progress = (step - WARMUP_STEPS) / max(1, total_steps - WARMUP_STEPS)
+        if step < warmup:
+            return step / max(1, warmup)
+        progress = (step - warmup) / max(1, total_steps - warmup)
         return 0.5 * (1 + math.cos(math.pi * min(1.0, progress)))
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
@@ -100,6 +104,13 @@ def main() -> None:
                    help="share of games held out for validation metrics (0 = none)")
     p.add_argument("--q-mix", type=float, default=0.0,
                    help="weight of the root Q in the P(win) target (0 = pure outcome)")
+    p.add_argument("--min-undrawn", type=int, default=0,
+                   help="train only on positions with at least this many undrawn edges "
+                        "(a solver run's net never needs the solver zone)")
+    p.add_argument("--channels", type=int, default=None, help="override the net width")
+    p.add_argument("--n-blocks", type=int, default=None, help="override the residual depth")
+    p.add_argument("--features", choices=["basic", "chains"], default="basic",
+                   help="input planes (encode.py): chains adds the chain / loop structure")
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
@@ -107,11 +118,12 @@ def main() -> None:
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
     rows, cols = args.rows, args.cols or args.rows
     t0 = time.time()
-    dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt))
+    dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt), min_undrawn=args.min_undrawn,
+                           features=args.features)
     assert (dataset.rows, dataset.cols) == (rows, cols), (dataset.rows, dataset.cols)
-    print(f"dataset: {len(dataset):,} positions from {len(dataset.games)} games "
-          f"({dataset.num_with_mcts} searched), {dataset.footprint_bytes() / 1e6:.1f} MB in RAM, "
-          f"loaded in {time.time() - t0:.1f}s")
+    print(f"dataset: {len(dataset):,} positions with >= {args.min_undrawn} undrawn edges from "
+          f"{len(dataset.games)} games ({dataset.num_with_mcts} searched), "
+          f"{dataset.footprint_bytes() / 1e6:.1f} MB in RAM, loaded in {time.time() - t0:.1f}s")
     train_set, val_set = dataset.split(args.val_fraction, seed=args.iteration)
     loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
                         drop_last=len(train_set) > BATCH_SIZE)
@@ -121,10 +133,13 @@ def main() -> None:
     steps_per_epoch = max(1, len(loader))
     max_steps = args.max_epochs * steps_per_epoch
 
-    model_cfg = MODELS.get(rows, MODELS[5])
-    model = BoxesNet(rows, cols, **model_cfg).to(device)
+    model_cfg = {**MODELS.get(rows, MODELS[5]),
+                 **{k: v for k, v in dict(channels=args.channels, n_blocks=args.n_blocks).items()
+                    if v is not None}}
+    model = BoxesNet(rows, cols, features=args.features, **model_cfg).to(device)
     if args.resume_from:
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
+        assert state["config"].get("features", "basic") == args.features, state["config"]
         model.load_state_dict(state["model_state_dict"])
         print(f"resumed from {args.resume_from}")
     n_params = sum(p.numel() for p in model.parameters())
@@ -179,7 +194,9 @@ def main() -> None:
         "train_value_acc": round(train_eval["value_acc"], 4),
         "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),
         "val_value_acc": round(val_eval["value_acc"], 4), "val_positions": len(val_set),
-        "q_mix": args.q_mix, "steps_completed": step,
+        "q_mix": args.q_mix, "min_undrawn": args.min_undrawn, "features": args.features,
+        "model": model_cfg,
+        "steps_completed": step,
         "positions": len(train_set), "elapsed_seconds": round(elapsed), "n_params": n_params,
         "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2**20) if use_amp else 0,
         "checkpoint": str(ckpt_path), "resumed_from": args.resume_from or "",

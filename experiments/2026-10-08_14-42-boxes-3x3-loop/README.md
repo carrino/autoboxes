@@ -32,12 +32,42 @@ ARENA_SIMS`) can be overridden from the environment; the script prints the budge
 `SP_PROCS=4` splits each self-play phase over four processes (disjoint game indices, own
 seeds, threads and GPU engines), which is the remedy when `nvidia-smi` shows the GPU idle
 while the game threads sit on the interpreter lock. `SOLVER_N=24` turns the exact endgame
-solver on in self-play and the arena at 24 undrawn edges (see `solver_bench.py`).
+solver on in self-play and the arena at 24 undrawn edges (see `solver_bench.py`);
+`SOLVER_BUDGET=50000` lets it spend more nodes per position, which is what a larger N needs.
+`ARENA_SOLVER_N=0` keeps the solver out of the arena only: with it on, two nets of any quality
+tie (the search reaches the solver's exact leaves whichever net steers it), so promotion
+cannot see the net; with it off the nets' own midgame and endgame knowledge decides.
 `MERGE_EQ=1` gives the search one action per independent chain or loop in quiet positions
 (BoxesZero's equivalent edges; value-preserving, tested against the oracle). `BASELINES`
 picks the arena's absolute-scale opponents (default `boxes-greedy,boxes-ab-d4`, both C++).
 `SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5"` passes extra search
-flags (`nn_agent.add_search_flags`) to self-play and the arena.
+flags (`nn_agent.add_search_flags`) to self-play and the arena; `--prove_terminals 1` among
+them is MCTS-Solver proof propagation: terminal and solver-settled leaves are proven, their
+exact values back up by minimax instead of averaging, and a proven root keeps only its
+optimal moves (so the policy targets there are exact). `WINDOW=8` widens the replay
+window (self-play iterations per training set, default 4) and `TRAIN_EPOCHS=2` caps the
+passes over it per iteration: the 5x5 solver run at the defaults made about eight passes
+per iteration over a window it had mostly trained on already, and its held-out loss stopped
+falling at iteration 12 while the train loss kept falling (`analyze.py` shows both).
+
+`FEATURES=chains` trains the net on the 21-plane input (the 11 basic planes plus the chain /
+loop structure of `encode.py`: chain lengths, loops, opened components, safe edges and the
+long-chain count and parity); the feature set is stored in the checkpoint, so self-play and
+the arena pick it up on their own, and a chains run starts from iteration 0.
+`EXTRA_DATA="experiments/<this folder>/5x5-oracle-26-34"` adds solver-labelled positions from
+`solver_label.py` to every iteration's training set: exact final margins and uniform optimal
+policies for midgame positions the solver can settle offline, a supervised foothold for the
+value head where self-play outcomes alone taught it nothing.
+`START_FROM=experiments/<this folder>/5x5-solver START_UNDRAWN="36 40" STOP_WHEN_SOLVED=1`
+branches self-play games from stored positions and ends each one with the exact outcome once
+the solver settles it: a full game spends two thirds of its search on the opening and yields
+about ten positions in the band that decides the result, so a branched game delivers roughly
+three times the decisive-band data per hour, with more variety. `START_FRACTION` (default
+0.75) keeps a share of games opening from the empty board so the opening still gets data; the
+NPZ records the branch prefix in `start_moves` and `oracle_eval.game_moves` replays it.
+Solver-played moves (positions at or below `SOLVER_N` undrawn edges) record one visit per
+optimal edge, so their policy target is uniform over the exact optimal set rather than a
+one-hot of an arbitrary optimal edge, and their root value is the exact outcome.
 Resume by passing the last trained iteration as `<start>`; the script refuses to start from
 a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iteration and scale
 `SP_GAMES` / `SP_SIMS` / `ARENA_GAMES` so one iteration fits your night.
@@ -55,10 +85,13 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   the root Q), a held-out split by game (`--val-fraction`, default 0.1) whose loss and
   accuracies sit next to the training ones in the `===RESULT===` JSON line, time budget,
   checkpoint `checkpoints/<tag>/iter{N}.pt`.
-- `arena_promote.py` — candidate vs champion (alternating first player, first 4 moves
-  sampled at temperature 1 so games differ, Wilson CI), promote at >= 55%
-  (`--threshold`); also reports candidate vs `boxes-greedy` and
-  `boxes-ab-d4`; appends to `league_state-<tag>.json`.
+- `arena_promote.py` — candidate vs champion in colour-swapped pairs from the same random
+  4-edge opening (`--opening_moves`), each pair scored on its summed margin so the
+  side-to-move advantage cancels; promote when the pair score is >= 55% (`--threshold`)
+  and its 95% interval excludes a tie (60 games with a plain 0.55 threshold promoted an
+  equal net one time in four); also reports candidate vs `boxes-greedy` and
+  `boxes-ab-d4` with the per-colour win rates; appends to `league_state-<tag>.json`.
+  Self-play always uses the latest checkpoint; the champion is the arena's reference only.
 - `run_iteration_local.sh <start> <end> [--cpu]` — the loop; `ROWS`/`COLS` pick the board,
   `TAG` the output name, `--cpu` switches to smoke budgets so the pipeline runs anywhere.
 - `analyze.py <tag>` — tabulates `league_state-<tag>.json` and `timing/<tag>/` into `report-<tag>.md`.
@@ -66,6 +99,9 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   solved within each node budget) of the exact endgame solver on positions with N undrawn
   edges taken from the run's own games; sets `SOLVER_N` for a solver arm
   (`SOLVER_N=28 TAG=5x5-solver ROWS=5 bash run_iteration_local.sh 0 20`).
+- `solver_label.py --positions-tag 5x5-solver --min-undrawn 26 --max-undrawn 34 --num-positions 20000 --save-name 5x5-oracle-26-34`
+  labels midgame positions from a run's games exactly (value and optimal-edge set) and writes
+  them as training data for `EXTRA_DATA`.
 - `oracle_eval.py --tag <tag>` — the exact check that training works: samples late positions
   (6..14 undrawn edges by default) from the run's own games, solves them with the oracle, and
   reports per checkpoint the share of oracle-optimal moves for the raw policy and for the

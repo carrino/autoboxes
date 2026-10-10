@@ -49,6 +49,8 @@ must keep.
 
 ### Status (2026-10-08)
 
+`EXPERIMENTS.md` is the run-by-run log with the numbers behind every statement below.
+
 Landed on `claude/awesome-fermi-ygaeuj`: commits 1-4 (Game protocol + Go adapter,
 mover-aware Python backup, reference rules, symmetries), 5 (oracle + sign tests), 6 (C++
 board), 7 (templated C++ search, Go byte-identical), 8 (baselines + arena), 9 (encoder +
@@ -73,6 +75,45 @@ solver-terminated outcomes with the exact margin on the same scale as the shaped
 leaves (today 1/0.5/0 vs `P(win) + lambda * tanh(E[margin]/k)`, which is why the solver
 hurt with lambda > 0), check that the 3x3 findings transfer to 5x5 with `oracle_eval.py`
 before changing the training arm, then the 5x5 comparison runs.
+
+Day 2 findings from the 5x5 solver run (31 iterations, N=28): the oracle on 8..24 undrawn
+edges, which is inside the solver zone, shows the net's own endgame move choice flat at
+0.72-0.78 optimal from iteration 1 (alpha-beta depth 4 scores 0.81 there) because
+solver-played positions gave it a one-hot of an arbitrary optimal edge as the policy
+target; now they record the uniform optimal set (`BoxesSolvedResult`). The held-out loss
+stopped falling at iteration 12 while the train loss kept falling (about eight passes per
+iteration over a replay window three quarters of which was already trained on); `WINDOW`
+and `TRAIN_EPOCHS` in the loop script address that. Baselines greedy and alpha-beta depth 4
+were saturated by iteration 5; the next run uses depth 6 and the solver-backed baseline.
+The oracle on 26..32 undrawn edges, just above the solver zone and the only band where the
+net's search decides moves in play, was flat for all 31 iterations (searched moves 0.40-0.49
+optimal, alpha-beta depth 4 0.53, value sign 0.55-0.65): the net never learned the midgame.
+`TRAIN_MIN_UNDRAWN` trains only above the solver zone, and §4.2's chain / loop input planes
+are implemented behind `FEATURES=chains` (`encode.py` planes 11..20, C++ parity-tested,
+stored in the checkpoint) so the net is handed the structure instead of counting it. Scored
+on positions from another run's games (`oracle_eval.py --positions-tag`), the basic net's
+midgame value stayed at chance (sign 0.54-0.57) through three iterations of the repaired
+pipeline, so the earlier climb on its own games was memorisation; `solver_label.py` plus
+`EXTRA_DATA` give the value head exact supervision on positions the solver settles offline.
+
+Where strength comes from (oracle on 26..32 undrawn, positions from another run): every
+static evaluation reads the band at chance or close to it (the net 0.55, alpha-beta's own
+value 0.55 at depth 2 and 4, 0.61 at depth 6), the net's search alone picks the optimal move
+0.54 of the time, the same search with the solver two plies below 0.71, and 1000 instead of
+300 simulations adds only 0.03. The midgame is a lookahead problem; the net's useful output
+there is the policy that aims the search, and the exact horizon is the lever. The solver's
+cost on real self-play games grows about 2x per undrawn edge (bench on the solver run's own
+games: 29 settles 85% of positions within 20k nodes, 32 only 33%) and 8x from 32 to 34 on
+the local hard set; the table-move / history ordering and MTD(f) driver take 20-25% off at
+every depth. The next exact gain needs structure, not search tuning: Nimstring values of
+independent regions (the control fight, nim-sum over components) as the evaluation at the
+solver's frontier and as move ordering, which is what the strong 5x5 programs are built on.
+Self-play can now branch from stored positions and stop at the solver's exact outcome
+(`START_FROM`, `STOP_WHEN_SOLVED`; shared `play_game(start_moves=, stop_when_solved=)`),
+which spends the search budget on the decisive band instead of the opening.
+Goal set by the author: stronger than every 5x5 engine before moving to 7x7, which needs
+the engine bridge (§3) to measure, the Nimstring evaluation to match them, and the learned
+opening to beat them.
 
 ### 2.1 Commit plan
 

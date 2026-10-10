@@ -134,6 +134,20 @@ checkpoint. Two more knobs matter on 5x5:
   `margin_utility_lambda`, `margin_utility_k`; the same flags work on `oracle_eval.py` and
   `alpha_go.boxes.arena`). The values come from the autoresearch folder's report
   (`experiments/2026-10-09_01-05-boxes-3x3-search-autoresearch/report.md`).
+- `WINDOW=8 TRAIN_EPOCHS=2` widens the replay window and caps the passes over it per
+  iteration. Watch the train / held-out loss columns of `analyze.py`: when the held-out loss
+  stops falling while the train loss keeps falling, the net is memorising the window.
+- `TRAIN_MIN_UNDRAWN=24` trains only on positions above the solver zone, and
+  `FEATURES=chains` gives the net the chain / loop structure as input planes (new run from
+  iteration 0; the feature set lives in the checkpoint).
+- `EXTRA_DATA="experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-26-34"` adds
+  solver-labelled midgame positions (`solver_label.py`, exact values and optimal edges) to
+  every training set.
+- `START_FROM=<games dir> START_UNDRAWN="36 40" STOP_WHEN_SOLVED=1` branches self-play games
+  from stored positions and stops each at the solver's exact outcome, so the search budget
+  goes to the moves that decide games (about three times the decisive-band data per hour).
+- `ARENA_SOLVER_N=0` keeps the solver out of the arena so promotion compares the nets
+  themselves.
 
 After any run, `uv run $EXP/oracle_eval.py --tag <tag>` scores every checkpoint against the
 exact oracle on late positions from the run's own games; the raw-policy and searched-move

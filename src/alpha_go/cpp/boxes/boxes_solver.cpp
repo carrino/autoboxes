@@ -51,7 +51,8 @@ BoxesSolver::BoxesSolver(int rows, int cols, std::size_t table_entries, bool use
     while ((std::size_t{1} << log2_size_) < table_entries) {
         ++log2_size_;
     }
-    table_.assign(std::size_t{1} << log2_size_, Entry{0, 0, kEmpty});
+    table_.assign(std::size_t{1} << log2_size_, Entry{0, 0, kEmpty, -1});
+    history_.assign(static_cast<std::size_t>(geo.num_edges), 0);
 }
 
 uint64_t BoxesSolver::canonical(uint64_t mask) const {
@@ -102,7 +103,8 @@ int BoxesSolver::loony_value(std::vector<int> chains, std::vector<int> loops) {
 }
 
 std::vector<int> BoxesSolver::moves(uint64_t quiet, const std::vector<int>& deg,
-                                    const std::vector<chains::Component>& comps) const {
+                                    const std::vector<chains::Component>& comps,
+                                    int first) const {
     const BoxesGeometry& geo = proto_.geometry();
     const std::vector<bool> drop = use_equivalence_ ? chains::equivalent_drop(quiet, geo, comps)
                                                     : std::vector<bool>(geo.num_edges, false);
@@ -118,8 +120,25 @@ std::vector<int> BoxesSolver::moves(uint64_t quiet, const std::vector<int>& deg,
         }
         (is_safe ? safe : loony).push_back(e);
     }
+    // Safe moves by history (most cutoffs first), loony moves last, the table's move first.
+    std::stable_sort(safe.begin(), safe.end(),
+                     [this](int a, int b) { return history_[a] > history_[b]; });
     safe.insert(safe.end(), loony.begin(), loony.end());
+    auto found = std::find(safe.begin(), safe.end(), first);
+    if (found != safe.end()) {
+        std::rotate(safe.begin(), found, found + 1);
+    }
     return safe;
+}
+
+void BoxesSolver::reward(int edge, uint64_t quiet) {
+    const int undrawn = __builtin_popcountll(full_ & ~quiet);
+    history_[edge] += static_cast<uint32_t>(undrawn * undrawn);
+    if (history_[edge] > (uint32_t{1} << 28)) {
+        for (uint32_t& h : history_) {
+            h >>= 1;
+        }
+    }
 }
 
 int BoxesSolver::child_after_take(uint64_t quiet, const chains::Decision& decision, int alpha,
@@ -143,7 +162,9 @@ int BoxesSolver::search(uint64_t mask, int alpha, int beta) {
     const BoxesGeometry& geo = proto_.geometry();
     const uint64_t key = canonical(mask);
     Entry& slot = table_[index(key)];
+    int first = -1;  // the table's move, read now: child searches may overwrite the slot
     if (slot.flag != kEmpty && slot.key == key) {
+        first = slot.move;
         if (slot.flag == kExact) {
             return slot.value;
         }
@@ -164,6 +185,7 @@ int BoxesSolver::search(uint64_t mask, int alpha, int beta) {
     const uint64_t quiet = chains::collapse_mask(mask, geo, prefix, decision);
     const int gained = chains::completed(mask, quiet, geo);
     int best;
+    int best_move = -1;
     if (quiet == full_) {
         best = gained;
     } else if (decision.control >= 0) {
@@ -196,15 +218,19 @@ int BoxesSolver::search(uint64_t mask, int alpha, int beta) {
             best = gained + loony_value(chain_sizes, loop_sizes);
         } else {
             best = -kInf;
-            for (int e : moves(quiet, deg, comps)) {
+            for (int e : moves(quiet, deg, comps, first)) {
                 const int v = gained - search(quiet | chains::bit(e), -(beta - gained),
                                               -(alpha - gained));
                 if (aborted_) {
                     return 0;
                 }
-                best = std::max(best, v);
+                if (v > best) {
+                    best = v;
+                    best_move = e;
+                }
                 alpha = std::max(alpha, v);
                 if (alpha >= beta) {
+                    reward(e, quiet);
                     break;
                 }
             }
@@ -213,21 +239,43 @@ int BoxesSolver::search(uint64_t mask, int alpha, int beta) {
     slot.key = key;
     slot.value = static_cast<int16_t>(best);
     slot.flag = best <= alpha0 ? kUpper : (best >= beta0 ? kLower : kExact);
+    slot.move = static_cast<int8_t>(best_move);
     return best;
+}
+
+int BoxesSolver::mtdf(uint64_t mask) {
+    if (!use_mtdf_) {
+        return search(mask, -kInf, kInf);
+    }
+    // Null-window searches converging on the exact value from the table's last estimate.
+    const uint64_t key = canonical(mask);
+    const Entry& slot = table_[index(key)];
+    int g = slot.flag != kEmpty && slot.key == key ? slot.value : 0;
+    int lower = -kInf;
+    int upper = kInf;
+    while (lower < upper) {
+        const int beta = g == lower ? g + 1 : g;
+        g = search(mask, beta - 1, beta);
+        if (aborted_) {
+            return 0;
+        }
+        (g < beta ? upper : lower) = g;
+    }
+    return g;
 }
 
 int BoxesSolver::value(uint64_t mask) {
     nodes_ = 0;
     budget_ = ~uint64_t{0};
     aborted_ = false;
-    return search(mask, -kInf, kInf);
+    return mtdf(mask);
 }
 
 std::optional<int> BoxesSolver::value_within(uint64_t mask, uint64_t max_nodes) {
     nodes_ = 0;
     budget_ = max_nodes;
     aborted_ = false;
-    const int v = search(mask, -kInf, kInf);
+    const int v = mtdf(mask);
     if (aborted_) {
         return std::nullopt;
     }
@@ -251,13 +299,18 @@ int BoxesSolver::best_edge_mask(uint64_t mask) {
         const int control = -value(quiet | chains::bit(decision.control));
         return take >= control ? decision.take[0] : decision.control;
     }
+    // Root driver: each child is searched against the running best, so a child that cannot
+    // improve on it returns a bound after a fraction of the work.
+    nodes_ = 0;
+    budget_ = ~uint64_t{0};
+    aborted_ = false;
     int best_edge = -1;
-    int best = INT_MIN;
+    int best = -kInf;
     for (int e = 0; e < geo.num_edges; ++e) {
         if (chains::drawn(quiet, e)) {
             continue;
         }
-        const int v = -value(quiet | chains::bit(e));
+        const int v = -search(quiet | chains::bit(e), -kInf, -best);
         if (v > best) {
             best = v;
             best_edge = e;

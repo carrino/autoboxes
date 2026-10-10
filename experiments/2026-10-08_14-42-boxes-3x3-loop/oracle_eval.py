@@ -8,7 +8,9 @@ with a forced capture are played without a search and would count as optimal for
 Per checkpoint this reports, on the same sampled positions:
 
   policy_optimal  the raw net's argmax over legal edges is an optimal edge
-  search_optimal  the MCTS agent's move (forced-move collapse, temperature 0) is optimal
+  search_optimal  the MCTS agent's move (forced-move collapse, temperature 0) is optimal;
+                  with --solver_max_undrawn the agent also has the solver, as in play, so the
+                  column measures the agent's midgame strength rather than the net's alone
   value_sign      the net's P(win) > 0.5 agrees with the sign of the oracle's final margin
   margin_mae      |E[margin] - oracle final margin|
 
@@ -18,6 +20,10 @@ self-play iterations), so every checkpoint is scored on one fixed set. Writes
 data/oracle_eval-<tag>.csv and prints the table. Usage:
 
   uv run oracle_eval.py --tag 5x5-solver [--iterations 0 1 2] [--max-undrawn 28]
+  uv run oracle_eval.py --tag 5x5-mid --positions-tag 5x5-solver --min-undrawn 26 --max-undrawn 32
+
+The second form scores one run's checkpoints on another run's games: positions from a run's
+own games are in its checkpoints' training sets, so part of a score on them is memorisation.
 """
 # ruff: noqa: N806
 from __future__ import annotations
@@ -46,6 +52,7 @@ from alpha_go.boxes.nn_agent import (
     BoxesMCTSAgent,
     add_search_flags,
     load_boxes_net,
+    optimal_edges,
     pick_device,
     search_flags,
 )
@@ -58,6 +65,13 @@ EXP_NAME = EXP_DIR.name
 GAME_DATA_DIR = Path(os.environ.get("GAME_DATA_DIR", "/nfs/game_data_root")).resolve()
 
 
+def game_moves(game: Any) -> list[tuple[int, int]]:
+    """Every move of a stored game in order: the branch prefix of a game that started from
+    a stored position (`start_moves`), then its own moves (padding rows excluded)."""
+    prefix = game["start_moves"] if "start_moves" in game else np.zeros((0, 2), dtype=np.int16)
+    return [(int(r), int(c)) for r, c in np.concatenate([prefix, game["moves"]]) if r >= 0]
+
+
 def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_undrawn: int,
                    n: int, rng: random.Random) -> list[Any]:
     """Replay every game (C++ boards, which the agents expect) and sample n distinct
@@ -66,9 +80,7 @@ def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_u
     for path in sorted(game_dir.rglob("*.npz")):
         game = np.load(path)
         board = alpha_go_cpp.BoxesBoard(rows, cols)
-        for row, col in game["moves"]:
-            if row < 0:
-                break
+        for row, col in game_moves(game):
             undrawn = board.num_edges() - board.move_count()
             decided = not alpha_go_cpp.BoxesSearchState(board).prefix()
             if min_undrawn <= undrawn <= max_undrawn and decided:
@@ -84,7 +96,7 @@ def late_positions(game_dir: Path, rows: int, cols: int, min_undrawn: int, max_u
 def raw_net(model: BoxesNet, device: torch.device, boards: list[Any]
             ) -> tuple[list[int], np.ndarray, np.ndarray]:
     """Argmax legal edge, P(win) and E[margin] for every board in one forward pass."""
-    planes_BKHW = torch.from_numpy(encode_batch(boards)).to(device)
+    planes_BKHW = torch.from_numpy(encode_batch(boards, model.features)).to(device)
     with torch.autocast(device.type, dtype=torch.float16, enabled=device.type == "cuda"):
         policy_BE, margin_BM = model(planes_BKHW)
     logits_BE = policy_BE.float().cpu().numpy()
@@ -109,6 +121,9 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--tag", default=None,
                    help="checkpoint subdir and data subdir; default <rows>x<cols>")
+    p.add_argument("--positions-tag", default=None,
+                   help="sample positions from this run's games instead of --tag's: a run the "
+                        "checkpoints never trained on removes memorisation from the score")
     p.add_argument("--rows", type=int, default=None,
                    help="board rows; default from a tag like 5x5-solver, else 3")
     p.add_argument("--cols", type=int, default=None)
@@ -118,7 +133,15 @@ def main() -> None:
     p.add_argument("--max-undrawn", type=int, default=24)
     p.add_argument("--num-positions", type=int, default=300)
     p.add_argument("--num_simulations", type=int, default=100)
+    p.add_argument("--solver_max_undrawn", type=int, default=0,
+                   help="give the scored search agent the exact solver at <= N undrawn edges, "
+                        "as in play; 0 scores the net's search alone")
+    p.add_argument("--solver_node_budget", type=int, default=20_000)
     p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4")
+    p.add_argument("--value-depths", type=int, nargs="*", default=[2, 4],
+                   help="also score the C++ alpha-beta's own value at these depths (value "
+                        "sign and margin error): how visible the band's value is to a "
+                        "shallow hand-written evaluation")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--cpu", action="store_true")
     add_search_flags(p)
@@ -139,20 +162,13 @@ def main() -> None:
 
     rng = random.Random(args.seed)
     t0 = time.time()
-    boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / tag, rows, cols,
+    positions_tag = args.positions_tag or tag
+    boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / positions_tag, rows, cols,
                             args.min_undrawn, args.max_undrawn, args.num_positions, rng)
     solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
     geo = geometry(rows, cols)
-
-    def child_value(mask: int, e: int) -> int:
-        gained = sum(1 for b in geo.edge_boxes[e]
-                     if all(((mask | 1 << e) >> s) & 1 for s in geo.box_edges[b]))
-        rest = solver.value(mask | 1 << e)
-        return gained + rest if gained else -rest
-
     values = [solver.value(b.edges()) for b in boards]  # remaining margin, side to move
-    best = [{e for e in b.get_legal_moves_flat() if child_value(b.edges(), e) == v}
-            for b, v in zip(boards, values)]
+    best = [set(optimal_edges(solver, b, geo)) for b in boards]
     final = np.array([b.margin() + v for b, v in zip(boards, values)])
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
           f"(mean undrawn {np.mean([b.num_edges() - b.move_count() for b in boards]):.1f}), "
@@ -163,6 +179,18 @@ def main() -> None:
         return float(np.mean([m in s for m, s in zip(moves, best)]))
 
     rows_out: list[dict[str, object]] = []
+    decided = final != 0
+    alphabeta = alpha_go_cpp.BoxesAlphaBeta(rows, cols)
+    for depth in args.value_depths:
+        t1 = time.time()
+        # The alpha-beta's remaining margin for the mover, as the net's value head is scored.
+        expected = np.array([b.margin() + alphabeta.value(b.edges(), depth) for b in boards])
+        sign = np.mean((expected[decided] > 0) == (final[decided] > 0))
+        row = {"agent": f"ab-d{depth} value", "iteration": "", "value_sign": round(float(sign), 4),
+               "margin_mae": round(float(np.mean(np.abs(expected - final))), 3)}
+        rows_out.append(row)
+        print(f"{row['agent']:>14}: value sign {row['value_sign']:.3f}  margin MAE "
+              f"{row['margin_mae']:.2f} ({time.time() - t1:.0f}s)")
     for name in [n for n in args.baselines.split(",") if n]:
         t1 = time.time()
         rate = optimal_rate(agent_moves(get_agent(name), boards, args.seed))
@@ -174,8 +202,8 @@ def main() -> None:
         argmax, win, expected = raw_net(model, device, boards)
         agent = BoxesMCTSAgent(BoxesLeafEvaluator(model, device, **evaluator_flags),
                                temperature=0.0, num_simulations=args.num_simulations,
-                               **mcts_flags)
-        decided = final != 0
+                               solver_max_undrawn=args.solver_max_undrawn,
+                               solver_node_budget=args.solver_node_budget, **mcts_flags)
         row = {
             "agent": f"iter{it}", "iteration": it,
             "policy_optimal": round(optimal_rate(argmax), 4),
@@ -191,7 +219,8 @@ def main() -> None:
     out = EXP_DIR / "data" / f"oracle_eval-{tag}.csv"
     out.parent.mkdir(exist_ok=True)
     fields = ["agent", "iteration", "policy_optimal", "search_optimal", "value_sign", "margin_mae",
-              "num_positions", "min_undrawn", "max_undrawn", "num_simulations", "search_flags"]
+              "num_positions", "min_undrawn", "max_undrawn", "num_simulations", "search_flags",
+              "positions_tag", "solver_max_undrawn"]
     with out.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
@@ -199,7 +228,9 @@ def main() -> None:
             writer.writerow({**row, "num_positions": len(boards),
                              "min_undrawn": args.min_undrawn, "max_undrawn": args.max_undrawn,
                              "num_simulations": args.num_simulations,
-                             "search_flags": json.dumps({**mcts_flags, **evaluator_flags})})
+                             "search_flags": json.dumps({**mcts_flags, **evaluator_flags}),
+                             "positions_tag": positions_tag,
+                             "solver_max_undrawn": args.solver_max_undrawn})
     print(f"wrote {out}")
 
 
