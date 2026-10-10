@@ -108,6 +108,14 @@ midgame positions in every training set from iteration 5.
 
   The policy creeps up, the value head rose to the level of a depth-6 hand-written search
   once the labelled set joined, and play quality plateaued at about 0.47 after iteration 4.
+- Iteration 15 (arena with the solver at 28 for both sides, 60 games, four opening moves at
+  temperature 1): beat the champion, iteration 13, 60-0 with a mean margin of +6.0 (std 3.0);
+  9-1 against alpha-beta depth 4 with the solver and 9-1 against depth 6; held-out policy
+  accuracy 0.46, value accuracy 0.61 on 122k training positions. The first decisive
+  promotion of any 5x5 run; every earlier arena between two nets was a tie. A margin of
+  +6 in every game is what winning the chain fight (control) every game looks like, but
+  until the ladder below is played it is not known whether iteration 15 learned it or
+  iteration 13 is an unusually weak champion.
 
 Changed: nothing about the planes (they help the policy and cost nothing); the labelled
 set stays; the plateau pointed at the search budget, measured next.
