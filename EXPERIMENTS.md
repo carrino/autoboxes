@@ -142,9 +142,28 @@ midgame positions in every training set from iteration 5.
   0.67 (16) -> 0.74 (21), policy 0.46 -> 0.49, training loss flat at 4.52 to 4.55; real or
   memorised is for the clean read on `5x5-mid` positions with 21 included.
 
+- The clean read, on `5x5-mid` games that the labelled set never touched (29..34 undrawn,
+  agent with its solver at 28, 100 simulations; random 0.15, greedy 0.32, alpha-beta depth 4
+  0.37):
+
+  | iteration | policy optimal | searched move optimal | value sign | margin MAE |
+  |---|---|---|---|---|
+  | 4 | 0.370 | 0.497 | 0.600 | 3.80 |
+  | 8 | 0.397 | 0.483 | 0.553 | 3.76 |
+  | 11 | 0.380 | 0.510 | 0.637 | 3.47 |
+  | 15 | 0.390 | 0.510 | 0.637 | 3.49 |
+  | 21 | 0.383 | 0.510 | 0.653 | 3.46 |
+
+  Half of the value climb measured on the solver run's positions was memorisation of the
+  labelled set: the real gain is about five points, to the level of depth-6 alpha-beta.
+  The searched move has been at 0.50 since iteration 4, the policy at 0.37 to 0.40 even
+  with 15k exact uniform-optimal targets in every training set. Seventeen iterations of
+  self-play bought nothing in the band that decides games.
+
 Changed: the arena plays colour-swapped pairs from the same random opening and scores each
 pair on its summed margin, so colour cancels inside the pair; promotion needs the pair
-score's 95% interval to exclude a tie; the per-colour win rates are reported.
+score's 95% interval to exclude a tie; the per-colour win rates are reported. Every
+future read of the chains checkpoints uses `--positions-tag 5x5-mid`.
 
 Changed: nothing about the planes (they help the policy and cost nothing); the labelled
 set stays; the plateau pointed at the search budget, measured next.
@@ -238,11 +257,14 @@ and stays available; the 5x5 read above says whether a real net changes the pict
    a learned policy and value can still beat a hand-written engine, and it has no
    measurement yet.
 2. The net's contribution at 300 simulations with the solver at 28 is a few points of
-   move quality from its policy. Its value head now reads the 29..34 band at 0.70 (exact
-   labels did that), above any hand-written static value, yet the searched move has not
-   moved: the next tests are whether minimax backup of proven leaves and more simulations
-   convert the better value into moves. Exact labels and branched self-play are the levers
-   on the learning side, the solver's reach on the engine side.
+   move quality from its policy. On clean positions its value head reads the 29..34 band at
+   0.65 (exact labels gave five points of that), the level of depth-6 alpha-beta, and the
+   searched move has sat at 0.51 since iteration 4 of the chains run: self-play at this
+   budget has a ceiling in the band, and exact labels lift the value head without lifting
+   play. Proof propagation is worth two or three points at 100 simulations (CPU probe).
+   What remains to measure is the simulation slope at 1000; after that the lever is the
+   solver's reach (Nimstring decomposition to 32..34 undrawn), which would settle the band
+   outright and leave the net the opening.
 3. To be stronger than the 5x5 engines: match their exact midgame (Nimstring
    decomposition), measure against them (engine bridge), then beat them in the opening.
 
