@@ -1,8 +1,9 @@
 """Arena promotion for one iteration.
 
-Plays the iter N checkpoint against the current champion (alternating first player, the
-first --opening_moves moves sampled at temperature 1 so the games differ),
-promotes it on a win rate >= --threshold, and also scores it against --baselines (default
+Plays the iter N checkpoint against the current champion in colour-swapped pairs from the
+same random --opening_moves-edge opening (the pair is scored on its summed margin, so the
+side-to-move advantage of an opening cancels), promotes it when the pair score is at least
+--threshold and its 95% interval excludes a tie, and also scores it against --baselines (default
 boxes-greedy and boxes-ab-d4; boxes-ab-d4-s28 plays the endgame exactly from the loop's
 default solver depth, so beating it is the net's midgame) so progress is visible on an
 absolute scale. Checkpoints are
@@ -45,11 +46,12 @@ def main() -> None:
     p.add_argument("--baseline_games", type=int, default=40)
     p.add_argument("--num_simulations", type=int, default=200)
     p.add_argument("--num_workers", type=int, default=8)
-    p.add_argument("--threshold", type=float, default=0.55)
+    p.add_argument("--threshold", type=float, default=0.55,
+                   help="promote at a pair score >= this whose 95%% interval excludes a tie")
     p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4",
                    help="comma-separated registered agents for the absolute-scale columns")
     p.add_argument("--opening_moves", type=int, default=4,
-                   help="moves sampled at temperature 1 before greedy play, for game variety")
+                   help="random edges both games of a pair start from, for game variety")
     p.add_argument("--solver_max_undrawn", type=int, default=0,
                    help="exact endgame solver at <= N undrawn edges for the candidate and champion")
     p.add_argument("--solver_node_budget", type=int, default=20_000)
@@ -72,10 +74,10 @@ def main() -> None:
         engine.start()
         engines.append(engine)
         return engine
-    # Sample the first few moves from the visit distribution: at temperature 0 both nets are
-    # deterministic and a 100-game match is the same two games played 50 times each.
+    # Greedy nets; the random opening each pair starts from gives the variety (at temperature 0
+    # from the empty board a 100-game match is the same two games played 50 times each).
     mcts = dict(num_simulations=args.num_simulations, temperature=1.0,
-                temperature_cutoff=args.opening_moves,
+                temperature_cutoff=0,
                 solver_max_undrawn=args.solver_max_undrawn,
                 solver_node_budget=args.solver_node_budget,
                 merge_equivalent=bool(args.merge_equivalent),
@@ -96,13 +98,15 @@ def main() -> None:
                                              args.rows, args.cols,
                                              engine=shared_engine(champion_ckpt), **mcts)
         match = play_match(candidate, champion, args.rows, args.cols, args.num_games,
-                           seed=1000 + args.iteration, num_workers=args.num_workers)
+                           seed=1000 + args.iteration, num_workers=args.num_workers,
+                           opening_moves=args.opening_moves)
         vs_champion = match.summary()
-        promoted = match.a_win_rate >= args.threshold
+        promoted = match.pair_score >= args.threshold and match.pair_wilson()[0] > 0.5
         print(f"iter{args.iteration} vs champion iter{state['champion']}: {vs_champion}")
     for baseline in [b for b in args.baselines.split(",") if b]:
         result = play_match(candidate, baseline, args.rows, args.cols, args.baseline_games,
-                            seed=2000 + args.iteration, num_workers=args.num_workers)
+                            seed=2000 + args.iteration, num_workers=args.num_workers,
+                            opening_moves=args.opening_moves)
         entry[f"vs_{baseline}"] = result.summary()
         print(f"iter{args.iteration} vs {baseline}: {entry[f'vs_{baseline}']}")
     entry.update({"vs_champion": vs_champion, "promoted": promoted,

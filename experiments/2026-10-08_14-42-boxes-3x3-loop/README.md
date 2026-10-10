@@ -82,10 +82,13 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   the root Q), a held-out split by game (`--val-fraction`, default 0.1) whose loss and
   accuracies sit next to the training ones in the `===RESULT===` JSON line, time budget,
   checkpoint `checkpoints/<tag>/iter{N}.pt`.
-- `arena_promote.py` — candidate vs champion (alternating first player, first 4 moves
-  sampled at temperature 1 so games differ, Wilson CI), promote at >= 55%
-  (`--threshold`); also reports candidate vs `boxes-greedy` and
-  `boxes-ab-d4`; appends to `league_state-<tag>.json`.
+- `arena_promote.py` — candidate vs champion in colour-swapped pairs from the same random
+  4-edge opening (`--opening_moves`), each pair scored on its summed margin so the
+  side-to-move advantage cancels; promote when the pair score is >= 55% (`--threshold`)
+  and its 95% interval excludes a tie (60 games with a plain 0.55 threshold promoted an
+  equal net one time in four); also reports candidate vs `boxes-greedy` and
+  `boxes-ab-d4` with the per-colour win rates; appends to `league_state-<tag>.json`.
+  Self-play always uses the latest checkpoint; the champion is the arena's reference only.
 - `run_iteration_local.sh <start> <end> [--cpu]` — the loop; `ROWS`/`COLS` pick the board,
   `TAG` the output name, `--cpu` switches to smoke budgets so the pipeline runs anywhere.
 - `analyze.py <tag>` — tabulates `league_state-<tag>.json` and `timing/<tag>/` into `report-<tag>.md`.

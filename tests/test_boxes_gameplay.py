@@ -9,8 +9,9 @@ import numpy as np
 
 from alpha_go import self_play
 from alpha_go.agents import get_agent
-from alpha_go.boxes import agents as _boxes_agents  # noqa: F401
-from alpha_go.boxes.arena import play_match
+from alpha_go.agents.base import register_agent
+from alpha_go.boxes import agents as _boxes_agents
+from alpha_go.boxes.arena import play_match, random_opening
 from alpha_go.boxes.nn_agent import register_boxes_mcts_agent
 from alpha_go.boxes.oracle import Oracle
 from alpha_go.boxes.rules import BoxesBoard, geometry
@@ -160,3 +161,40 @@ class TestArena:
         lo, hi = result.wilson()
         assert 0.0 <= lo <= result.a_win_rate <= hi <= 1.0
         assert summary["board"] == "3x3" and summary["a_sec_per_move"] >= 0
+
+    def test_random_opening_is_legal_and_seeded(self) -> None:
+        moves = random_opening(3, 3, 5, np.random.default_rng(3))
+        assert moves == random_opening(3, 3, 5, np.random.default_rng(3))
+        assert len(moves) == 5 and len(set(moves)) == 5
+        board = alpha_go_cpp.BoxesBoard(3, 3)
+        for r, c in moves:
+            board.play(r, c)
+        assert board.move_count() == 5
+
+    def test_pairs_share_an_opening_and_swap_colours(self) -> None:
+        seen: list[tuple[int, ...]] = []
+
+        @register_agent("boxes-test-opening-probe")
+        class _Probe(_boxes_agents.BoxesRandomAgent):
+            def select_move(self, board: object, seed: int) -> tuple[int, int]:
+                if board.move_count() == 3:  # type: ignore[attr-defined]
+                    seen.append(tuple(np.asarray(board.to_numpy()).flatten().tolist()))  # type: ignore[attr-defined]
+                return super().select_move(board, seed)
+
+        probe = "boxes-test-opening-probe"
+        result = play_match(probe, probe, rows=3, num_games=4, seed=5, num_workers=1,
+                            opening_moves=3)
+        # Three random edges never complete a box, so each game's first searched position is
+        # its opening: both games of a pair see the same one and the two pairs differ.
+        assert len(seen) == 4 and seen[0] == seen[1] and seen[2] == seen[3]
+        assert seen[0] != seen[2]
+        m = result.margins
+        assert result.pair_margins == [m[0] + m[1], m[2] + m[3]]
+        first, second = result.colour_win_rates()
+        assert first == sum((x > 0) + 0.5 * (x == 0) for x in m[0::2]) / 2
+        assert second == sum((x > 0) + 0.5 * (x == 0) for x in m[1::2]) / 2
+        lo, hi = result.pair_wilson()
+        assert 0.0 <= lo <= result.pair_score <= hi <= 1.0
+        summary = result.summary()
+        assert summary["a_pair_score"] == result.pair_score
+        assert {"a_first_win_rate", "a_second_win_rate", "a_pair_score_ci95"} <= summary.keys()

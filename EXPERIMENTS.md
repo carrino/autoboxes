@@ -116,6 +116,22 @@ midgame positions in every training set from iteration 5.
   +6 in every game is what winning the chain fight (control) every game looks like, but
   until the ladder below is played it is not known whether iteration 15 learned it or
   iteration 13 is an unusually weak champion.
+- The ladder and the clean read, same day. Iteration 15 against iteration 8 stood at
+  exactly half the games won at every progress line (3 of 6, 6 of 12, ... 18 of 36), which
+  a coin flip does once in a thousand matches: the side moving first (or second) won every
+  game, so the two nets are equal and colour decides. Clean positions, 29..34, agent with
+  its solver at 28, iterations 4 / 8 / 11 / 15: searched move optimal 0.483 / 0.470 / 0.507
+  / 0.503, policy 0.367 / 0.387 / 0.390 / 0.377, value sign 0.563 / 0.620 / 0.700 / 0.687,
+  margin MAE 4.08 / 4.15 / 3.70 / 3.66. No step at 15. The value head's climb to 0.70,
+  above the depth-6 hand-written value, is the one real trend, and it has not moved the
+  searched move at 100 simulations. So the 60-0 says iteration 13 was a weak champion, let
+  in by a 60-game arena with a 0.55 threshold (which promotes an equal net one time in
+  four). Self-play always used the latest checkpoint, so the weak champion never
+  generated data.
+
+Changed: the arena plays colour-swapped pairs from the same random opening and scores each
+pair on its summed margin, so colour cancels inside the pair; promotion needs the pair
+score's 95% interval to exclude a tie; the per-colour win rates are reported.
 
 Changed: nothing about the planes (they help the policy and cost nothing); the labelled
 set stays; the plateau pointed at the search budget, measured next.
@@ -166,10 +182,11 @@ values of independent regions), not search tuning.
    a learned policy and value can still beat a hand-written engine, and it has no
    measurement yet.
 2. The net's contribution at 300 simulations with the solver at 28 is a few points of
-   move quality from its policy; its value head matters above the solver's reach only
-   loosely. Training it further on outcomes alone does not change play; exact labels and
-   branched self-play are the levers on the learning side, the solver's reach on the
-   engine side.
+   move quality from its policy. Its value head now reads the 29..34 band at 0.70 (exact
+   labels did that), above any hand-written static value, yet the searched move has not
+   moved: the next tests are whether minimax backup of proven leaves and more simulations
+   convert the better value into moves. Exact labels and branched self-play are the levers
+   on the learning side, the solver's reach on the engine side.
 3. To be stronger than the 5x5 engines: match their exact midgame (Nimstring
    decomposition), measure against them (engine bridge), then beat them in the opening.
 
