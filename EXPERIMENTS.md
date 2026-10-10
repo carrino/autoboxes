@@ -83,7 +83,7 @@ passes, uniform targets, policy temperature 0.7, 100-game arena.
 Changed: the representation hypothesis moved to the front (chain planes); the arena was
 recognised as blind to the net while the solver plays for both sides.
 
-## 5. Chain / loop planes (`TAG=5x5-chains`, from scratch, 9+ iterations)
+## 5. Chain / loop planes (`TAG=5x5-chains`, from scratch, 21 iterations)
 
 `FEATURES=chains` (10 planes: chain lengths, loops, opened components, safe edges, chain
 count, loop count, safe-edge share, long-chain parity), train above 24 undrawn, window 8,
@@ -132,6 +132,15 @@ midgame positions in every training set from iteration 5.
   in by a 60-game arena with a 0.55 threshold (which promotes an equal net one time in
   four). Self-play always used the latest checkpoint, so the weak champion never
   generated data.
+
+- The run ended at iteration 21 (old arena throughout). Iterations 16 to 21 each scored
+  exactly 30-30 against iteration 15 with mean margin 0.0, every six-game block 3-3: colour
+  decided every game. Read with the earlier 0.98 / 1.00 / 1.00 promotions (11, 13, 15),
+  four temperature-sampled opening moves from a sharpened policy give a handful of lines
+  that 60 games replay, so the champion column measured nothing after iteration 7. Both
+  baselines 10-0 at 21 (saturated). Held-out accuracy in the tail: value 0.61 (15) ->
+  0.67 (16) -> 0.74 (21), policy 0.46 -> 0.49, training loss flat at 4.52 to 4.55; real or
+  memorised is for the clean read on `5x5-mid` positions with 21 included.
 
 Changed: the arena plays colour-swapped pairs from the same random opening and scores each
 pair on its summed margin, so colour cancels inside the pair; promotion needs the pair
