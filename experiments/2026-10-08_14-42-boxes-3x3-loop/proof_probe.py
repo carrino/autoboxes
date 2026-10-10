@@ -43,10 +43,11 @@ def uniform_batched(states):
     return out
 
 
-print(f"{len(positions)} positions; random legal move optimal: "
-      f"{sum(len(o) / len(b.get_legal_moves_flat()) for b, _, o, _ in positions) / len(positions):.3f}"
-      f"; random move keeps the outcome: "
-      f"{sum(len(k) / len(b.get_legal_moves_flat()) for b, _, _, k in positions) / len(positions):.3f}")
+n = len(positions)
+random_optimal = sum(len(o) / len(b.get_legal_moves_flat()) for b, _, o, _ in positions) / n
+random_keeps = sum(len(k) / len(b.get_legal_moves_flat()) for b, _, _, k in positions) / n
+print(f"{n} positions; random legal move optimal: {random_optimal:.3f}; "
+      f"random move keeps the outcome: {random_keeps:.3f}")
 for sims in (100, 400):
     for prove in (False, True):
         cfg = alpha_go_cpp.MCTSConfig()
@@ -61,6 +62,5 @@ for sims in (100, 400):
             hits += move in optimal
             keeps += move in keeping
             proven += tree.is_root_proven()
-        n = len(positions)
         print(f"sims {sims:4d} prove {int(prove)}: margin-optimal {hits / n:.3f}  keeps outcome "
               f"{keeps / n:.3f}  roots proven {proven / n:.2f}  ({time.time() - t0:.0f}s)")
