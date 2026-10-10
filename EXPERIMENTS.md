@@ -123,8 +123,12 @@ midgame positions in every training set from iteration 5.
   its solver at 28, iterations 4 / 8 / 11 / 15: searched move optimal 0.483 / 0.470 / 0.507
   / 0.503, policy 0.367 / 0.387 / 0.390 / 0.377, value sign 0.563 / 0.620 / 0.700 / 0.687,
   margin MAE 4.08 / 4.15 / 3.70 / 3.66. No step at 15. The value head's climb to 0.70,
-  above the depth-6 hand-written value, is the one real trend, and it has not moved the
-  searched move at 100 simulations. So the 60-0 says iteration 13 was a weak champion, let
+  above the depth-6 hand-written value, is the one trend, and it has not moved the
+  searched move at 100 simulations. Caveat: the labelled set and these "clean" positions
+  were both sampled from the `5x5-solver` games by the same function, so about a fifth of
+  the scored positions carry exact labels the net trained on; the climb has to be
+  re-measured on games the labelled set never touched (`--positions-tag 5x5-mid`) before
+  it counts. So the 60-0 says iteration 13 was a weak champion, let
   in by a 60-game arena with a 0.55 threshold (which promotes an equal net one time in
   four). Self-play always used the latest checkpoint, so the weak champion never
   generated data.
