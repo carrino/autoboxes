@@ -167,12 +167,22 @@ def main() -> None:
                             args.min_undrawn, args.max_undrawn, args.num_positions, rng)
     solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
     geo = geometry(rows, cols)
-    values = [solver.value(b.edges()) for b in boards]  # remaining margin, side to move
-    best = [set(optimal_edges(solver, b, geo)) for b in boards]
+    # Exact labels (remaining margin for the side to move, optimal edges) are cached per edge
+    # mask under data/, since solving is most of a read's fixed cost and reads repeat.
+    cache_path = EXP_DIR / "data" / f"oracle_labels-{positions_tag}.json"
+    cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
+    cached = sum(str(b.edges()) in cache for b in boards)
+    for b in boards:
+        cache.setdefault(str(b.edges()), [solver.value(b.edges()), optimal_edges(solver, b, geo)])
+    cache_path.write_text(json.dumps(cache))
+    labels = [cache[str(b.edges())] for b in boards]
+    values = [v for v, _ in labels]
+    best = [set(e) for _, e in labels]
     final = np.array([b.margin() + v for b, v in zip(boards, values)])
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
           f"(mean undrawn {np.mean([b.num_edges() - b.move_count() for b in boards]):.1f}), "
-          f"solved in {time.time() - t0:.1f}s; optimal-move share of a random legal move: "
+          f"solved in {time.time() - t0:.1f}s ({cached} labels cached); "
+          f"optimal-move share of a random legal move: "
           f"{np.mean([len(s) / len(b.get_legal_moves_flat()) for s, b in zip(best, boards)]):.3f}")
 
     def optimal_rate(moves: list[int]) -> float:
