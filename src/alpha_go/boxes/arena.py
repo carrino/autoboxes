@@ -6,6 +6,8 @@ of view. Games come in pairs: both games of a pair start from the same random op
 `opening_moves` edges, with A moving first in one and second in the other, so the side-to-move
 advantage of an opening cancels inside the pair. The pair score (share of pairs A wins on the
 summed margin) is the strength signal; the per-colour win rates show how much colour decides.
+With --start_positions the pairs start instead from stored games cut where --start_undrawn
+edges remain (self-play's branching sampler), which isolates the middle game from the opening.
 
     uv run -m alpha_go.boxes.arena --rows 3 --a boxes-ab-d4 --b boxes-greedy --num_games 20
 """
@@ -122,6 +124,19 @@ def random_opening(
     return moves
 
 
+def stored_openings(
+    source: str, rows: int, cols: int, undrawn: tuple[int, int], count: int, seed: int
+) -> list[list[tuple[int, int]]]:
+    """`count` prefixes of random stored games under $GAME_DATA_DIR/<source>, each cut where
+    undrawn[0]..undrawn[1] edges remain (`self_play.sample_start_moves`)."""
+    from alpha_go.self_play import sample_start_moves
+    args = argparse.Namespace(start_positions=source, start_fraction=1.0, board_size=rows,
+                              board_cols=cols, komi=0.0, start_undrawn_min=undrawn[0],
+                              start_undrawn_max=undrawn[1])
+    return [sample_start_moves(args, get_game("boxes"), seed * 100_003 + i) or []
+            for i in range(count)]
+
+
 def _one_game(
     a: str, b: str, rows: int, cols: int, index: int, seed: int,
     start_moves: list[tuple[int, int]] | None = None,
@@ -151,16 +166,20 @@ def _one_game(
 def play_match(
     a: str, b: str, rows: int, cols: int | None = None, num_games: int = 20,
     seed: int = 0, num_workers: int = 1, opening_moves: int = 0,
+    openings: list[list[tuple[int, int]]] | None = None,
 ) -> MatchResult:
     """Play `num_games` games (an even number) between registered agents `a` and `b`.
 
-    Games 2p and 2p+1 start from the same random opening of `opening_moves` edges, drawn
-    from `seed`, with A moving first in the even game and second in the odd one.
+    Games 2p and 2p+1 start from the same opening, with A as the first player (black) in the
+    even game and the second in the odd one: `openings[p]` when given, else a random opening
+    of `opening_moves` edges drawn from `seed`.
     """
     assert num_games % 2 == 0, "games come in colour-swapped pairs"
     cols = cols or rows
     rng = np.random.default_rng(seed)
-    openings = [random_opening(rows, cols, opening_moves, rng) for _ in range(num_games // 2)]
+    openings = openings or [random_opening(rows, cols, opening_moves, rng)
+                            for _ in range(num_games // 2)]
+    assert len(openings) == num_games // 2, "one opening per pair"
     start = time.time()
     every = max(1, num_games // 10)
     with ThreadPoolExecutor(max_workers=num_workers) as pool:
@@ -226,6 +245,10 @@ def main() -> None:
     parser.add_argument("--solver_budget", type=int, default=20_000)
     parser.add_argument("--merge_eq", type=int, default=0,
                         help="ckpt agents: equivalent-edge merge")
+    parser.add_argument("--start_positions", default=None,
+                        help="games directory under $GAME_DATA_DIR to start the pairs from")
+    parser.add_argument("--start_undrawn", type=int, nargs=2, default=[36, 40],
+                        help="with --start_positions: cut the stored games here (min max)")
     parser.add_argument("--cpu", action="store_true")
     from alpha_go.boxes.nn_agent import add_search_flags
     add_search_flags(parser)
@@ -233,9 +256,12 @@ def main() -> None:
     for name in (args.a, args.b):
         if name.startswith("ckpt:"):
             register_checkpoint(name, args)
+    cols = args.cols or args.rows
+    openings = (stored_openings(args.start_positions, args.rows, cols, args.start_undrawn,
+                                args.num_games // 2, args.seed) if args.start_positions else None)
     result = play_match(
         args.a, args.b, args.rows, args.cols, args.num_games, args.seed, args.num_workers,
-        opening_moves=args.opening_moves,
+        opening_moves=args.opening_moves, openings=openings,
     )
     summary = result.summary()
     print(

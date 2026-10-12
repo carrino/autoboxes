@@ -11,7 +11,7 @@ from alpha_go import self_play
 from alpha_go.agents import get_agent
 from alpha_go.agents.base import register_agent
 from alpha_go.boxes import agents as _boxes_agents
-from alpha_go.boxes.arena import play_match, random_opening
+from alpha_go.boxes.arena import play_match, random_opening, stored_openings
 from alpha_go.boxes.nn_agent import register_boxes_mcts_agent
 from alpha_go.boxes.oracle import Oracle
 from alpha_go.boxes.rules import BoxesBoard, geometry
@@ -198,3 +198,32 @@ class TestArena:
         summary = result.summary()
         assert summary["a_pair_score"] == result.pair_score
         assert {"a_first_win_rate", "a_second_win_rate", "a_pair_score_ci95"} <= summary.keys()
+
+    def test_pairs_start_from_given_openings(self) -> None:
+        seen: list[int] = []
+
+        @register_agent("boxes-test-opening-counter")
+        class _Counter(_boxes_agents.BoxesRandomAgent):
+            def select_move(self, board: object, seed: int) -> tuple[int, int]:
+                seen.append(board.move_count())  # type: ignore[attr-defined]
+                return super().select_move(board, seed)
+
+        probe = "boxes-test-opening-counter"
+        openings = [random_opening(3, 3, 5, np.random.default_rng(1)),
+                    random_opening(3, 3, 7, np.random.default_rng(2))]
+        play_match(probe, probe, rows=3, num_games=4, seed=0, num_workers=1, openings=openings)
+        # Each game's first searched move comes right after its pair's opening.
+        firsts = [n for i, n in enumerate(seen) if i == 0 or n < seen[i - 1]]
+        assert firsts == [5, 5, 7, 7]
+
+    def test_stored_openings_cut_inside_the_range(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.setattr(self_play, "GAME_DATA_DIR", tmp_path)
+        game = get_game("boxes")
+        record = play_game(get_agent("boxes-random"), get_agent("boxes-random"), board_size=3,
+                           max_moves=game.default_max_moves(3), game=game, seed=4)
+        (tmp_path / "games").mkdir()
+        save_game_data(record, tmp_path / "games", 0, "t")
+        openings = stored_openings("games", 3, 3, (10, 14), 6, seed=0)
+        assert len(openings) == 6
+        assert all(24 - 14 <= len(o) <= 24 - 10 for o in openings)
+        assert all(o == record.moves[:len(o)] for o in openings)

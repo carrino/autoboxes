@@ -310,6 +310,22 @@ same, four self-play processes. The question for it: do search targets that are 
 right instead of 60% lift the policy, where 60% ones stopped at 0.42? Read at 45 and 49
 with the command above.
 
+### The solver-30 run (from iteration 41)
+
+- Iteration 54 against iteration 15, paired arena with the solver at 30 for both: pair
+  score 0.25 [0.13, 0.43], mean margin -2.8. The first significant result between two nets,
+  and it is a loss: iteration 15, trained before any branching, plays whole games better.
+  The branched runs were already drifting the same way (0.38 at 40, 0.43 at 41). Iteration
+  54 also spent 1.73 s per move against 0.49 s for iteration 15 in the same games (0.79 /
+  0.40 at 40, 1.19 / 0.65 at 41).
+- Leading hypothesis: the opening regressed. Branched self-play gives the opening and early
+  middle game (60 down to about 40 undrawn) only the quarter of games that start from the
+  empty board, a quarter of the data it had before, and the band oracle cannot see it.
+  The test: the same paired match started from clean midgame positions instead of random
+  openings (`arena.py --start_positions ... --start_undrawn 36 40`, `5x5-mid` games). If
+  iteration 54 holds its own from 36..40 undrawn and loses from the opening, the opening is
+  what regressed.
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
