@@ -285,7 +285,30 @@ paired arena (solver at 28 for both sides, 400 simulations).
   second: from random four-edge openings, between nets this close, the second player wins
   almost every game and the pairing is what makes the match readable at all. Against
   greedy 10-0, against alpha-beta depth 4 8-2 (both pairs won).
-- Clean read of iterations 21..41: pending.
+- Clean read, same positions and search settings as section 5 (100 simulations, solver at
+  28):
+
+  | iteration | policy optimal | searched move optimal | value sign | margin MAE |
+  |---|---|---|---|---|
+  | 21 | 0.383 | 0.510 | 0.653 | 3.46 |
+  | 25 | 0.410 | 0.530 | 0.640 | 3.46 |
+  | 30 | 0.413 | 0.557 | 0.637 | 3.53 |
+  | 35 | 0.423 | 0.523 | 0.640 | 3.53 |
+  | 41 | 0.413 | 0.500 | 0.623 | 3.54 |
+
+  Twenty iterations of branched self-play at 1000 simulations moved the policy up about
+  three points and the searched move not at all; the value sign drifted down within
+  noise. The paired arena agrees: every candidate from 22 to 41 scored 0.38 to 0.58
+  against iteration 15, none significant. The held-out value accuracy fell from 0.74 to
+  0.62 as the window filled with band positions, which are harder; the clean read did not
+  move. Collect time rose from 870 s to about 1500 s per iteration over 28..41, and the
+  newer nets took about twice as long per move as iteration 15 in the same arena games.
+
+Changed: the search budget is spent on reach instead of simulations. Resumed from
+iteration 41 with the solver at 30 (100k budget), 400 simulations, everything else the
+same, four self-play processes. The question for it: do search targets that are 69%
+right instead of 60% lift the policy, where 60% ones stopped at 0.42? Read at 45 and 49
+with the command above.
 
 ## What we believe now
 
