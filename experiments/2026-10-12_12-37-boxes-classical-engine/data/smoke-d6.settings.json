@@ -1,0 +1,9 @@
+{
+  "a": "boxes-classic",
+  "b": "boxes-ab-d6",
+  "rows": 5,
+  "cols": 5,
+  "games": 4,
+  "seed": 42,
+  "opening_moves": 4
+}

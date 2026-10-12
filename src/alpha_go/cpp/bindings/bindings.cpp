@@ -8,6 +8,7 @@
 #include "boxes/boxes_game.h"
 #include "boxes/boxes_search.h"
 #include "boxes/boxes_alphabeta.h"
+#include "boxes/boxes_classic.h"
 #include "boxes/boxes_solver.h"
 #include "go/go_game.h"
 #include "mcts/mcts.h"
@@ -276,6 +277,27 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
              "0 capture, 1 safe, 2 loony.")
         .def("nodes", &alpha_go::BoxesAlphaBeta::nodes)
         .def("table_bytes", &alpha_go::BoxesAlphaBeta::table_bytes);
+
+    // Optional classical Boxes searcher; selected only by boxes-classic agents.
+    py::class_<alpha_go::BoxesClassic>(m, "BoxesClassic")
+        .def(py::init<int, int, double, int, std::size_t, std::size_t>(),
+             py::arg("rows"), py::arg("cols") = 0, py::arg("seconds") = 1.0,
+             py::arg("solver_max_undrawn") = 30,
+             py::arg("table_entries") = std::size_t{1} << 18,
+             py::arg("solver_entries") = std::size_t{1} << 20)
+        .def("best_edge", &alpha_go::BoxesClassic::best_edge,
+             py::call_guard<py::gil_scoped_release>(), py::arg("mask"), py::arg("seed") = 0)
+        .def("evaluate", &alpha_go::BoxesClassic::evaluate,
+             py::call_guard<py::gil_scoped_release>(), py::arg("mask"))
+        .def("final_margin", &alpha_go::BoxesClassic::final_margin,
+             py::call_guard<py::gil_scoped_release>(), py::arg("board"))
+        .def("value", &alpha_go::BoxesClassic::value,
+             py::call_guard<py::gil_scoped_release>(), py::arg("mask"), py::arg("depth"))
+        .def("completed_depth", &alpha_go::BoxesClassic::completed_depth)
+        .def("last_value", &alpha_go::BoxesClassic::last_value)
+        .def("nodes", &alpha_go::BoxesClassic::nodes)
+        .def("solver_nodes", &alpha_go::BoxesClassic::solver_nodes)
+        .def("table_bytes", &alpha_go::BoxesClassic::table_bytes);
 
     // BoxesSearchState binding: forced-move collapse around a BoxesBoard
     py::class_<alpha_go::BoxesSearchState>(m, "BoxesSearchState")
