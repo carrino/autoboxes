@@ -12,11 +12,11 @@ namespace alpha_go {
 // Optional classical engine. All scores are remaining margins for the mover, in
 // hundredths of a box; adding board.margin() gives a final-margin evaluation.
 // A steady-clock deadline covers the entire iterative-deepening call. Exact-solver
-// probes are deliberately small (1024 nodes), so one probe cannot consume the move
-// budget unchecked. One instance and one thread per player.
+// probes retain their table across 1024-node slices, checking the clock between
+// slices, up to 16384 total nodes. One instance and one thread per player.
 class BoxesClassic {
 public:
-    BoxesClassic(int rows, int cols = 0, double seconds = 1.0, int solver_max_undrawn = 30,
+    BoxesClassic(int rows, int cols = 0, double seconds = 1.0, int solver_max_undrawn = 26,
                  std::size_t table_entries = std::size_t{1} << 18,
                  std::size_t solver_entries = std::size_t{1} << 20);
 
@@ -29,6 +29,8 @@ public:
     double last_value() const { return last_value_ / 100.0; }
     uint64_t nodes() const { return nodes_; }
     uint64_t solver_nodes() const { return solver_nodes_; }
+    static uint64_t probe_node_budget() { return kProbeBudget; }
+    static uint64_t probe_slice_nodes() { return kProbeSlice; }
     std::size_t table_bytes() const { return table_.size() * sizeof(Entry) + solver_.table_bytes(); }
 
 private:
@@ -36,6 +38,8 @@ private:
     static constexpr int kScale = 100;
     static constexpr int kInf = 10000;
     static constexpr int kSolved = 65;
+    static constexpr uint64_t kProbeBudget = 16384;
+    static constexpr uint64_t kProbeSlice = 1024;
     struct Entry {
         uint64_t key;
         int16_t value;

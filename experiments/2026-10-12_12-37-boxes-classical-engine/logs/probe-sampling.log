@@ -1,0 +1,13 @@
+1400 positions from 5x5-chains, 24..30 undrawn edges
+
+undrawn | positions | split | regions | largest (median) | largest <= 20 | largest <= 24 | largest <= 28
+24 | 103 | 0.495 | 1.69 | 24 | 0.437 | 1.0 | 1.0
+25 | 88 | 0.443 | 1.81 | 25 | 0.33 | 0.443 | 1.0
+26 | 109 | 0.44 | 1.87 | 26 | 0.312 | 0.44 | 1.0
+27 | 132 | 0.394 | 1.85 | 27 | 0.28 | 0.348 | 1.0
+28 | 304 | 0.49 | 2.01 | 28 | 0.329 | 0.441 | 1.0
+29 | 327 | 0.413 | 1.85 | 29 | 0.226 | 0.327 | 0.413
+30 | 337 | 0.516 | 2.07 | 28 | 0.267 | 0.368 | 0.516
+
+wrote /workspace/work/classical-engine/experiments/2026-10-08_14-42-boxes-3x3-loop/data/region_stats-5x5-chains.csv
+wrote /workspace/work/classical-engine/experiments/2026-10-08_14-42-boxes-3x3-loop/data/positions-5x5-chains-24-30.txt (1400 positions)

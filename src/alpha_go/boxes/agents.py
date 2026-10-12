@@ -223,14 +223,15 @@ for _depth, _undrawn in ((0, 24), (2, 24), (2, 28), (4, 28)):
 
 @register_agent("boxes-classic")
 class BoxesClassicAgent(Agent):
-    """One-core iterative-deepening engine: chain evaluation, TT, and exact leaves at 30.
+    """One-core iterative-deepening engine: chain evaluation, TT, and probes below 27 edges.
 
     The default is one second per searched move. Forced captures return immediately;
-    exact probes use small node slices so the deadline covers the complete move.
+    Exact probes retain their table across 1,024-node slices, up to 16,384 nodes,
+    with deadline checks between slices. Unfinished probes fall back to evaluation.
     """
 
     seconds = 1.0
-    solver_max_undrawn = 30
+    solver_max_undrawn = 26
 
     def __init__(self) -> None:
         self.searcher: Any = None

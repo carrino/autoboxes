@@ -1,0 +1,9 @@
+{
+  "threshold": 26,
+  "budget": 16384,
+  "slice_nodes": 1024,
+  "rule": "prefer threshold26 (then25,24), smallest cumulative budget4096/16384/65536 with >=90% solved at each sampled count24..threshold; development only",
+  "positions": 1400,
+  "seed": 73,
+  "fresh_tables": true
+}

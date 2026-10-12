@@ -282,7 +282,7 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
     py::class_<alpha_go::BoxesClassic>(m, "BoxesClassic")
         .def(py::init<int, int, double, int, std::size_t, std::size_t>(),
              py::arg("rows"), py::arg("cols") = 0, py::arg("seconds") = 1.0,
-             py::arg("solver_max_undrawn") = 30,
+             py::arg("solver_max_undrawn") = 26,
              py::arg("table_entries") = std::size_t{1} << 18,
              py::arg("solver_entries") = std::size_t{1} << 20)
         .def("best_edge", &alpha_go::BoxesClassic::best_edge,
@@ -297,6 +297,8 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         .def("last_value", &alpha_go::BoxesClassic::last_value)
         .def("nodes", &alpha_go::BoxesClassic::nodes)
         .def("solver_nodes", &alpha_go::BoxesClassic::solver_nodes)
+        .def_static("probe_node_budget", &alpha_go::BoxesClassic::probe_node_budget)
+        .def_static("probe_slice_nodes", &alpha_go::BoxesClassic::probe_slice_nodes)
         .def("table_bytes", &alpha_go::BoxesClassic::table_bytes);
 
     // BoxesSearchState binding: forced-move collapse around a BoxesBoard

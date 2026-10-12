@@ -1,0 +1,10 @@
+{
+  "a": "boxes-classic",
+  "b": "boxes-ab-d6",
+  "rows": 5,
+  "cols": 5,
+  "games": 200,
+  "seed": 0,
+  "opening_moves": 4,
+  "extension_sha256": "90c61aebad3866028aa78a78be8e3ca047e21506528e2ac0935cc15181818d33"
+}

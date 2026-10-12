@@ -12,6 +12,7 @@ from pathlib import Path
 import alpha_go_cpp  # type: ignore[import-not-found]
 import numpy as np
 
+from alpha_go.boxes.agents import BoxesClassicAgent
 from alpha_go.boxes.arena import MatchResult, _one_game, random_opening
 
 
@@ -29,6 +30,12 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     configuration = {"a": args.a, "b": args.b, "rows": 5, "cols": 5,
                      "games": args.num_games, "seed": args.seed, "opening_moves": 4,
+                     "classic_settings": {
+                         "solver_max_undrawn": BoxesClassicAgent.solver_max_undrawn,
+                         "probe_node_budget": alpha_go_cpp.BoxesClassic.probe_node_budget(),
+                         "probe_slice_nodes": alpha_go_cpp.BoxesClassic.probe_slice_nodes(),
+                         "seconds": {"boxes-classic": 1.0, "boxes-classic-fast": 0.1,
+                                     "boxes-classic-tiny": 0.02}},
                      "extension_sha256": hashlib.sha256(
                          Path(alpha_go_cpp.__file__).read_bytes()).hexdigest()}
     settings = args.output.with_suffix(".settings.json")

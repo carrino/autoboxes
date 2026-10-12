@@ -1,0 +1,235 @@
+100/1400 development positions
+200/1400 development positions
+300/1400 development positions
+400/1400 development positions
+500/1400 development positions
+600/1400 development positions
+700/1400 development positions
+800/1400 development positions
+900/1400 development positions
+1000/1400 development positions
+1100/1400 development positions
+1200/1400 development positions
+1300/1400 development positions
+1400/1400 development positions
+{
+  "summaries": [
+    {
+      "undrawn": 24,
+      "budget": 1024,
+      "positions": 103,
+      "solved_share": 0.6213592233009708,
+      "median_ms": 1.742256,
+      "p90_ms": 5.0214517999999995,
+      "max_ms": 22.190961,
+      "median_exact_nodes": 631.0
+    },
+    {
+      "undrawn": 24,
+      "budget": 4096,
+      "positions": 103,
+      "solved_share": 0.9223300970873787,
+      "median_ms": 1.820449,
+      "p90_ms": 9.529631,
+      "max_ms": 20.345023,
+      "median_exact_nodes": 631.0
+    },
+    {
+      "undrawn": 24,
+      "budget": 16384,
+      "positions": 103,
+      "solved_share": 0.9902912621359223,
+      "median_ms": 1.695833,
+      "p90_ms": 11.848847399999999,
+      "max_ms": 31.129748,
+      "median_exact_nodes": 631.0
+    },
+    {
+      "undrawn": 25,
+      "budget": 1024,
+      "positions": 88,
+      "solved_share": 0.48863636363636365,
+      "median_ms": 2.3567055000000003,
+      "p90_ms": 5.004378099999999,
+      "max_ms": 8.335166,
+      "median_exact_nodes": 1153.0
+    },
+    {
+      "undrawn": 25,
+      "budget": 4096,
+      "positions": 88,
+      "solved_share": 0.8181818181818182,
+      "median_ms": 3.538351,
+      "p90_ms": 15.30186,
+      "max_ms": 24.06066,
+      "median_exact_nodes": 1153.0
+    },
+    {
+      "undrawn": 25,
+      "budget": 16384,
+      "positions": 88,
+      "solved_share": 0.9886363636363636,
+      "median_ms": 3.461863,
+      "p90_ms": 24.790246999999997,
+      "max_ms": 74.787566,
+      "median_exact_nodes": 1153.0
+    },
+    {
+      "undrawn": 26,
+      "budget": 1024,
+      "positions": 109,
+      "solved_share": 0.44954128440366975,
+      "median_ms": 2.515423,
+      "p90_ms": 5.325082,
+      "max_ms": 24.061657,
+      "median_exact_nodes": 1395.0
+    },
+    {
+      "undrawn": 26,
+      "budget": 4096,
+      "positions": 109,
+      "solved_share": 0.7614678899082569,
+      "median_ms": 4.579053,
+      "p90_ms": 14.400835400000005,
+      "max_ms": 23.530159,
+      "median_exact_nodes": 1395.0
+    },
+    {
+      "undrawn": 26,
+      "budget": 16384,
+      "positions": 109,
+      "solved_share": 0.981651376146789,
+      "median_ms": 4.497545,
+      "p90_ms": 27.60235460000001,
+      "max_ms": 460.080743,
+      "median_exact_nodes": 1395.0
+    },
+    {
+      "undrawn": 27,
+      "budget": 1024,
+      "positions": 132,
+      "solved_share": 0.2727272727272727,
+      "median_ms": 2.6576079999999997,
+      "p90_ms": 5.7050025,
+      "max_ms": 8.95652,
+      "median_exact_nodes": 2382.0
+    },
+    {
+      "undrawn": 27,
+      "budget": 4096,
+      "positions": 132,
+      "solved_share": 0.6212121212121212,
+      "median_ms": 6.9142235,
+      "p90_ms": 18.882066000000002,
+      "max_ms": 29.420221,
+      "median_exact_nodes": 2382.0
+    },
+    {
+      "undrawn": 27,
+      "budget": 16384,
+      "positions": 132,
+      "solved_share": 0.8636363636363636,
+      "median_ms": 6.781986,
+      "p90_ms": 38.5312201,
+      "max_ms": 88.429616,
+      "median_exact_nodes": 2382.0
+    },
+    {
+      "undrawn": 28,
+      "budget": 1024,
+      "positions": 304,
+      "solved_share": 0.17763157894736842,
+      "median_ms": 2.847984,
+      "p90_ms": 5.6626441,
+      "max_ms": 10.452809,
+      "median_exact_nodes": 4718.5
+    },
+    {
+      "undrawn": 28,
+      "budget": 4096,
+      "positions": 304,
+      "solved_share": 0.4769736842105263,
+      "median_ms": 9.3820355,
+      "p90_ms": 20.462386799999997,
+      "max_ms": 491.1167,
+      "median_exact_nodes": 4718.5
+    },
+    {
+      "undrawn": 28,
+      "budget": 16384,
+      "positions": 304,
+      "solved_share": 0.7401315789473685,
+      "median_ms": 16.6886205,
+      "p90_ms": 58.996266399999996,
+      "max_ms": 435.296381,
+      "median_exact_nodes": 4718.5
+    },
+    {
+      "undrawn": 29,
+      "budget": 1024,
+      "positions": 327,
+      "solved_share": 0.09174311926605505,
+      "median_ms": 2.895485,
+      "p90_ms": 6.0562686,
+      "max_ms": 28.980946,
+      "median_exact_nodes": 17838.0
+    },
+    {
+      "undrawn": 29,
+      "budget": 4096,
+      "positions": 327,
+      "solved_share": 0.28440366972477066,
+      "median_ms": 9.930392,
+      "p90_ms": 21.068716600000002,
+      "max_ms": 156.267124,
+      "median_exact_nodes": 17838.0
+    },
+    {
+      "undrawn": 29,
+      "budget": 16384,
+      "positions": 327,
+      "solved_share": 0.48623853211009177,
+      "median_ms": 34.306209,
+      "p90_ms": 75.83749860000002,
+      "max_ms": 243.919177,
+      "median_exact_nodes": 17838.0
+    },
+    {
+      "undrawn": 30,
+      "budget": 1024,
+      "positions": 337,
+      "solved_share": 0.05341246290801187,
+      "median_ms": 3.001125,
+      "p90_ms": 5.765116400000001,
+      "max_ms": 23.872681,
+      "median_exact_nodes": 26544.0
+    },
+    {
+      "undrawn": 30,
+      "budget": 4096,
+      "positions": 337,
+      "solved_share": 0.17210682492581603,
+      "median_ms": 10.655182,
+      "p90_ms": 20.598639000000006,
+      "max_ms": 61.699002,
+      "median_exact_nodes": 26544.0
+    },
+    {
+      "undrawn": 30,
+      "budget": 16384,
+      "positions": 337,
+      "solved_share": 0.42136498516320475,
+      "median_ms": 36.364263,
+      "p90_ms": 76.25857720000002,
+      "max_ms": 185.139764,
+      "median_exact_nodes": 26544.0
+    }
+  ],
+  "recommendation": {
+    "budget": 1024,
+    "threshold": null,
+    "rule": "largest threshold24..26 with >=90% solved at each sampled undrawn count at or below it; development only, seed73",
+    "positions": 1400,
+    "fresh_tables": true
+  }
+}

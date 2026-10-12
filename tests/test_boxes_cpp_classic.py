@@ -35,6 +35,18 @@ class TestClassicEvaluation:
 
 
 class TestClassicSearch:
+    @pytest.mark.parametrize("mask,expected", [(1001442305178077535, -5),
+                                               (932763501780797775, 2)])
+    def test_sliced_probes_finish_previously_heuristic_leaves(self, mask: int,
+                                                            expected: int) -> None:
+        # Development positions: a single 1024-node probe gave depth-one values
+        # +2.12 and +4.57 respectively, instead of the exact remaining margins.
+        solver = alpha_go_cpp.BoxesSolver(5, 5)
+        assert solver.value(mask) == expected
+        engine = alpha_go_cpp.BoxesClassic(5, 5)
+        assert engine.value(mask, 1) == expected
+        assert engine.solver_nodes() > 1024
+
     @pytest.mark.parametrize("entries", [2, 256])
     @pytest.mark.parametrize("rows,cols", [(1, 2), (2, 2), (2, 3)])
     def test_full_depth_matches_oracle_without_solver(self, entries: int,
@@ -71,6 +83,16 @@ class TestClassicSearch:
         assert elapsed < 0.5  # loose scheduling allowance, not a performance claim
         assert edge in board.get_legal_moves_flat() and depth >= 1
         assert engine.value(board.edges(), depth) == value
+
+    def test_timeout_during_solver_probes_keeps_a_legal_move(self) -> None:
+        mask = 928189155451622239  # quiet development position with 27 undrawn edges
+        engine = alpha_go_cpp.BoxesClassic(5, 5, 0.03)
+        start = time.monotonic()
+        edge = engine.best_edge(mask, 0)
+        elapsed = time.monotonic() - start
+        assert 0 <= edge < 60 and not (mask >> edge) & 1
+        assert engine.solver_nodes() > 0
+        assert elapsed < 0.5  # allows scheduling delay; never run the full solve unchecked
 
     def test_zero_budget_and_terminal_board(self) -> None:
         engine = alpha_go_cpp.BoxesClassic(1, 1, 0.0)
