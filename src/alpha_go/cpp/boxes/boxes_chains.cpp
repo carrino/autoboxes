@@ -58,17 +58,18 @@ std::vector<Component> components(uint64_t mask, const BoxesGeometry& geo,
             }
             seen[nxt] = true;
             path.push_back(nxt);
-            std::vector<int> others;
-            for (int e : undrawn_sides(mask, geo, nxt)) {
-                if (e != edge) {
-                    others.push_back(e);
+            int next_edge = -1;
+            for (int e : geo.box_edges[nxt]) {
+                if (e != edge && !drawn(mask, e)) {
+                    next_edge = e;
+                    break;
                 }
             }
-            if (others.empty()) {
+            if (next_edge < 0) {
                 return OPEN;
             }
             box = nxt;
-            edge = others[0];
+            edge = next_edge;
         }
     };
 
