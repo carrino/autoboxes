@@ -271,6 +271,22 @@ the moves right, and the loss is in which children get explored at all, which is
 policy prior's job. The flag is free (proven roots also make the policy targets exact there)
 and stays available; the 5x5 read above says whether a real net changes the picture.
 
+## 9. Branched restart of the chains run (iterations 21 to 41)
+
+Resumed from iteration 21 with branched self-play (75% of games start from the
+`5x5-solver` games at 36..40 undrawn), games stopped at the solver's exact outcome, 1000
+simulations, the proof flag, the solver at 28 (50k budget), the labelled set, and the
+paired arena (solver at 28 for both sides, 400 simulations).
+
+- Training sets shrink to about 70k positions over eight iterations, nearly all in the
+  band: branched games record about ten positions each.
+- Iteration 40 against the champion, iteration 15: pair score 0.38 [0.23, 0.56], mean
+  margin -0.7, not promoted. The candidate won 7% of its games moving first and 87% moving
+  second: from random four-edge openings, between nets this close, the second player wins
+  almost every game and the pairing is what makes the match readable at all. Against
+  greedy 10-0, against alpha-beta depth 4 8-2 (both pairs won).
+- Clean read of iterations 21..41: pending.
+
 ## What we believe now
 
 1. The endgame (from 28 undrawn) is exact and cheap. The midgame fight (29 to about 36)
