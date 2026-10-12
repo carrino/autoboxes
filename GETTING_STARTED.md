@@ -172,7 +172,36 @@ Memory in WSL2 is capped by `%UserProfile%\.wslconfig` (`[wsl2]` then `memory=16
 example). Every entry point prints the byte footprint of its buffers and tables at startup so
 they can be sized against that cap.
 
-## 8. What next
+## 8. CPU-only cloud boxes
+
+The exact solver, the labeller, the oracle and the region and solver benchmarks need no GPU,
+and the solver work is where many cores pay most. On a Linux box with a C++ toolchain, CMake
+and Python headers:
+
+```bash
+git clone https://github.com/carrino/autoboxes && cd autoboxes
+uv sync && bash scripts/build_cpp.sh
+export GAME_DATA_DIR=$HOME/autoboxes-data/game_data_root
+EXP=experiments/2026-10-08_14-42-boxes-3x3-loop
+```
+
+Copy the games it reads from the WSL machine (they are small; checkpoints only for
+evaluations, which then take `--cpu`):
+
+```bash
+# on the WSL machine
+D=experiments/2026-10-08_14-42-boxes-3x3-loop
+rsync -a $GAME_DATA_DIR/$D/5x5-solver $GAME_DATA_DIR/$D/5x5-chains box:autoboxes-data/game_data_root/$D/
+```
+
+Exact labels above the solver's reach are the main job: `solver_label.py` with `--shard K
+--num-shards N` splits one sample across N processes (its docstring has the loop). Start
+with a pilot of about 100 positions per shard to read the time per position and the share
+skipped on the node budget, then size the real run from it. Never label `5x5-mid` games:
+they are the clean evaluation positions. Copy the output folder back with rsync and add it
+to `EXTRA_DATA`.
+
+## 9. What next
 
 `PLAN.md` §2 has the Phase 1 status and §4 the Phase 2 work (exact endgame solver, chain
 features). `ARCHITECTURE.md` explains how the upstream Go code works and where the Boxes code

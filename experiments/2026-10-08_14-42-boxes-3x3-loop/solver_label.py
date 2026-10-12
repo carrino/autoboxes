@@ -11,6 +11,13 @@ EXTRA_DATA in run_iteration_local.sh; they join every iteration's training set.
 
   uv run solver_label.py --positions-tag 5x5-solver --min-undrawn 26 --max-undrawn 34 \
       --num-positions 20000 --save-name 5x5-oracle-26-34
+
+It is single-threaded; on a many-core CPU box, split one sample across processes with the same
+--seed and --shard 0..N-1 --num-shards N (each writes its own files into the same folder):
+
+  for K in $(seq 0 31); do uv run solver_label.py --positions-tag 5x5-solver --min-undrawn 31 \
+      --max-undrawn 36 --num-positions 64000 --node-budget 20000000 --save-name 5x5-oracle-31-36 \
+      --shard $K --num-shards 32 > label-$K.log 2>&1 & done; wait
 """
 from __future__ import annotations
 
@@ -50,7 +57,12 @@ def main() -> None:
     p.add_argument("--node-budget", type=int, default=200_000)
     p.add_argument("--table-entries", type=int, default=1 << 22)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--shard", type=int, default=0,
+                   help="solve the sampled positions i with i % --num-shards == --shard")
+    p.add_argument("--num-shards", type=int, default=1,
+                   help="processes splitting one sample (all with the same --seed)")
     args = p.parse_args()
+    assert 0 <= args.shard < args.num_shards
     size = re.match(r"(\d+)x(\d+)", args.positions_tag)
     rows = args.rows or (int(size.group(1)) if size else 5)
     cols = args.cols or (int(size.group(2)) if size and not args.rows else rows)
@@ -61,9 +73,9 @@ def main() -> None:
     t0 = time.time()
     boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / args.positions_tag, rows,
                             cols, args.min_undrawn, args.max_undrawn, args.num_positions,
-                            random.Random(args.seed))
+                            random.Random(args.seed))[args.shard::args.num_shards]
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
-          f"sampled in {time.time() - t0:.0f}s")
+          f"(shard {args.shard} of {args.num_shards}) sampled in {time.time() - t0:.0f}s")
     solver = alpha_go_cpp.BoxesSolver(rows, cols, args.table_entries)
     print(f"BoxesSolver table {solver.table_bytes() / 1e6:.0f} MB, node budget {args.node_budget}")
 
@@ -99,7 +111,8 @@ def main() -> None:
             grids = np.stack([g for g, _, _ in chunk]).astype(np.int8)
             to_play = np.array([t for _, t, _ in chunk], dtype=np.int8)
             sign = "p" if margin_p1 >= 0 else "m"
-            path = out_dir / f"oracle-{sign}{abs(margin_p1):02d}-{c // CHUNK:03d}.npz"
+            path = out_dir / (f"oracle-{sign}{abs(margin_p1):02d}-s{args.shard:03d}-"
+                              f"{c // CHUNK:03d}.npz")
             save_labelled_positions(path, grids, to_play, [o for _, _, o in chunk], margin_p1, geo)
             files += 1
     labelled = sum(len(v) for v in by_margin.values())
