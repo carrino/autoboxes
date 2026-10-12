@@ -165,15 +165,16 @@ def main() -> None:
     positions_tag = args.positions_tag or tag
     boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / positions_tag, rows, cols,
                             args.min_undrawn, args.max_undrawn, args.num_positions, rng)
+    sampled = time.time() - t0
     solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
     geo = geometry(rows, cols)
     # Exact labels (remaining margin for the side to move, optimal edges) are cached per edge
-    # mask under data/, since solving is most of a read's fixed cost and reads repeat.
+    # mask under data/, so a repeat read on the same positions skips the solve.
     cache_path = EXP_DIR / "data" / f"oracle_labels-{positions_tag}.json"
     cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
-    cached = sum(str(b.edges()) in cache for b in boards)
-    for b in boards:
-        cache.setdefault(str(b.edges()), [solver.value(b.edges()), optimal_edges(solver, b, geo)])
+    missing = [b for b in boards if str(b.edges()) not in cache]
+    cache.update({str(b.edges()): [solver.value(b.edges()), optimal_edges(solver, b, geo)]
+                  for b in missing})
     cache_path.write_text(json.dumps(cache))
     labels = [cache[str(b.edges())] for b in boards]
     values = [v for v, _ in labels]
@@ -181,7 +182,8 @@ def main() -> None:
     final = np.array([b.margin() + v for b, v in zip(boards, values)])
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
           f"(mean undrawn {np.mean([b.num_edges() - b.move_count() for b in boards]):.1f}), "
-          f"solved in {time.time() - t0:.1f}s ({cached} labels cached); "
+          f"sampled in {sampled:.1f}s, {len(missing)} solved and "
+          f"{len(boards) - len(missing)} cached in {time.time() - t0 - sampled:.1f}s; "
           f"optimal-move share of a random legal move: "
           f"{np.mean([len(s) / len(b.get_legal_moves_flat()) for s, b in zip(best, boards)]):.3f}")
 
