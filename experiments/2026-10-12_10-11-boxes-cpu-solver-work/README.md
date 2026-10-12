@@ -212,3 +212,11 @@ report, and opening the report PR. None launched a solver job.
 Only report files are committed. The uploaded tarball, virtual environment, build
 outputs, and workspace scratch files stay outside the commit. This report's `data/`
 contains machine and build-diagnosis JSON; it contains no Job 1 CSVs or game records.
+
+The first report commit was pushed successfully. The repository ignores
+`experiments/**/logs/`, so the setup logs and command audit were explicitly added
+in a follow-up report commit. An attempted extra copy to the chat output directory
+failed because `/codex` is read-only in this executor; the report remains available
+in the repository and through the PR. That copy failure did not affect the report
+or the uploaded input tarball. The publication script and follow-up commands are
+preserved in the audit.
