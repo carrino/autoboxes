@@ -232,18 +232,26 @@ done; done
 Result on 5x5, iteration 21 of the chains run, clean `5x5-mid` positions (29..34), solver
 at 28 with a 50k budget (the 100-simulation row had the 20k default):
 
-| simulations | proof flag | searched move optimal |
-|---|---|---|
-| 100 | off | 0.510 |
-| 400 | off | 0.550 |
-| 1000 | off | 0.600 |
-| 400 | on | 0.587 |
+| solver at | simulations | proof flag | searched move optimal | seconds for 300 |
+|---|---|---|---|---|
+| 28 | 100 | off | 0.510 | |
+| 28 | 400 | off | 0.550 | 105 |
+| 28 | 1000 | off | 0.600 | 194 |
+| 28 | 400 | on | 0.587 | 109 |
+| 28 | 1000 | on | 0.607 | 244 |
+| 30 (100k budget) | 400 | on | 0.693 | 244 |
 
 The simulation budget moves the band at three to four points per doubling, not flat by
 1000: the first lever since iteration 4 that moved the searched move. The flag at 400 is
-worth about a doubling, free. On the same positions the net's value head (0.653) beats
-depth-2 (0.543) and depth-4 (0.550) alpha-beta's own values by ten points. Still to price:
-the two gains together, and the solver at 30 (100k budget) against 1000 simulations.
+worth about a doubling, free; at 1000 it adds nothing measurable, so the two do not stack.
+Two more edges of solver reach are worth nine points over 1000 simulations at the same
+wall time (both 244 s, measured while self-play ran). Part of that is the positions at
+29..30 undrawn, now solved at the root; scoring 31..34 alone would say how much is
+lookahead. On the same positions the net's value head (0.653) beats depth-2 (0.543) and
+depth-4 (0.550) alpha-beta's own values by ten points.
+
+Changed: the restart runs the solver at 30 with a 100k budget, 400 simulations and the
+flag on, with branched self-play; the solver's reach is confirmed as the main lever.
 
 CPU probe first (`proof_probe.py` in the loop folder: 3x3, a uniform evaluator with no net,
 solver at 8, 300 random positions at 11..14 undrawn edges, so the exact leaves sit 3 to 6
@@ -276,9 +284,11 @@ and stays available; the 5x5 read above says whether a real net changes the pict
    budget has a ceiling in the band, and exact labels lift the value head without lifting
    play. The search budget does lift it: 0.51 / 0.55 / 0.60 at 100 / 400 / 1000
    simulations on clean positions, and proof propagation adds about a doubling's worth for
-   free (0.55 -> 0.59 at 400). So the restart puts the budget where it counts: branched
-   self-play in the band with 1000 simulations and the flag on. The solver's reach
-   (Nimstring decomposition to 32..34 undrawn) stays the structural lever behind that.
+   free at 400. The solver's reach lifts it most: at 30 undrawn with 400 simulations the
+   band reads 0.69, nine points above 1000 simulations at 28 for the same time. So the
+   restart puts the budget where it counts (branched self-play in the band, solver at 30,
+   flag on), and the next engineering is more reach: Nimstring decomposition towards
+   32..34 undrawn.
 3. To be stronger than the 5x5 engines: match their exact midgame (Nimstring
    decomposition), measure against them (engine bridge), then beat them in the opening.
 
