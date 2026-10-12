@@ -15,7 +15,9 @@ fi
 # Detect Python paths
 PYTHON_ROOT=$($VENV_PYTHON -c "import sys; print(sys.base_prefix)")
 PYTHON_INCLUDE=$($VENV_PYTHON -c "import sysconfig; print(sysconfig.get_path('include'))")
-PYTHON_LIBRARY=$($VENV_PYTHON -c "import sysconfig, os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))")
+# LIBDIR can point at the build machine's prefix in a relocated Python (e.g. /install/lib);
+# then the library sits under sys.base_prefix/lib instead.
+PYTHON_LIBRARY=$($VENV_PYTHON -c "import os, sys, sysconfig; name = sysconfig.get_config_var('LDLIBRARY'); paths = [os.path.join(d, name) for d in (sysconfig.get_config_var('LIBDIR'), os.path.join(sys.base_prefix, 'lib'))]; print(next((p for p in paths if os.path.exists(p)), paths[0]))")
 
 # Build
 rm -rf "$BUILD_DIR"
