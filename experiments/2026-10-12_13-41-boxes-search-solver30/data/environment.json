@@ -1,0 +1,18 @@
+{
+  "base_commit": "70558b73a181c3b29a246979d507f335e913e8c1",
+  "python": "3.12.14",
+  "torch": "2.11.0+cu130",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "nproc": 5,
+  "max_parallel_jobs": 4,
+  "threads_per_job": 1,
+  "cuda": false,
+  "meminfo": {
+    "MemTotal": "       18440136 kB",
+    "MemAvailable": "   15848448 kB"
+  },
+  "uploads": {
+    "boxes-games-slim.tgz": "4ca95b315317fb71fe7b5457665cbd06d556bc087262be7a50d80092f736d132",
+    "boxes-ckpts.tgz": "78a3fa7b890cda877c023236141dbc4d202254e4fa66363d096d59045acf9f88"
+  }
+}

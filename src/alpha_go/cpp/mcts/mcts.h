@@ -28,6 +28,10 @@ struct MCTSConfig {
     // exact minimax value, and proven values replace averages on the way up. Off, the
     // search is byte-identical to the plain one.
     bool prove_terminals = false;
+    // Boxes only: opt-in exact-leaf utility, matching the evaluator's margin term.
+    // A nonzero coefficient requires all children before a margin value is proven.
+    float terminal_margin_lambda = 0.0f;
+    float terminal_margin_k = 6.0f;
 
     // Playout Cap Randomization (PCR): if non-empty, each call to run_simulations
     // samples num_simulations from this categorical distribution, overriding the

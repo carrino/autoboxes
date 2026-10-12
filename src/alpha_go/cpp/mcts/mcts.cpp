@@ -2,6 +2,7 @@
 
 #include "boxes/boxes_game.h"
 #include "boxes/boxes_search.h"
+#include "boxes/boxes_utility.h"
 
 #include <algorithm>
 #include <cmath>
@@ -87,7 +88,7 @@ template <class State>
 bool MCTSTree<State>::try_prove(int node_idx) {
     const MCTSNode<State>& node = nodes_[node_idx];
     if (node.proven || node.children.empty()) return false;
-    float best = -1.0f;
+    float best = -std::numeric_limits<float>::infinity();
     size_t proven = 0;
     for (const auto& [action, child_idx] : node.children) {
         if (!nodes_[child_idx].proven) continue;
@@ -95,7 +96,10 @@ bool MCTSTree<State>::try_prove(int node_idx) {
         // Child values are from this node's mover, who moved into them.
         best = std::max(best, nodes_[child_idx].proven_value);
     }
-    if (proven == 0 || (best < 1.0f && proven < node.logP_A.size())) return false;
+    // A proven win need not be the best margin. With shaping, every action must be
+    // settled before the exact utility is known (including when every move loses).
+    const bool shaped = shapes_terminal_margin<State>(config_.terminal_margin_lambda);
+    if (proven == 0 || ((shaped || best < 1.0f) && proven < node.logP_A.size())) return false;
     const int8_t mover = static_cast<int8_t>(node.state.player());
     MCTSNode<State>& n = nodes_[node_idx];
     n.proven = true;
@@ -120,7 +124,8 @@ float MCTSTree<State>::perform_playout(int node_idx, EvaluatorFn& evaluator) {
     }
     // Case 1: Terminal node - game is over
     else if (nodes_[node_idx].state.is_game_over()) {
-        U = nodes_[node_idx].state.outcome(player_perspective);
+        U = terminal_utility(nodes_[node_idx].state, player_perspective,
+                             config_.terminal_margin_lambda, config_.terminal_margin_k);
         if (config_.prove_terminals) {
             nodes_[node_idx].proven = true;
             nodes_[node_idx].proven_value = U;
@@ -274,7 +279,8 @@ float MCTSTree<State>::fast_rollout(
     // Compute rollout value
     float rollout_value;
     if (current.is_game_over()) {
-        rollout_value = current.outcome(player_perspective);
+        rollout_value = terminal_utility(current, player_perspective,
+                                         config_.terminal_margin_lambda, config_.terminal_margin_k);
     } else {
         // Hit depth limit - use value estimate from current position
         auto [_, v] = evaluator(current);
@@ -407,7 +413,9 @@ void MCTSTree<State>::run_simulations_batched(
                 }
                 // Terminal leaf
                 if (nodes_[node_idx].state.is_game_over()) {
-                    float U = nodes_[node_idx].state.outcome(nodes_[node_idx].player_at_parent);
+                    float U = terminal_utility(nodes_[node_idx].state,
+                        nodes_[node_idx].player_at_parent,
+                        config_.terminal_margin_lambda, config_.terminal_margin_k);
                     if (config_.prove_terminals) {
                         nodes_[node_idx].proven = true;
                         nodes_[node_idx].proven_value = U;
@@ -470,7 +478,9 @@ void MCTSTree<State>::run_simulations_batched(
                     if (nodes_[child_idx].state.is_game_over()) {
                         pl.is_terminal = true;
                         pl.terminal_U =
-                            nodes_[child_idx].state.outcome(nodes_[child_idx].player_at_parent);
+                            terminal_utility(nodes_[child_idx].state,
+                                nodes_[child_idx].player_at_parent,
+                                config_.terminal_margin_lambda, config_.terminal_margin_k);
                         pl.eval_slot = -1;
                         if (config_.prove_terminals) {
                             nodes_[child_idx].proven = true;
@@ -561,17 +571,18 @@ std::unordered_map<int, float> MCTSTree<State>::get_action_probabilities(float t
     if (config_.prove_terminals) {
         // A proven root keeps only children at its exact value, an unproven root drops proven
         // losses; unchanged when no child is proven or nothing would remain.
-        float best = -1.0f;
+        float best = -std::numeric_limits<float>::infinity();
         for (const auto& [action, child_idx] : root.children) {
             if (nodes_[child_idx].proven) best = std::max(best, nodes_[child_idx].proven_value);
         }
-        if (best >= 0.0f) {
+        const bool shaped = shapes_terminal_margin<State>(config_.terminal_margin_lambda);
+        if (best >= 0.0f || (shaped && std::isfinite(best))) {
             std::unordered_map<int, int> masked;
             int total = 0;
             for (const auto& [action, child_idx] : root.children) {
                 const MCTSNode<State>& c = nodes_[child_idx];
                 bool keep = root.proven ? (c.proven && c.proven_value == best)
-                                        : !(c.proven && c.proven_value == 0.0f);
+                                        : (shaped || !(c.proven && c.proven_value == 0.0f));
                 masked[action] = keep ? c.N : 0;
                 total += masked[action];
             }
