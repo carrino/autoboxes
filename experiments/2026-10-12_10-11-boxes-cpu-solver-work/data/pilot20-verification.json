@@ -1,0 +1,55 @@
+{
+  "output": "/workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36-pilot",
+  "files": 46,
+  "positions": 388,
+  "skipped": 12,
+  "sampled": 400,
+  "wall_seconds": 2270.010937904999,
+  "node_budget": 20000000,
+  "positions_per_shard": {
+    "0": 99,
+    "1": 97,
+    "2": 97,
+    "3": 95
+  },
+  "positions_per_undrawn": {
+    "31": 79,
+    "32": 56,
+    "33": 72,
+    "34": 65,
+    "35": 71,
+    "36": 45
+  },
+  "final_margins_player_1": {
+    "-11": 7,
+    "-9": 18,
+    "-7": 20,
+    "-5": 66,
+    "-3": 79,
+    "-1": 74,
+    "1": 59,
+    "3": 27,
+    "5": 18,
+    "7": 8,
+    "9": 8,
+    "11": 3,
+    "13": 1
+  },
+  "final_margins_side_to_move": {
+    "-11": 2,
+    "-9": 3,
+    "-7": 5,
+    "-5": 24,
+    "-3": 46,
+    "-1": 69,
+    "1": 64,
+    "3": 60,
+    "5": 60,
+    "7": 23,
+    "9": 23,
+    "11": 8,
+    "13": 1
+  },
+  "maximum_policy_sum_error": 1.1920928955078125e-07,
+  "verification_passed": true
+}

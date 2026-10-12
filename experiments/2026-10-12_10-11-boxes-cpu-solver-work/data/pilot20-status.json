@@ -1,0 +1,57 @@
+{
+  "phase": "pilot20",
+  "requested": 400,
+  "seed": 0,
+  "node_budget": 20000000,
+  "shards": 4,
+  "output": "/workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36-pilot",
+  "wall_seconds": 2270.010937904999,
+  "running_shards": [],
+  "failed": false,
+  "results": [
+    {
+      "shard": 0,
+      "exit_code": 0,
+      "wall_seconds": 1722.3491949590007,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/pilot20-shard-0.txt",
+      "sampled": 100,
+      "labelled": 99,
+      "skipped": 1,
+      "solver_seconds_rounded": 1669,
+      "files": 12
+    },
+    {
+      "shard": 1,
+      "exit_code": 0,
+      "wall_seconds": 1597.7221856180004,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/pilot20-shard-1.txt",
+      "sampled": 100,
+      "labelled": 97,
+      "skipped": 3,
+      "solver_seconds_rounded": 1552,
+      "files": 10
+    },
+    {
+      "shard": 2,
+      "exit_code": 0,
+      "wall_seconds": 1597.722207578001,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/pilot20-shard-2.txt",
+      "sampled": 100,
+      "labelled": 97,
+      "skipped": 3,
+      "solver_seconds_rounded": 1529,
+      "files": 12
+    },
+    {
+      "shard": 3,
+      "exit_code": 0,
+      "wall_seconds": 2270.0023652730006,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/pilot20-shard-3.txt",
+      "sampled": 100,
+      "labelled": 95,
+      "skipped": 5,
+      "solver_seconds_rounded": 2208,
+      "files": 12
+    }
+  ]
+}

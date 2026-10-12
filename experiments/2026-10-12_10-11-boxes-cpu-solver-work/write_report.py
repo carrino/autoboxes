@@ -59,7 +59,8 @@ archive = ("```json\n" + archive_path.read_text().rstrip() + "\n```" if archive_
            else "No full-run archive has been created yet.")
 events = [json.loads(line) for line in (ROOT / "logs/resumed-commands.jsonl").read_text().splitlines()]
 timing_rows = [[e["name"], f'{e["wall_seconds"]:.3f}', e["exit_code"]]
-               for e in events if e["event"] == "finished" and "name" in e]
+               for e in events if e["event"] == "finished"
+               and e.get("name") in {"region-29-36", "region-nodes-30-32", "solver-bench"}]
 timings = table(["Measurement", "Wall seconds", "Exit code"], timing_rows)
 status = (f'The full run produced **{summaries["full"]["positions"]:,} verified exact labels**, '
           f'with {summaries["full"]["skipped"]:,} positions skipped on the node budget.'
@@ -224,10 +225,20 @@ intended for the PR.
 - `logs/resumed-commands.jsonl` records every underlying measurement and label
   command, data root, log path, UTC timestamp, exit code and elapsed wall time.
 - `run_cpu_jobs.py` runs the unchanged experiment commands and preserves their
-  outputs. `verify_labels.py` verifies the NPZs; `plot_job1.py` produces the figure;
+  outputs. `verify_labels.py` verifies the NPZs; `plan_full.py` sizes the full run;
+  `plot_job1.py` produces the figure;
   `write_report.py` assembles this README from the captured evidence.
 - Input checksums and counts are in `data/input-manifest.json`. The full per-file
   input manifest is retained at `/workspace/work/cpu-solver/input-manifest-full.json`.
+  After the full run, `data/input-integrity.json` records the recheck of every
+  original input file's hash and both tag counts.
+- `run_pipeline.py` waits for the pilot, applies the requested conditional retry,
+  sizes and runs the full job, verifies all outputs, creates and checks the archive,
+  rechecks the inputs, and refreshes this report. It stops on failed subprocesses
+  and does not commit or push anything.
+- `publish_completed.py` waits for successful pipeline completion, checks the
+  verification records and branch, and commits only this report directory. It
+  pushes only `astra/cpu-solver-work`; the local build fix and datasets are excluded.
 - The initial clone's proxy connection failed in the default sandbox and succeeded
   with the supported network permission. The initial optional chat-output copy
   failed because `/codex` is read-only; the report is available through GitHub.

@@ -1,0 +1,2 @@
+1903 positions with 31..36 undrawn edges (shard 1 of 4) sampled in 19s
+BoxesSolver table 67 MB, node budget 20000000

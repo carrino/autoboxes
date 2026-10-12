@@ -176,7 +176,9 @@ shards of 100, initially at a 20-million-node budget. The budget is doubled once
 only if more than 20% are skipped. The full run uses seed 1, the same sharding,
 and at most 60,000 requested positions, sized for approximately 12 hours.
 
-Pilot and full-run verification results are pending.
+| Phase | Node budget | Sampled | Labelled | Skipped | Skipped % | Wall seconds | NPZ files | Max policy-sum error |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| pilot20 | 20000000 | 400 | 388 | 12 | 3.00% | 2270.011 | 46 | 1.19e-07 |
 
 Wall time is elapsed time for the entire concurrent shard group, including
 sampling and output. Per-shard times, requested/sample counts, log paths and exit
@@ -186,19 +188,74 @@ by the unchanged labeller; a position is skipped if its root or any child times 
 
 ### Full-run sizing
 
-The full run will be sized from the completed pilot's measured rate.
+```json
+{
+  "pilot_phase": "pilot20",
+  "pilot_sampled": 400,
+  "pilot_labelled": 388,
+  "pilot_skipped": 12,
+  "pilot_wall_seconds": 2270.010937904999,
+  "pilot_attempted_positions_per_second": 0.17621060468068114,
+  "target_wall_seconds": 43200,
+  "cap_positions": 60000,
+  "requested_positions": 7612,
+  "shards": 4,
+  "positions_per_shard": 1903,
+  "node_budget": 20000000,
+  "seed": 1,
+  "save_name": "5x5-oracle-31-36",
+  "estimated_wall_seconds": 43198.30814833213,
+  "formula": "min(60000, floor(43200 * pilot_sampled / pilot_wall_seconds / shards) * shards)",
+  "rate_definition": "All attempted positions (labelled plus skipped) divided by concurrent-group wall time, including sampling and output."
+}
+```
 
 ### Verified positions by undrawn count
 
-Pending.
+| Undrawn | pilot20 |
+| --- | --- |
+| 31 | 79 |
+| 32 | 56 |
+| 33 | 72 |
+| 34 | 65 |
+| 35 | 71 |
+| 36 | 45 |
 
 ### Exact final margins for player 1
 
-Pending.
+| Final margin for player 1 | pilot20 |
+| --- | --- |
+| -11 | 7 |
+| -9 | 18 |
+| -7 | 20 |
+| -5 | 66 |
+| -3 | 79 |
+| -1 | 74 |
+| 1 | 59 |
+| 3 | 27 |
+| 5 | 18 |
+| 7 | 8 |
+| 9 | 8 |
+| 11 | 3 |
+| 13 | 1 |
 
 ### Exact final margins for the side to move
 
-Pending.
+| Final margin for side to move | pilot20 |
+| --- | --- |
+| -11 | 2 |
+| -9 | 3 |
+| -7 | 5 |
+| -5 | 24 |
+| -3 | 46 |
+| -1 | 69 |
+| 1 | 64 |
+| 3 | 60 |
+| 5 | 60 |
+| 7 | 23 |
+| 9 | 23 |
+| 11 | 8 |
+| 13 | 1 |
 
 The NPZ format stores one visit per optimal edge in `mcts_visits`, rather than
 an already-normalized policy. `verify_labels.py` loads every array from every
@@ -225,10 +282,20 @@ intended for the PR.
 - `logs/resumed-commands.jsonl` records every underlying measurement and label
   command, data root, log path, UTC timestamp, exit code and elapsed wall time.
 - `run_cpu_jobs.py` runs the unchanged experiment commands and preserves their
-  outputs. `verify_labels.py` verifies the NPZs; `plot_job1.py` produces the figure;
+  outputs. `verify_labels.py` verifies the NPZs; `plan_full.py` sizes the full run;
+  `plot_job1.py` produces the figure;
   `write_report.py` assembles this README from the captured evidence.
 - Input checksums and counts are in `data/input-manifest.json`. The full per-file
   input manifest is retained at `/workspace/work/cpu-solver/input-manifest-full.json`.
+  After the full run, `data/input-integrity.json` records the recheck of every
+  original input file's hash and both tag counts.
+- `run_pipeline.py` waits for the pilot, applies the requested conditional retry,
+  sizes and runs the full job, verifies all outputs, creates and checks the archive,
+  rechecks the inputs, and refreshes this report. It stops on failed subprocesses
+  and does not commit or push anything.
+- `publish_completed.py` waits for successful pipeline completion, checks the
+  verification records and branch, and commits only this report directory. It
+  pushes only `astra/cpu-solver-work`; the local build fix and datasets are excluded.
 - The initial clone's proxy connection failed in the default sandbox and succeeded
   with the supported network permission. The initial optional chat-output copy
   failed because `/codex` is read-only; the report is available through GitHub.

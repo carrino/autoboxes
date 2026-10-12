@@ -1,0 +1,17 @@
+{
+  "phase": "full",
+  "requested": 7612,
+  "seed": 1,
+  "node_budget": 20000000,
+  "shards": 4,
+  "output": "/workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36",
+  "wall_seconds": 85.17824847099837,
+  "running_shards": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "failed": false,
+  "results": []
+}
