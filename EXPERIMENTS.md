@@ -405,6 +405,10 @@ positions are easy for it; the real read is on the `5x5-mid` positions.
 
 ## Experiments worth running in parallel
 
+CPU-only work for cloud agents (solver reach, exact labels, a classical yardstick engine,
+search tuning) is written up as self-contained tasks in `ASTRA_TASKS.md`. The arms below
+need the GPU.
+
 Each is one GPU box with the loop script and a different environment; all score on the same
 clean positions (29..34 with the solver at 28, positions from the `5x5-solver` games) so the
 arms compare. Each box needs the evaluation data once: the `5x5-solver` games directory
