@@ -6,9 +6,14 @@ Regions interact only through whose turn it is, so an exact solver can work on t
 a time (Nimstring decomposition, PLAN.md). For positions sampled from stored games the way
 oracle_eval.py samples them, this reports how many regions there are and how many undrawn
 edges the largest one holds: decomposition pays off when the largest region is within the
-solver's cheap reach while the whole board is not.
+solver's cheap reach while the whole board is not. With --solver-nodes it also solves every
+position at the given undrawn counts (a fresh table each, capped at --node-cap nodes) and
+reports the solver's nodes by largest-region size: if they already fall as the largest
+region shrinks, the solver exploits the split on its own and decomposition adds little.
 
   uv run region_stats.py --positions-tag 5x5-mid --min-undrawn 29 --max-undrawn 36
+  uv run region_stats.py --positions-tag 5x5-mid --min-undrawn 30 --max-undrawn 32 \
+      --solver-nodes 30 32
 """
 from __future__ import annotations
 
@@ -19,6 +24,7 @@ import re
 import sys
 from pathlib import Path
 
+import alpha_go_cpp  # type: ignore[import-not-found]
 import numpy as np
 
 from alpha_go.boxes.rules import BoxesGeometry, geometry
@@ -58,6 +64,9 @@ def main() -> None:
     p.add_argument("--num-positions", type=int, default=4000)
     p.add_argument("--reach", type=int, nargs="*", default=[20, 24, 28],
                    help="report the share of positions whose largest region has <= N edges")
+    p.add_argument("--solver-nodes", type=int, nargs="*", default=[],
+                   help="undrawn counts at which to report solver nodes by largest region")
+    p.add_argument("--node-cap", type=int, default=2_000_000)
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
 
@@ -68,9 +77,10 @@ def main() -> None:
     boards = late_positions(GAME_DATA_DIR / "experiments" / EXP_NAME / args.positions_tag, rows,
                             cols, args.min_undrawn, args.max_undrawn, args.num_positions,
                             random.Random(args.seed))
-    by_undrawn: dict[int, list[list[int]]] = {}
+    by_undrawn: dict[int, list[tuple[object, list[int]]]] = {}
     for b in boards:
-        by_undrawn.setdefault(b.num_edges() - b.move_count(), []).append(regions(b.edges(), geo))
+        by_undrawn.setdefault(b.num_edges() - b.move_count(), []).append(
+            (b, regions(b.edges(), geo)))
 
     reach_cols = [f"largest <= {n}" for n in args.reach]
     print(f"{len(boards)} positions from {args.positions_tag}, "
@@ -79,7 +89,7 @@ def main() -> None:
     print(" | ".join(header))
     rows_out = []
     for undrawn in sorted(by_undrawn):
-        found = by_undrawn[undrawn]
+        found = [r for _, r in by_undrawn[undrawn]]
         largest = np.array([r[0] for r in found])
         row = {
             "undrawn": undrawn, "positions": len(found),
@@ -97,6 +107,19 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows_out)
     print(f"\nwrote {out}")
+
+    for undrawn in args.solver_nodes:
+        nodes: dict[int, list[int]] = {}
+        for b, found_regions in by_undrawn.get(undrawn, []):
+            solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 20)
+            solver.value_within(b.edges(), args.node_cap)  # type: ignore[attr-defined]
+            nodes.setdefault(found_regions[0], []).append(solver.nodes())
+        print(f"\nsolver nodes at {undrawn} undrawn, by largest region (cap {args.node_cap}):")
+        print("largest | positions | nodes median | nodes p90 | capped")
+        for largest in sorted(nodes):
+            n = np.array(nodes[largest])
+            print(f"{largest} | {len(n)} | {int(np.median(n))} | {int(np.percentile(n, 90))} | "
+                  f"{float(np.mean(n >= args.node_cap)):.2f}")
 
 
 if __name__ == "__main__":

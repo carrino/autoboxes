@@ -310,6 +310,31 @@ same, four self-play processes. The question for it: do search targets that are 
 right instead of 60% lift the policy, where 60% ones stopped at 0.42? Read at 45 and 49
 with the command above.
 
+## 10. Does the board split into independent regions? (`region_stats.py`)
+
+4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
+undrawn edges; regions interact only through the turn, which is what Nimstring
+decomposition needs.
+
+| undrawn | split | regions | largest region, median edges | largest <= 24 | largest <= 28 |
+|---|---|---|---|---|---|
+| 29 | 0.84 | 2.77 | 20 | 0.69 | 0.84 |
+| 30 | 0.80 | 2.61 | 23 | 0.55 | 0.80 |
+| 31 | 0.76 | 2.43 | 25 | 0.47 | 0.74 |
+| 32 | 0.73 | 2.39 | 27 | 0.40 | 0.64 |
+| 33 | 0.70 | 2.21 | 29 | 0.27 | 0.44 |
+| 34 | 0.64 | 2.05 | 30 | 0.19 | 0.39 |
+| 35 | 0.61 | 1.92 | 31 | 0.10 | 0.27 |
+| 36 | 0.59 | 1.81 | 33 | 0.05 | 0.14 |
+
+The board has usually split by the band, but mostly by peeling off small pieces: the
+largest region is three to nine edges smaller than the whole board, median about five at
+31..33. If the solver's cost followed the largest region, decomposition would be worth
+about four to six edges of reach in the band, more than the two edges that took the band
+from 0.61 to 0.69. Whether the solver already gets that on its own (it merges the moves of
+independent chains) is the next measurement: nodes by largest-region size at a fixed
+undrawn count (`--solver-nodes`).
+
 ## What we believe now
 
 1. The endgame (from 28 undrawn) is exact and cheap. The midgame fight (29 to about 36)
