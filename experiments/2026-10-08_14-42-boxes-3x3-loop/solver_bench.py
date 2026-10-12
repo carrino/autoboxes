@@ -16,11 +16,15 @@ import csv
 import os
 import random
 import re
+import sys
 import time
 from pathlib import Path
 
 import alpha_go_cpp
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from oracle_eval import game_moves  # noqa: E402
 
 EXP_DIR = Path(__file__).resolve().parent
 EXP_NAME = EXP_DIR.name
@@ -34,9 +38,7 @@ def positions_with(game_dir: Path, rows: int, cols: int, undrawn: int, n: int,
     pattern = "selfplay-*/**/*.npz" if selfplay_only else "**/*.npz"
     for path in sorted(game_dir.glob(pattern)):
         board = alpha_go_cpp.BoxesBoard(rows, cols)
-        for row, col in np.load(path)["moves"]:
-            if row < 0:
-                break
+        for row, col in game_moves(np.load(path)):
             if board.num_edges() - board.move_count() == undrawn:
                 masks.add(board.edges())
             board.play(int(row), int(col))
@@ -58,6 +60,7 @@ def main() -> None:
     p.add_argument("--selfplay-only", action="store_true",
                    help="ignore bootstrap games (random play gives easy endgames)")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--mtdf", type=int, default=1, help="0: one full-window search per position")
     args = p.parse_args()
     size = re.match(r"(\d+)x(\d+)", args.tag or "")
     rows = args.rows or (int(size.group(1)) if size else 5)
@@ -77,6 +80,7 @@ def main() -> None:
             print(f"N={undrawn}: no positions")
             continue
         solver = alpha_go_cpp.BoxesSolver(rows, cols, args.table_entries)  # fresh table per N
+        solver.set_mtdf(bool(args.mtdf))
         ms, nodes = [], []
         for mask in masks:
             t0 = time.perf_counter()

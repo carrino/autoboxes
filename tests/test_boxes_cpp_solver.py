@@ -62,6 +62,18 @@ class TestCppSolver:
             assert cpp.value(board.edges()) == py.value(board.edges()), board.render()
             assert cpp.final_margin(board) == board.margin() + py.value(board.edges())
 
+    def test_full_window_and_mtdf_agree(self) -> None:
+        """value() by MTD(f) null windows equals one full-window search (the Python reference
+        is the full window), and the table's move ordering never changes a value."""
+        rng = random.Random(9)
+        a, b = alpha_go_cpp.BoxesSolver(5, 5, 1 << 16), alpha_go_cpp.BoxesSolver(5, 5, 1 << 16)
+        b.set_mtdf(False)
+        for _ in range(40):
+            board = alpha_go_cpp.BoxesBoard(5, 5)
+            while board.num_edges() - board.move_count() > 26:
+                board.play_edge(rng.choice(board.get_legal_moves_flat()))
+            assert a.value(board.edges()) == b.value(board.edges())
+
     def test_principal_line_is_consistent_at_high_n(self) -> None:
         # No reference exists at 28 undrawn edges on 5x5, but the value must agree with the
         # line the solver itself plays: v(pos) = gain + v(after) on captures, -v(after) else.

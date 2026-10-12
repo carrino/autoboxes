@@ -82,7 +82,10 @@ public:
     // Feature planes for the net, float32 (kNumPlanes, lattice_rows, lattice_cols) row-major,
     // identical to alpha_go.boxes.encode.encode_grid (see that docstring for the plane list).
     static constexpr int kNumPlanes = 11;
-    void encode_planes(float* out) const;
+    // With `chains`, the 10 planes of the "chains" feature set follow (chain / loop
+    // structure from boxes_chains; see encode.py for the plane list).
+    static constexpr int kNumChainPlanes = 10;
+    void encode_planes(float* out, bool chains = false) const;
     std::string render() const;
 
 private:

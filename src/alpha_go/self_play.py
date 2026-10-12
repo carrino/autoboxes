@@ -287,6 +287,29 @@ class MemoryProfiler:
 
 _profiler: MemoryProfiler | None = None
 
+_start_files: dict[str, list[Path]] = {}
+
+
+def sample_start_moves(cli_args, game, game_seed: int) -> list[tuple[int, int]] | None:
+    """A prefix of a stored game to branch from (--start-positions): a random game under
+    that directory cut where --start-undrawn-min..max edges remain, for --start-fraction of
+    the games; games that branched themselves contribute their own prefix."""
+    source = getattr(cli_args, "start_positions", None)
+    rng = random.Random(game_seed)
+    if not source or rng.random() >= cli_args.start_fraction:
+        return None
+    files = _start_files.setdefault(source, sorted((GAME_DATA_DIR / source).rglob("*.npz")))
+    assert files, f"no .npz games under {GAME_DATA_DIR / source}"
+    data = np.load(rng.choice(files))
+    prefix = data["start_moves"] if "start_moves" in data else np.zeros((0, 2), dtype=np.int16)
+    full = [(int(r), int(c)) for r, c in np.concatenate([prefix, data["moves"]]) if r >= 0]
+    total = game.new_board(cli_args.board_size, cli_args.komi,
+                           getattr(cli_args, "board_cols", None)).num_edges()
+    low = max(0, total - cli_args.start_undrawn_max)
+    high = min(len(full), total - cli_args.start_undrawn_min)
+    return full[:rng.randint(low, high)]
+
+
 # Worker function for parallel execution using threading
 def _play_game_worker(work_item: tuple) -> GameResult:  # type: ignore[type-arg]
     """Worker function to play a single game in a thread."""
@@ -313,6 +336,7 @@ def _play_game_worker(work_item: tuple) -> GameResult:  # type: ignore[type-arg]
         white_agent = _get_or_create_agent(cli_args.white, "white")
 
         # Play game
+        game = get_game(getattr(cli_args, "game", "go"))
         record = play_game(
             black_agent=black_agent,
             white_agent=white_agent,
@@ -323,8 +347,10 @@ def _play_game_worker(work_item: tuple) -> GameResult:  # type: ignore[type-arg]
             collect_metrics=getattr(cli_args, "collect_metrics", False),
             black_is_teacher=getattr(cli_args, "black_is_teacher", False),
             white_is_teacher=getattr(cli_args, "white_is_teacher", False),
-            game=get_game(getattr(cli_args, "game", "go")),
+            game=game,
             board_cols=getattr(cli_args, "board_cols", None),
+            start_moves=sample_start_moves(cli_args, game, game_seed),
+            stop_when_solved=getattr(cli_args, "stop_when_solved", False),
         )
     except Exception:
         import traceback
@@ -370,6 +396,7 @@ def run_sequential(
 
     for i in range(args.num_games):
         actual_idx = i + offset
+        game = get_game(getattr(args, "game", "go"))
         record = play_game(
             black_agent=black_agent,
             white_agent=white_agent,
@@ -380,8 +407,10 @@ def run_sequential(
             collect_metrics=getattr(args, "collect_metrics", False),
             black_is_teacher=getattr(args, "black_is_teacher", False),
             white_is_teacher=getattr(args, "white_is_teacher", False),
-            game=get_game(getattr(args, "game", "go")),
+            game=game,
             board_cols=getattr(args, "board_cols", None),
+            start_moves=sample_start_moves(args, game, actual_idx + args.seed),
+            stop_when_solved=getattr(args, "stop_when_solved", False),
         )
 
         if _profiler:
@@ -578,6 +607,20 @@ def main() -> None:
         type=int,
         default=0,
         help="Offset for game indices (used by distributed execution)",
+    )
+    parser.add_argument(
+        "--start-positions", type=str, default=None,
+        help="Branch games from stored ones: a directory of .npz games under GAME_DATA_DIR",
+    )
+    parser.add_argument("--start-undrawn-min", type=int, default=0,
+                        help="Boxes: branch where this many edges remain undrawn (at least)")
+    parser.add_argument("--start-undrawn-max", type=int, default=10**6,
+                        help="Boxes: branch where this many edges remain undrawn (at most)")
+    parser.add_argument("--start-fraction", type=float, default=1.0,
+                        help="Share of games that branch; the rest start from the empty board")
+    parser.add_argument(
+        "--stop-when-solved", action="store_true",
+        help="End a game with the exact outcome once the agent's solver settles it",
     )
     parser.add_argument(
         "--profile-memory",

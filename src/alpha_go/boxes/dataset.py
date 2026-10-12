@@ -5,8 +5,13 @@ Each NPZ holds one game: `boards` (n, H, W) lattice grids before each move, `to_
 by 3), and, when the agents searched, `mcts_visits` (n, E) with `mcts_temperatures` and
 `mcts_root_values`. A sample is the encoded planes, the policy target (the normalised visit
 distribution, or a label-smoothed one-hot of the played edge without search data), the
-final margin for the side to move, and the root value for the z/Q mix option.
+final margin for the side to move, and the root value for the z/Q mix option. `min_undrawn`
+drops the positions with fewer undrawn edges than that: in a solver run those are the
+solver's in play, and the net's capacity is better spent above the solver zone.
+`save_labelled_positions` writes solver-labelled positions in the same format (exact margin,
+uniform policy over the optimal edges), the supervised foothold for the midgame value.
 """
+# ruff: noqa: N803  (dimension-suffixed array names)
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,18 +19,51 @@ from typing import Any
 
 import numpy as np
 import torch
+from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 from alpha_go.boxes.encode import encode_grid, lattice_rows_cols
-from alpha_go.boxes.rules import geometry
+from alpha_go.boxes.rules import BoxesGeometry, geometry
 from alpha_go.self_play import parse_score_from_result
+
+
+def undrawn_edges(boards_NHW: NDArray[np.int8], num_edges: int) -> NDArray[np.int64]:
+    """Undrawn edges of each lattice grid (horizontal edges sit at even rows and odd columns,
+    vertical ones at odd rows and even columns; drawn = 1)."""
+    drawn = ((boards_NHW[:, 0::2, 1::2] == 1).sum(axis=(1, 2))
+             + (boards_NHW[:, 1::2, 0::2] == 1).sum(axis=(1, 2)))
+    return np.asarray(num_edges - drawn, dtype=np.int64)
+
+
+def save_labelled_positions(path: Path, grids_NHW: NDArray[np.int8], to_play_N: NDArray[np.int8],
+                            optimal: list[list[int]], margin_p1: int, geo: BoxesGeometry) -> None:
+    """Solver-labelled positions as one game NPZ: `result` is the exact player-1 final margin
+    they all share, `mcts_visits` has one visit per optimal edge (a uniform policy target) and
+    `mcts_root_values` the exact win for the side to move. Stored by undrawn edges descending,
+    so `min_undrawn` keeps a prefix exactly as it does for a game."""
+    order = np.argsort(-undrawn_edges(grids_NHW, geo.num_edges), kind="stable")
+    visits = np.zeros((len(order), geo.num_edges), dtype=np.int16)
+    moves = np.zeros((len(order), 2), dtype=np.int16)
+    root_values = np.zeros(len(order), dtype=np.float32)
+    for i, k in enumerate(order):
+        visits[i, optimal[k]] = 1
+        moves[i] = geo.edge_rc[optimal[k][0]]
+        mover_margin = margin_p1 if to_play_N[k] == 0 else -margin_p1
+        root_values[i] = float(mover_margin > 0) + 0.5 * float(mover_margin == 0)
+    result = "Draw" if margin_p1 == 0 else f"{'B' if margin_p1 > 0 else 'W'}+{abs(margin_p1)}.0"
+    np.savez_compressed(path, boards=grids_NHW[order], to_play=to_play_N[order].astype(np.int8),
+                        moves=moves, result=result, num_moves=len(order), game="boxes",
+                        termination="solver", mcts_visits=visits, mcts_root_values=root_values)
 
 
 class BoxesDataset(Dataset[dict[str, Any]]):
     def __init__(self, data_dirs: list[str | Path], smooth_eps: float = 0.1,
                  games: list[dict[str, Any]] | None = None,
-                 like: BoxesDataset | None = None) -> None:
+                 like: BoxesDataset | None = None, min_undrawn: int = 0,
+                 features: str = "basic") -> None:
         self.smooth_eps = smooth_eps
+        self.min_undrawn: int = like.min_undrawn if like is not None else min_undrawn
+        self.features: str = like.features if like is not None else features
         paths = [p for d in data_dirs for p in sorted(Path(d).rglob("*.npz"))]
         self.games = [dict(np.load(p)) for p in paths] if games is None else games
         assert self.games or like is not None, f"no .npz games under {data_dirs}"
@@ -35,8 +73,16 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             assert like is not None
             self.rows, self.cols = like.rows, like.cols
         self.geo = geometry(self.rows, self.cols)
-        self.cumsum = np.cumsum([0] + [int(g["num_moves"]) for g in self.games])
+        # The kept positions of every game are a prefix: a game's undrawn edges fall by one per
+        # move, and solver-labelled files are stored by undrawn edges descending.
+        self.cumsum = np.cumsum([0] + [self.kept(g) for g in self.games])
         self.num_with_mcts = sum("mcts_visits" in g for g in self.games)
+
+    def kept(self, game: dict[str, Any]) -> int:
+        """Positions of a game with at least `min_undrawn` undrawn edges (its prefix)."""
+        undrawn = undrawn_edges(game["boards"], self.geo.num_edges)
+        assert np.all(np.diff(undrawn) <= 0), "positions must be ordered by undrawn edges"
+        return int((undrawn >= self.min_undrawn).sum())
 
     def split(self, val_fraction: float, seed: int = 0) -> tuple[BoxesDataset, BoxesDataset]:
         """Held-out split by game (positions of one game never straddle the two sets)."""
@@ -60,7 +106,7 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         local = idx - int(self.cumsum[game_idx])
         game = self.games[game_idx]
         to_play = int(game["to_play"][local]) + 1
-        planes = encode_grid(game["boards"][local], to_play)
+        planes = encode_grid(game["boards"][local], to_play, self.features)
         score_p1 = parse_score_from_result(str(game["result"]))
         margin = int(score_p1) if to_play == 1 else -int(score_p1)
         # Positions the agent played without a search (forced captures, solver-played

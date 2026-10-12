@@ -84,6 +84,27 @@ int MCTSTree<State>::select_action_puct(int node_idx) const {
 }
 
 template <class State>
+bool MCTSTree<State>::try_prove(int node_idx) {
+    const MCTSNode<State>& node = nodes_[node_idx];
+    if (node.proven || node.children.empty()) return false;
+    float best = -1.0f;
+    size_t proven = 0;
+    for (const auto& [action, child_idx] : node.children) {
+        if (!nodes_[child_idx].proven) continue;
+        proven += 1;
+        // Child values are from this node's mover, who moved into them.
+        best = std::max(best, nodes_[child_idx].proven_value);
+    }
+    if (proven == 0 || (best < 1.0f && proven < node.logP_A.size())) return false;
+    const int8_t mover = static_cast<int8_t>(node.state.player());
+    MCTSNode<State>& n = nodes_[node_idx];
+    n.proven = true;
+    n.proven_value = (mover == n.player_at_parent) ? best : 1.0f - best;
+    n.Q = n.proven_value;
+    return true;
+}
+
+template <class State>
 float MCTSTree<State>::perform_playout(int node_idx, EvaluatorFn& evaluator) {
     // IMPORTANT: Don't store references to nodes_ elements - vector may reallocate!
     // Always access via index.
@@ -93,9 +114,17 @@ float MCTSTree<State>::perform_playout(int node_idx, EvaluatorFn& evaluator) {
 
     float U;
 
+    // Case 0: Proven node (prove_terminals) - its exact value stands in for a simulation
+    if (config_.prove_terminals && nodes_[node_idx].proven) {
+        U = nodes_[node_idx].proven_value;
+    }
     // Case 1: Terminal node - game is over
-    if (nodes_[node_idx].state.is_game_over()) {
+    else if (nodes_[node_idx].state.is_game_over()) {
         U = nodes_[node_idx].state.outcome(player_perspective);
+        if (config_.prove_terminals) {
+            nodes_[node_idx].proven = true;
+            nodes_[node_idx].proven_value = U;
+        }
     }
     // Case 2: Leaf node not yet visited - evaluate and expand
     else if (nodes_[node_idx].N == 0) {
@@ -172,6 +201,9 @@ float MCTSTree<State>::perform_playout(int node_idx, EvaluatorFn& evaluator) {
     nodes_[node_idx].N += 1;
     // Incremental mean update: Q = Q + (U - Q) / N
     nodes_[node_idx].Q = nodes_[node_idx].Q + (U - nodes_[node_idx].Q) / nodes_[node_idx].N;
+    if (config_.prove_terminals && try_prove(node_idx)) {
+        U = nodes_[node_idx].proven_value;  // the exact value replaces the simulation result
+    }
 
     return U;
 }
@@ -366,9 +398,20 @@ void MCTSTree<State>::run_simulations_batched(
             path.push_back(node_idx);
 
             while (true) {
+                // Proven node (prove_terminals): its exact value stands in for a simulation
+                if (config_.prove_terminals && nodes_[node_idx].proven) {
+                    PendingLeaf pl{path, node_idx, true, nodes_[node_idx].proven_value, -1};
+                    pending.push_back(pl);
+                    for (int idx : path) nodes_[idx].N_virt += 1;
+                    break;
+                }
                 // Terminal leaf
                 if (nodes_[node_idx].state.is_game_over()) {
                     float U = nodes_[node_idx].state.outcome(nodes_[node_idx].player_at_parent);
+                    if (config_.prove_terminals) {
+                        nodes_[node_idx].proven = true;
+                        nodes_[node_idx].proven_value = U;
+                    }
                     PendingLeaf pl{path, node_idx, true, U, -1};
                     pending.push_back(pl);
                     for (int idx : path) nodes_[idx].N_virt += 1;
@@ -429,6 +472,10 @@ void MCTSTree<State>::run_simulations_batched(
                         pl.terminal_U =
                             nodes_[child_idx].state.outcome(nodes_[child_idx].player_at_parent);
                         pl.eval_slot = -1;
+                        if (config_.prove_terminals) {
+                            nodes_[child_idx].proven = true;
+                            nodes_[child_idx].proven_value = pl.terminal_U;
+                        }
                     } else {
                         eval_states.push_back(nodes_[child_idx].state);
                     }
@@ -477,6 +524,12 @@ void MCTSTree<State>::run_simulations_batched(
                 nodes_[idx].N_virt -= 1;
                 nodes_[idx].N += 1;
                 nodes_[idx].Q += (U - nodes_[idx].Q) / (float)nodes_[idx].N;
+                // A proven node (already, or just now) hands its exact value up, and a leaf
+                // that was in flight before the proof must not drift its Q.
+                if (config_.prove_terminals && (nodes_[idx].proven || try_prove(idx))) {
+                    nodes_[idx].Q = nodes_[idx].proven_value;
+                    U = nodes_[idx].proven_value;
+                }
                 if (k > 0 && nodes_[pl.path[k - 1]].player_at_parent != nodes_[idx].player_at_parent) {
                     U = 1.0f - U;
                 }
@@ -504,6 +557,26 @@ std::unordered_map<int, float> MCTSTree<State>::get_action_probabilities(float t
     std::unordered_map<int, int> visit_counts;
     for (const auto& [action, child_idx] : root.children) {
         visit_counts[action] = nodes_[child_idx].N;
+    }
+    if (config_.prove_terminals) {
+        // A proven root keeps only children at its exact value, an unproven root drops proven
+        // losses; unchanged when no child is proven or nothing would remain.
+        float best = -1.0f;
+        for (const auto& [action, child_idx] : root.children) {
+            if (nodes_[child_idx].proven) best = std::max(best, nodes_[child_idx].proven_value);
+        }
+        if (best >= 0.0f) {
+            std::unordered_map<int, int> masked;
+            int total = 0;
+            for (const auto& [action, child_idx] : root.children) {
+                const MCTSNode<State>& c = nodes_[child_idx];
+                bool keep = root.proven ? (c.proven && c.proven_value == best)
+                                        : !(c.proven && c.proven_value == 0.0f);
+                masked[action] = keep ? c.N : 0;
+                total += masked[action];
+            }
+            if (total > 0) visit_counts = masked;
+        }
     }
 
     if (temperature == 0) {
@@ -576,6 +649,15 @@ std::unordered_map<int, int> MCTSTree<State>::get_child_visit_counts() const {
         counts[action] = nodes_[child_idx].N;
     }
     return counts;
+}
+
+template <class State>
+std::unordered_map<int, float> MCTSTree<State>::get_child_proven_values() const {
+    std::unordered_map<int, float> values;
+    for (const auto& [action, child_idx] : nodes_[0].children) {
+        if (nodes_[child_idx].proven) values[action] = nodes_[child_idx].proven_value;
+    }
+    return values;
 }
 
 template <class State>

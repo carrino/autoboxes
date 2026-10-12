@@ -13,10 +13,26 @@ END=${2:?Usage: run_iteration_local.sh <start_iter> <end_iter> [--cpu]}
 CPU_FLAG=${3:-}
 ROWS=${ROWS:-3}; COLS=${COLS:-$ROWS}; TAG=${TAG:-${ROWS}x${COLS}}
 SOLVER_N=${SOLVER_N:-0}  # exact endgame solver at <= N undrawn edges in self-play and arena (0 = off)
+SOLVER_BUDGET=${SOLVER_BUDGET:-20000}  # nodes the solver may spend per position before the search takes over
+ARENA_SOLVER_N=${ARENA_SOLVER_N:-$SOLVER_N}  # solver depth in the arena only; 0 makes promotion compare the nets
+                                            # themselves (with the solver on, two nets of any quality tie)
 BASELINES=${BASELINES:-boxes-greedy,boxes-ab-d4}  # arena absolute-scale opponents
 MERGE_EQ=${MERGE_EQ:-0}  # 1: one search action per independent chain or loop (equivalent edges)
 SP_PROCS=${SP_PROCS:-1}  # self-play processes per iteration; each gets SP_WORKERS/SP_PROCS threads and
                          # its own GPU engine, which sidesteps the interpreter lock across threads
+WINDOW=${WINDOW:-4}  # self-play iterations in each training set (replay window)
+TRAIN_EPOCHS=${TRAIN_EPOCHS:-20}  # cap on passes over the window per iteration (the time budget usually binds first)
+TRAIN_ARGS=${TRAIN_ARGS:-}  # extra train.py flags, e.g. "--q-mix 1.0" or "--channels 192 --n-blocks 12"
+TRAIN_MIN_UNDRAWN=${TRAIN_MIN_UNDRAWN:-0}  # train only on positions with at least this many undrawn edges
+                                           # (e.g. SOLVER_N - 4: the solver owns the rest in play)
+FEATURES=${FEATURES:-basic}  # net input planes: basic (11) or chains (+10 chain / loop planes, PLAN 4.2);
+                             # fixed per checkpoint, so a chains run starts from iter0
+EXTRA_DATA=${EXTRA_DATA:-}  # extra dataset directories (under $GAME_DATA_DIR, space-separated) added to every
+                            # iteration's training set, e.g. solver-labelled midgame positions from solver_label.py
+START_FROM=${START_FROM:-}  # branch self-play games from stored ones (a games directory under $GAME_DATA_DIR)
+START_UNDRAWN=${START_UNDRAWN:-36 40}  # ... cut where this many edges remain undrawn (min max)
+START_FRACTION=${START_FRACTION:-0.75}  # share of games that branch; the rest open from the empty board
+STOP_WHEN_SOLVED=${STOP_WHEN_SOLVED:-0}  # 1: a self-play game ends with the exact outcome once the solver settles it
 SEARCH_ARGS=${SEARCH_ARGS:-}  # extra search flags for self-play and the arena, e.g.
                               # "--policy_temperature 0.7 --margin_utility_lambda 0.5" (see nn_agent.add_search_flags)
 SIZE_ARGS="--rows $ROWS --cols $COLS"
@@ -41,8 +57,19 @@ BOOT_GAMES=${BOOT_GAMES:-$D_BOOT}; SP_GAMES=${SP_GAMES:-$D_SP}; SP_SIMS=${SP_SIM
 SP_WORKERS=${SP_WORKERS:-$D_WORKERS}; TRAIN_BUDGET=${TRAIN_BUDGET:-$D_TRAIN}; ARENA_GAMES=${ARENA_GAMES:-$D_ARENA}
 BASE_GAMES=${BASE_GAMES:-$D_BASE}; ARENA_SIMS=${ARENA_SIMS:-$D_ASIMS}
 echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x $SP_SIMS sims ($SP_WORKERS workers), "\
-     "train ${TRAIN_BUDGET}s, arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
-     "solver N=$SOLVER_N, merge equivalent $MERGE_EQ, self-play processes $SP_PROCS, search args '$SEARCH_ARGS'"
+     "train ${TRAIN_BUDGET}s / <= $TRAIN_EPOCHS epochs over the last $WINDOW iterations (>= $TRAIN_MIN_UNDRAWN undrawn), "\
+     "arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
+     "solver N=$SOLVER_N (budget $SOLVER_BUDGET nodes; arena N=$ARENA_SOLVER_N), merge equivalent $MERGE_EQ, "\
+     "self-play processes $SP_PROCS, "\
+     "search args '$SEARCH_ARGS', "\
+     "features $FEATURES, train args '$TRAIN_ARGS', extra data '$EXTRA_DATA', branch from '$START_FROM' at $START_UNDRAWN undrawn "\
+     "($START_FRACTION of games), stop when solved $STOP_WHEN_SOLVED"
+BRANCH_ARGS=""
+if [ -n "$START_FROM" ]; then
+    set -- $START_UNDRAWN
+    BRANCH_ARGS="--start-positions $START_FROM --start-undrawn-min $1 --start-undrawn-max $2 --start-fraction $START_FRACTION"
+fi
+[ "$STOP_WHEN_SOLVED" = "1" ] && BRANCH_ARGS="$BRANCH_ARGS --stop-when-solved"
 DATA="experiments/${EXP_NAME}/${TAG}"
 log() { echo; echo "############### [$TAG] $* ###############"; }
 
@@ -53,13 +80,14 @@ if [ ! -f "$CKPT/iter${START}.pt" ]; then
         uv run "$EXP_DIR/pre_collect.py" $SIZE_ARGS --num_games "$BOOT_GAMES" \
             --save-name "${DATA}/bootstrap-it0" 2>&1 | tee "$LOGS/bootstrap.log"
     fi
-    echo "${DATA}/bootstrap-it0" > "$EXP_DIR/dataset-${TAG}-it0.txt"
+    { echo "${DATA}/bootstrap-it0"; for X in $EXTRA_DATA; do echo "$X"; done; } > "$EXP_DIR/dataset-${TAG}-it0.txt"
     log "Train iter0 from bootstrap games"
     uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "dataset-${TAG}-it0.txt" --iteration 0 \
-        --time-budget "$TRAIN_BUDGET" $CPU_FLAG 2>&1 | tee "$LOGS/train-it0.log"
+        --time-budget "$TRAIN_BUDGET" --max-epochs "$TRAIN_EPOCHS" --min-undrawn "$TRAIN_MIN_UNDRAWN" \
+        --features "$FEATURES" $TRAIN_ARGS $CPU_FLAG 2>&1 | tee "$LOGS/train-it0.log"
     log "Arena: iter0 becomes the first champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration 0 --num_games "$ARENA_GAMES" \
-        --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$SOLVER_N" \
+        --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" --solver_max_undrawn "$ARENA_SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" \
         --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS $CPU_FLAG 2>&1 | tee "$LOGS/arena-it0.log"
 fi
 
@@ -73,8 +101,8 @@ for ITER in $(seq "$START" "$END"); do
     for P in $(seq 0 $((SP_PROCS - 1))); do
         uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
             --num_games "$PER_PROC" --game_index_offset "$((P * PER_PROC))" \
-            --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" \
-            --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
+            --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" \
+            --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS $BRANCH_ARGS \
             --save-name "${DATA}/selfplay-it${ITER}" --seed "$((ITER * 100000 + P * 1000))" $CPU_FLAG \
             > "$LOGS/collect-it${ITER}-p${P}.log" 2>&1 &
     done
@@ -82,17 +110,19 @@ for ITER in $(seq "$START" "$END"); do
     tail -n 4 "$LOGS"/collect-it${ITER}-p*.log
     t1=$(date +%s)
     DS="$EXP_DIR/dataset-${TAG}-it${NEXT}.txt"
-    { echo "# ${EXP_NAME} ${TAG} iter${NEXT} dataset (auto-generated): last 4 self-play iterations"
-      for K in $(seq $((ITER > 3 ? ITER - 3 : 0)) "$ITER"); do echo "${DATA}/selfplay-it${K}"; done; } > "$DS"
+    { echo "# ${EXP_NAME} ${TAG} iter${NEXT} dataset (auto-generated): last $WINDOW self-play iterations"
+      for K in $(seq $((ITER - WINDOW + 1 > 0 ? ITER - WINDOW + 1 : 0)) "$ITER"); do echo "${DATA}/selfplay-it${K}"; done
+      for X in $EXTRA_DATA; do echo "$X"; done; } > "$DS"
     log "Train iter${NEXT} from $(basename "$DS")"
     uv run "$EXP_DIR/train.py" $SIZE_ARGS $TAG_ARGS --dataset-txt "$(basename "$DS")" --iteration "$NEXT" \
-        --resume-from "$CKPT/iter${ITER}.pt" --time-budget "$TRAIN_BUDGET" $CPU_FLAG \
+        --resume-from "$CKPT/iter${ITER}.pt" --time-budget "$TRAIN_BUDGET" --max-epochs "$TRAIN_EPOCHS" \
+        --min-undrawn "$TRAIN_MIN_UNDRAWN" --features "$FEATURES" $TRAIN_ARGS $CPU_FLAG \
         2>&1 | tee "$LOGS/train-it${NEXT}.log"
     t2=$(date +%s)
     log "Arena: iter${NEXT} vs champion"
     uv run "$EXP_DIR/arena_promote.py" $SIZE_ARGS $TAG_ARGS --iteration "$NEXT" --num_games "$ARENA_GAMES" \
         --baseline_games "$BASE_GAMES" --num_simulations "$ARENA_SIMS" $CPU_FLAG \
-        --solver_max_undrawn "$SOLVER_N" --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
+        --solver_max_undrawn "$ARENA_SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" --baselines "$BASELINES" --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS \
         2>&1 | tee "$LOGS/arena-it${NEXT}.log"
     t3=$(date +%s)
     echo "{\"iteration\": $NEXT, \"collect\": $((t1 - t0)), \"train\": $((t2 - t1)), \"arena\": $((t3 - t2))}" \

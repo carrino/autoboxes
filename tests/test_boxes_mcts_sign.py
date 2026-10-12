@@ -57,3 +57,44 @@ class TestPythonMCTSSign:
                 for e in board.get_legal_moves_flat()
             }
             assert outcomes[chosen] == max(outcomes.values()), (board.render(), chosen, outcomes)
+
+
+class TestPythonProofPropagation:
+    """`prove_terminals`: exact leaves back up by minimax and settle the root."""
+
+    def test_capture_line_is_proven(self) -> None:
+        cfg = MCTSConfig(c_puct=1.0, prove_terminals=True)
+        root = run_mcts(capture_position(), 50, cfg, uniform_policy_and_value)
+        take = root.children[5]
+        assert (take.proven, take.proven_value, take.Q) == (True, 1.0, 1.0)
+        # The root is proven the moment its winning line is, before edge 6 is ever looked at:
+        # a loss for the opponent, who "moved" into it.
+        assert root.proven and root.Q == 0.0
+        probs = get_action_probabilities(root, temperature=1.0)
+        assert probs[5] == 1.0 and probs.get(6, 0.0) == 0.0
+
+    def test_exact_on_late_positions(self) -> None:
+        # Two to four undrawn edges on 2x2: at most 65 nodes, so the tree is exhausted and the
+        # root's value is the oracle's; only optimal edges keep probability mass.
+        oracle = Oracle(2, 2)
+        rng = random.Random(11)
+        cfg = MCTSConfig(c_puct=1.0, prove_terminals=True)
+        for _ in range(30):
+            board = BoxesBoard(2, 2)
+            for _ in range(board.num_edges() - rng.randint(2, 4)):
+                board.play_edge(rng.choice(board.get_legal_moves_flat()))
+            root = run_mcts(BoxesState(board), 600, cfg, uniform_policy_and_value)
+            outcomes = {
+                e: np.sign(board.margin() + oracle.child_value(board.edges, e))
+                for e in board.get_legal_moves_flat()
+            }
+            best = max(outcomes.values())
+            assert root.proven, board.render()
+            assert max(c.proven_value for c in root.children.values() if c.proven) == (best + 1) / 2
+            probs = get_action_probabilities(root, temperature=1.0)
+            kept = [a for a, p in probs.items() if p > 0]
+            assert all(outcomes[a] == best for a in kept), (board.render(), probs)
+
+    def test_flag_off_is_unchanged(self) -> None:
+        on = run_mcts(capture_position(), 50, MCTSConfig(c_puct=1.0), uniform_policy_and_value)
+        assert not on.proven and not any(c.proven for c in on.children.values())

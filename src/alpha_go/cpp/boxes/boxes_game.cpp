@@ -1,5 +1,7 @@
 #include "boxes_game.h"
 
+#include "boxes_chains.h"
+
 #include <algorithm>
 
 #include <stdexcept>
@@ -113,11 +115,11 @@ std::vector<int8_t> BoxesBoard::to_lattice() const {
     return grid;
 }
 
-void BoxesBoard::encode_planes(float* out) const {
+void BoxesBoard::encode_planes(float* out, bool chains) const {
     const int lr = geo_->lattice_rows();
     const int lc = geo_->lattice_cols();
     const int plane = lr * lc;
-    std::fill(out, out + kNumPlanes * plane, 0.0f);
+    std::fill(out, out + (kNumPlanes + (chains ? kNumChainPlanes : 0)) * plane, 0.0f);
     for (int e = 0; e < geo_->num_edges; ++e) {
         const int cell = geo_->edge_rc[e].first * lc + geo_->edge_rc[e].second;
         out[cell] = static_cast<float>((edges_ >> e) & 1);  // plane 0: edge drawn
@@ -133,6 +135,44 @@ void BoxesBoard::encode_planes(float* out) const {
     }
     const float margin = static_cast<float>(this->margin()) / static_cast<float>(geo_->num_boxes);
     std::fill(out + 10 * plane, out + 11 * plane, margin);
+    if (!chains) {
+        return;
+    }
+    float* ext = out + kNumPlanes * plane;
+    const std::vector<int> deg = chains::degrees(edges_, *geo_);
+    const std::vector<chains::Component> comps = chains::components(edges_, *geo_, deg);
+    int long_chains = 0;
+    int loops = 0;
+    for (const chains::Component& comp : comps) {
+        const int kind = comp.is_loop ? 3 : std::min(comp.size(), 3) - 1;
+        long_chains += !comp.is_loop && comp.size() >= 3;
+        loops += comp.is_loop;
+        for (int b : comp.boxes) {
+            const int cell = (2 * (b / geo_->cols) + 1) * lc + 2 * (b % geo_->cols) + 1;
+            ext[kind * plane + cell] = 1.0f;
+            ext[4 * plane + cell] = comp.opened() ? 1.0f : 0.0f;
+        }
+    }
+    int safe = 0;
+    for (int e = 0; e < geo_->num_edges; ++e) {
+        if ((edges_ >> e) & 1) {
+            continue;
+        }
+        bool ok = true;
+        for (int b : geo_->edge_boxes[e]) {
+            ok = ok && (b < 0 || deg[b] >= 3);
+        }
+        if (ok) {
+            ext[5 * plane + geo_->edge_rc[e].first * lc + geo_->edge_rc[e].second] = 1.0f;
+            ++safe;
+        }
+    }
+    // Ratios in double then rounded once, like numpy's float64 -> float32.
+    std::fill(ext + 6 * plane, ext + 7 * plane, static_cast<float>(long_chains / 4.0));
+    std::fill(ext + 7 * plane, ext + 8 * plane, static_cast<float>(loops / 4.0));
+    std::fill(ext + 8 * plane, ext + 9 * plane,
+              static_cast<float>(static_cast<double>(safe) / geo_->num_edges));
+    std::fill(ext + 9 * plane, ext + 10 * plane, static_cast<float>(long_chains % 2));
 }
 
 std::string BoxesBoard::render() const {

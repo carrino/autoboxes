@@ -55,6 +55,8 @@ class Node(Generic[Action]):
         parent: Parent node (None for root)
         action_from_parent: Action that led to this node from parent
         player_at_parent: Which player made the move to reach this node
+        proven: Exact value known (MCTSConfig.prove_terminals)
+        proven_value: That value, from player_at_parent's perspective like Q
     """
 
     game_state: GameState[Action]
@@ -65,6 +67,8 @@ class Node(Generic[Action]):
     parent: "Node[Action] | None" = None
     action_from_parent: Action | None = None
     player_at_parent: int = 0
+    proven: bool = False
+    proven_value: float = 0.0
 
 
 @dataclass
@@ -78,6 +82,10 @@ class MCTSConfig:
         dirichlet_weight: Weight of Dirichlet noise at root (epsilon in paper)
         temperature: Temperature for final action selection
         max_rollout_depth: Maximum depth for fast rollout (if lambda > 0)
+        prove_terminals: MCTS-Solver (Winands et al. 2008): terminal leaves are proven, a
+            node with a proven winning child for its mover (or only proven children) takes
+            the exact minimax value, and proven values replace averages on the way up.
+            Off, the search is unchanged.
     """
 
     c_puct: float = 1.0
@@ -86,6 +94,7 @@ class MCTSConfig:
     dirichlet_weight: float = 0.25
     temperature: float = 1.0
     max_rollout_depth: int = 100
+    prove_terminals: bool = False
 
 
 @dataclass
@@ -226,6 +235,32 @@ def fast_rollout(
     return current.get_reward(player)
 
 
+def _try_prove(node: Node[Action]) -> bool:
+    """MCTS-Solver step: a node is proven when a child is a proven win for its mover, or when
+    every legal action leads to a proven child; its value is the minimax over them."""
+    proven = [c.proven_value for c in node.children.values() if c.proven]
+    if not proven or (max(proven) < 1.0 and len(proven) < len(node.logP_A)):
+        return False
+    best = max(proven)  # child values are from this node's mover, who moved into them
+    mover = node.game_state.current_player()
+    node.proven = True
+    node.proven_value = best if mover == node.player_at_parent else 1.0 - best
+    node.Q = node.proven_value
+    return True
+
+
+def _mask_by_proofs(root: Node[Action], weights: dict[Action, float]) -> dict[Action, float]:
+    """A proven root keeps only children at its exact value, an unproven root drops proven
+    losses; unchanged when no child is proven (the flag off) or nothing would remain."""
+    proven = {a: c.proven_value for a, c in root.children.items() if c.proven}
+    if not proven:
+        return weights
+    keep = ({a for a, v in proven.items() if v == max(proven.values())} if root.proven
+            else {a for a in weights if proven.get(a, 1.0) > 0.0})
+    masked = {a: (w if a in keep else 0.0) for a, w in weights.items()}
+    return masked if sum(masked.values()) > 0 else weights
+
+
 def _perform_alphago_playout_impl(
     node: Node[Action],
     config: MCTSConfig,
@@ -271,9 +306,19 @@ def _perform_alphago_playout_impl(
     # Determine which player we're evaluating for (the player who took the action to reach this node)
     player_perspective = node.player_at_parent
 
+    # Case 0: Proven node (prove_terminals) - its exact value stands in for a simulation
+    if config.prove_terminals and node.proven:
+        U = node.proven_value
+        if trace is not None:
+            trace.is_terminal = True
+            trace.leaf_value = U
+            trace.leaf_state = node.game_state
+
     # Case 1: Terminal node - game is over
-    if is_game_over(node.game_state):
+    elif is_game_over(node.game_state):
         U = get_utility_of_game_outcome(node.game_state, player_perspective)
+        if config.prove_terminals:
+            node.proven, node.proven_value = True, U
         if trace is not None:
             trace.is_terminal = True
             trace.leaf_value = U
@@ -365,6 +410,8 @@ def _perform_alphago_playout_impl(
     node.N += 1
     # Incremental mean update: Q = Q + (U - Q) / N
     node.Q = node.Q + (U - node.Q) / node.N
+    if config.prove_terminals and not node.proven and node.children and _try_prove(node):
+        U = node.proven_value  # the exact value replaces the simulation result for the ancestors
 
     return U
 
@@ -490,9 +537,9 @@ def get_action_probabilities(
         actions = list(root.logP_A.keys())
         return {a: 1.0 / len(actions) for a in actions}
 
-    visit_counts = {
-        action: child.N for action, child in root.children.items()
-    }
+    visit_counts = _mask_by_proofs(
+        root, {action: float(child.N) for action, child in root.children.items()}
+    )
 
     if temperature == 0:
         # Deterministic: pick action with most visits

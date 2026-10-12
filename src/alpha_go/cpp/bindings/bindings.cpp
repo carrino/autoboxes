@@ -24,7 +24,7 @@ void bind_mcts_tree(py::module_& m, const char* name) {
         .def(py::init<const State&, const alpha_go::MCTSConfig&>(),
              py::arg("root_state"), py::arg("config"),
              "Create MCTS tree from root state with given config.")
-        .def("run_simulations", &Tree::run_simulations,
+        .def("run_simulations", &Tree::run_simulations, py::call_guard<py::gil_scoped_release>(),
              py::arg("num_simulations"), py::arg("evaluator"),
              "Run MCTS simulations using the evaluator function.\n"
              "evaluator: callable(state) -> (dict[int, float], float)\n"
@@ -53,7 +53,13 @@ void bind_mcts_tree(py::module_& m, const char* name) {
              "time as dict[action, value]. Same perspective as Q (root player).")
         .def("get_child_max_subtree_depths", &Tree::get_child_max_subtree_depths,
              "Get max subtree depth under each root child as dict[action, depth].")
-        .def("run_simulations_batched", &Tree::run_simulations_batched,
+        .def("is_root_proven", &Tree::is_root_proven,
+             "prove_terminals: whether the root's exact value is known.")
+        .def("get_root_proven_value", &Tree::get_root_proven_value,
+             "prove_terminals: the root's exact value (player_at_parent perspective, like Q).")
+        .def("get_child_proven_values", &Tree::get_child_proven_values,
+             "prove_terminals: exact values of the proven root children as dict[action, value].")
+        .def("run_simulations_batched", &Tree::run_simulations_batched, py::call_guard<py::gil_scoped_release>(),
              py::arg("num_simulations"), py::arg("leaf_batch_size"), py::arg("batched_evaluator"),
              "Leaf-parallel MCTS with virtual loss.\n"
              "batched_evaluator: callable(list[state]) -> list[(dict[int,float], float)]");
@@ -195,8 +201,11 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
     m.def("boxes_perft", &alpha_go::boxes_perft, py::arg("board"), py::arg("depth"),
           "(sequences, PLAYER_1 boxes summed over leaves, PLAYER_2 boxes summed over leaves).");
 
-    m.def("encode_planes", [](const py::sequence& states) {
-        // Feature planes (B, 11, H, W) for a batch of BoxesBoard / BoxesSearchState of one size.
+    m.def("encode_planes", [](const py::sequence& states, bool chains) {
+        // Feature planes (B, K, H, W) for a batch of BoxesBoard / BoxesSearchState of one size;
+        // K = 11, or 21 with the chain / loop planes.
+        const int num_planes = alpha_go::BoxesBoard::kNumPlanes
+            + (chains ? alpha_go::BoxesBoard::kNumChainPlanes : 0);
         const auto board_of = [](py::handle h) -> const alpha_go::BoxesBoard& {
             if (py::isinstance<alpha_go::BoxesSearchState>(h)) {
                 return h.cast<const alpha_go::BoxesSearchState&>().board();
@@ -208,22 +217,22 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
             throw std::invalid_argument("encode_planes: empty batch");
         }
         const auto& geo = board_of(states[0]).geometry();
-        auto arr = py::array_t<float>({n, static_cast<py::ssize_t>(alpha_go::BoxesBoard::kNumPlanes),
+        auto arr = py::array_t<float>({n, static_cast<py::ssize_t>(num_planes),
                                        static_cast<py::ssize_t>(geo.lattice_rows()),
                                        static_cast<py::ssize_t>(geo.lattice_cols())});
-        const py::ssize_t stride = alpha_go::BoxesBoard::kNumPlanes * geo.lattice_rows() * geo.lattice_cols();
+        const py::ssize_t stride = num_planes * geo.lattice_rows() * geo.lattice_cols();
         float* out = arr.mutable_data();
         for (py::ssize_t i = 0; i < n; ++i) {
             const alpha_go::BoxesBoard& board = board_of(states[i]);
             if (board.rows() != geo.rows || board.cols() != geo.cols) {
                 throw std::invalid_argument("encode_planes: boards of different sizes");
             }
-            board.encode_planes(out + i * stride);
+            board.encode_planes(out + i * stride, chains);
         }
         return arr;
-    }, py::arg("states"),
-    "Feature planes (B, 11, H, W) float32 for BoxesBoard / BoxesSearchState objects of one size; "
-    "identical to alpha_go.boxes.encode.encode_batch.");
+    }, py::arg("states"), py::arg("chains") = false,
+    "Feature planes (B, K, H, W) float32 for BoxesBoard / BoxesSearchState objects of one size "
+    "(K = 11, or 21 with chains=True); identical to alpha_go.boxes.encode.encode_batch.");
 
     // BoxesSolver binding: exact endgame solver (PLAN.md §4.1)
     py::class_<alpha_go::BoxesSolver, std::shared_ptr<alpha_go::BoxesSolver>>(m, "BoxesSolver")
@@ -232,18 +241,20 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
              py::arg("use_equivalence") = true,
              "Exact remaining-margin solver with a bounded transposition table (one per thread); "
              "use_leaf / use_equivalence switch two reductions off for tests.")
-        .def("value", &alpha_go::BoxesSolver::value, py::arg("mask"),
+        .def("value", &alpha_go::BoxesSolver::value, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
              "Remaining box margin for the side to move under optimal play (unbounded search).")
-        .def("value_within", &alpha_go::BoxesSolver::value_within, py::arg("mask"),
+        .def("value_within", &alpha_go::BoxesSolver::value_within, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
              py::arg("max_nodes"), "Like value(), or None once max_nodes nodes were visited.")
-        .def("remaining", &alpha_go::BoxesSolver::remaining, py::arg("board"))
-        .def("final_margin", &alpha_go::BoxesSolver::final_margin, py::arg("board"),
+        .def("remaining", &alpha_go::BoxesSolver::remaining, py::call_guard<py::gil_scoped_release>(), py::arg("board"))
+        .def("final_margin", &alpha_go::BoxesSolver::final_margin, py::call_guard<py::gil_scoped_release>(), py::arg("board"),
              "Final margin for the side to move under optimal play from `board`.")
-        .def("best_edge", &alpha_go::BoxesSolver::best_edge, py::arg("board"),
+        .def("best_edge", &alpha_go::BoxesSolver::best_edge, py::call_guard<py::gil_scoped_release>(), py::arg("board"),
              "An optimal edge for the side to move (forced captures first).")
-        .def("best_edge_mask", &alpha_go::BoxesSolver::best_edge_mask, py::arg("mask"),
+        .def("best_edge_mask", &alpha_go::BoxesSolver::best_edge_mask, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
              "best_edge from an edge mask (works for Python boards too).")
         .def("canonical", &alpha_go::BoxesSolver::canonical, py::arg("mask"))
+        .def("set_mtdf", &alpha_go::BoxesSolver::set_mtdf, py::arg("on"),
+             "value() by MTD(f) null windows (default) or by one full-window search.")
         .def("loony_value", &alpha_go::BoxesSolver::loony_value, py::arg("chains"), py::arg("loops"),
              "Exact value of a simple loony endgame from its chain and loop sizes.")
         .def("table_entries", &alpha_go::BoxesSolver::table_entries)
@@ -255,9 +266,10 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
         .def(py::init<int, int, std::size_t>(), py::arg("rows"), py::arg("cols") = 0,
              py::arg("table_entries") = std::size_t{1} << 20,
              "Depth-limited negamax on the remaining margin with a greedy-haul leaf (one per thread).")
-        .def("value", &alpha_go::BoxesAlphaBeta::value, py::arg("mask"), py::arg("depth"),
+        .def("value", &alpha_go::BoxesAlphaBeta::value, py::call_guard<py::gil_scoped_release>(), py::arg("mask"), py::arg("depth"),
              "Exact depth-limited value for the side to move (captures do not consume depth).")
-        .def("best_edge", &alpha_go::BoxesAlphaBeta::best_edge, py::arg("mask"), py::arg("depth"),
+        .def("best_edge", &alpha_go::BoxesAlphaBeta::best_edge, py::call_guard<py::gil_scoped_release>(), py::arg("mask"),
+             py::arg("depth"),
              py::arg("seed"), "Highest-valued edge; ties broken by the seeded move order.")
         .def("greedy_haul", &alpha_go::BoxesAlphaBeta::greedy_haul, py::arg("mask"))
         .def("classify", &alpha_go::BoxesAlphaBeta::classify, py::arg("mask"), py::arg("edge"),
@@ -271,6 +283,7 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
              "Collapse the side to move's forced captures; see get_legal_moves_flat().")
         .def(py::init<const alpha_go::BoxesBoard&, std::shared_ptr<alpha_go::BoxesSolver>, int,
                       uint64_t, bool>(),
+             py::call_guard<py::gil_scoped_release>(),
              py::arg("board"), py::arg("solver"), py::arg("max_undrawn"), py::arg("node_budget"),
              py::arg("merge_equivalent") = false,
              "As above, and positions with <= max_undrawn undrawn edges that the solver settles "
@@ -330,6 +343,8 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
                       "Maximum total depth from game start (tree + rollout combined, default: 100)")
         .def_readwrite("rollout_temperature", &alpha_go::MCTSConfig::rollout_temperature,
                       "Temperature for sampling during fast rollouts (default: 1.0)")
+        .def_readwrite("prove_terminals", &alpha_go::MCTSConfig::prove_terminals,
+                      "MCTS-Solver: back up exact subtree values by minimax, not by averaging (default: False)")
         .def_readwrite("pcr_sims", &alpha_go::MCTSConfig::pcr_sims,
                       "Playout cap randomization: list of sim counts to sample from.")
         .def_readwrite("pcr_probs", &alpha_go::MCTSConfig::pcr_probs,
