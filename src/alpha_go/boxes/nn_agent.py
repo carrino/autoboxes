@@ -81,13 +81,17 @@ def add_search_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--margin_utility_k", type=float, default=6.0)
     parser.add_argument("--prove_terminals", type=int, default=0,
                         help="1: MCTS-Solver, exact subtree values back up by minimax")
+    parser.add_argument("--solver_table_entries", type=int, default=1 << 20,
+                        help="endgame solver transposition table per agent (16 bytes each, "
+                             "rounded up to a power of two)")
 
 
 def search_flags(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     """(MCTS kwargs, evaluator kwargs) from `add_search_flags` arguments."""
     return (
         dict(c_puct=args.c_puct, leaf_batch_size=args.leaf_batch_size,
-             prove_terminals=bool(args.prove_terminals)),
+             prove_terminals=bool(args.prove_terminals),
+             solver_table_entries=args.solver_table_entries),
         dict(policy_temperature=args.policy_temperature,
              margin_utility_lambda=args.margin_utility_lambda,
              margin_utility_k=args.margin_utility_k),

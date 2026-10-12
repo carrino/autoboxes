@@ -67,6 +67,9 @@ def main() -> None:
     p.add_argument("--solver-nodes", type=int, nargs="*", default=[],
                    help="undrawn counts at which to report solver nodes by largest region")
     p.add_argument("--node-cap", type=int, default=2_000_000)
+    p.add_argument("--save-masks", action="store_true",
+                   help="also write the sampled positions' drawn-edge masks, one per line with "
+                        "their undrawn count, to data/positions-<tag>-<min>-<max>.txt")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
 
@@ -107,6 +110,12 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows_out)
     print(f"\nwrote {out}")
+    if args.save_masks:
+        masks = EXP_DIR / "data" / (f"positions-{args.positions_tag}-{args.min_undrawn}-"
+                                    f"{args.max_undrawn}.txt")
+        masks.write_text("".join(f"{b.num_edges() - b.move_count()} {b.edges()}\n"
+                                 for b in boards))
+        print(f"wrote {masks} ({len(boards)} positions)")
 
     for undrawn in args.solver_nodes:
         nodes: dict[int, list[int]] = {}

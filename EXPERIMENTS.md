@@ -335,6 +335,13 @@ from 0.61 to 0.69. Whether the solver already gets that on its own (it merges th
 independent chains) is the next measurement: nodes by largest-region size at a fixed
 undrawn count (`--solver-nodes`).
 
+A first look on local games between depth-4 alpha-beta agents (their boards fragment more:
+96% split at 30 undrawn, largest region median 16 edges): at 30 undrawn the solver's median
+nodes go from about 630 with a largest region of 10 edges to 2,860 unsplit. Four to five
+times, where solving a 10-edge region alone costs a few dozen nodes. So the solver gets
+little of the split's benefit; the interaction between regions is what it pays for. These
+positions are easy for it; the real read is on the `5x5-mid` positions.
+
 ## What we believe now
 
 1. The endgame (from 28 undrawn) is exact and cheap. The midgame fight (29 to about 36)
