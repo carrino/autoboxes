@@ -33,6 +33,8 @@ START_FROM=${START_FROM:-}  # branch self-play games from stored ones (a games d
 START_UNDRAWN=${START_UNDRAWN:-36 40}  # ... cut where this many edges remain undrawn (min max)
 START_FRACTION=${START_FRACTION:-0.75}  # share of games that branch; the rest open from the empty board
 STOP_WHEN_SOLVED=${STOP_WHEN_SOLVED:-0}  # 1: a self-play game ends with the exact outcome once the solver settles it
+GATE=${GATE:-0}  # 1: self-play with the arena champion instead of the latest checkpoint (AlphaGo Zero's gating);
+                 # training still continues from the latest, so a regressed net stops generating the data
 SEARCH_ARGS=${SEARCH_ARGS:-}  # extra search flags for self-play and the arena, e.g.
                               # "--policy_temperature 0.7 --margin_utility_lambda 0.5" (see nn_agent.add_search_flags)
 SIZE_ARGS="--rows $ROWS --cols $COLS"
@@ -63,7 +65,7 @@ echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x
      "self-play processes $SP_PROCS, "\
      "search args '$SEARCH_ARGS', "\
      "features $FEATURES, train args '$TRAIN_ARGS', extra data '$EXTRA_DATA', branch from '$START_FROM' at $START_UNDRAWN undrawn "\
-     "($START_FRACTION of games), stop when solved $STOP_WHEN_SOLVED"
+     "($START_FRACTION of games), stop when solved $STOP_WHEN_SOLVED, self-play from the champion $GATE"
 BRANCH_ARGS=""
 if [ -n "$START_FROM" ]; then
     set -- $START_UNDRAWN
@@ -93,13 +95,16 @@ fi
 
 for ITER in $(seq "$START" "$END"); do
     NEXT=$((ITER + 1))
-    log "Iter ${ITER}: self-play with $CKPT/iter${ITER}.pt"
+    SP_ITER=$ITER
+    [ "$GATE" = "1" ] && SP_ITER=$(python3 -c "import json, sys; print(json.load(open(sys.argv[1]))['champion'])" \
+        "$EXP_DIR/league_state-${TAG}.json")
+    log "Iter ${ITER}: self-play with $CKPT/iter${SP_ITER}.pt"
     t0=$(date +%s)
     # SP_PROCS processes play disjoint game-index ranges into the same directory (NPZ names carry
     # the game index), each with its own seed, threads and GPU engine.
     PER_PROC=$((SP_GAMES / SP_PROCS)); THREADS=$(( SP_WORKERS / SP_PROCS > 0 ? SP_WORKERS / SP_PROCS : 1 ))
     for P in $(seq 0 $((SP_PROCS - 1))); do
-        uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${ITER}.pt" \
+        uv run "$EXP_DIR/run_games.py" $SIZE_ARGS --checkpoint "$CKPT/iter${SP_ITER}.pt" \
             --num_games "$PER_PROC" --game_index_offset "$((P * PER_PROC))" \
             --num_simulations "$SP_SIMS" --num_workers "$THREADS" --solver_max_undrawn "$SOLVER_N" --solver_node_budget "$SOLVER_BUDGET" \
             --merge_equivalent "$MERGE_EQ" $SEARCH_ARGS $BRANCH_ARGS \

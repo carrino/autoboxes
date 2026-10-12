@@ -91,7 +91,9 @@ a missing checkpoint. For 5x5 read `timing/5x5/it1.json` after the first iterati
   and its 95% interval excludes a tie (60 games with a plain 0.55 threshold promoted an
   equal net one time in four); also reports candidate vs `boxes-greedy` and
   `boxes-ab-d4` with the per-colour win rates; appends to `league_state-<tag>.json`.
-  Self-play always uses the latest checkpoint; the champion is the arena's reference only.
+  Self-play uses the latest checkpoint unless `GATE=1`, which makes it use the arena champion
+  (AlphaGo Zero's gating) while training still continues from the latest: a candidate that
+  loses to the champion then stops generating the data.
 - `run_iteration_local.sh <start> <end> [--cpu]` — the loop; `ROWS`/`COLS` pick the board,
   `TAG` the output name, `--cpu` switches to smoke budgets so the pipeline runs anywhere.
 - `analyze.py <tag>` — tabulates `league_state-<tag>.json` and `timing/<tag>/` into `report-<tag>.md`.

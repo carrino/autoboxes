@@ -250,6 +250,9 @@ wall time (both 244 s, measured while self-play ran). Part of that is the positi
 lookahead. On the same positions the net's value head (0.653) beats depth-2 (0.543) and
 depth-4 (0.550) alpha-beta's own values by ten points.
 
+A 16x larger solver table (16.8M entries, 268 MB per agent) gives the same 0.693, in 163 s
+on an idle machine; the 244 s above ran beside self-play, so the timing does not compare.
+
 Changed: the restart runs the solver at 30 with a 100k budget, 400 simulations and the
 flag on, with branched self-play; the solver's reach is confirmed as the main lever.
 
@@ -325,6 +328,27 @@ with the command above.
   openings (`arena.py --start_positions ... --start_undrawn 36 40`, `5x5-mid` games). If
   iteration 54 holds its own from 36..40 undrawn and loses from the opening, the opening is
   what regressed.
+- Result. From clean midgame positions (`5x5-mid` games cut at 36..40 undrawn, 50 pairs,
+  solver at 30): pair score 0.51 [0.38, 0.64], mean margin +0.3. A tie, where the same two
+  nets from random openings scored 0.25. Iteration 54 also spent 1.8x iteration 15's time
+  per move from the midgame, against 3.5x from the opening. The opening regressed; the
+  middle game did not.
+- Clean band read (100 simulations, solver at 28):
+
+  | iteration | policy optimal | searched move optimal | value sign |
+  |---|---|---|---|
+  | 15 | 0.390 | 0.510 | 0.637 |
+  | 41 | 0.413 | 0.500 | 0.623 |
+  | 45 | 0.423 | 0.493 | 0.607 |
+  | 49 | 0.430 | 0.503 | 0.627 |
+  | 54 | 0.447 | 0.520 | 0.613 |
+
+  The policy climbs steadily under the solver-30 targets (0.41 -> 0.45 in thirteen
+  iterations, against 0.38 -> 0.41 in twenty under solver-28 targets): better search
+  targets do teach the policy. The searched move at 100 simulations has not followed yet.
+
+Changed: the next run restores the opening's data (`START_FRACTION=0.25`) and gates
+self-play on the arena champion (`GATE=1`), resuming training from iteration 54.
 
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
@@ -380,6 +404,10 @@ positions are easy for it; the real read is on the `5x5-mid` positions.
    decomposition), measure against them (engine bridge), then beat them in the opening.
 
 ## Experiments worth running in parallel
+
+CPU-only work for cloud agents (solver reach, exact labels, a classical yardstick engine,
+search tuning) is written up as self-contained tasks in `ASTRA_TASKS.md`. The arms below
+need the GPU.
 
 Each is one GPU box with the loop script and a different environment; all score on the same
 clean positions (29..34 with the solver at 28, positions from the `5x5-solver` games) so the
