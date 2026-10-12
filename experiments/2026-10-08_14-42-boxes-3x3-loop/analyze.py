@@ -73,8 +73,8 @@ def main() -> None:
                     key = (row["positions_tag"], row["min_undrawn"], row["max_undrawn"],
                            row["solver_max_undrawn"], row["num_simulations"], row["iteration"])
                     latest[key] = row
-        lines += ["", "Clean band reads (exact oracle; at 300 positions, differences under 3 points "
-                  "are noise):", "",
+        lines += ["", "Clean band reads (exact oracle; at 300 positions, differences under "
+                  "3 points are noise):", "",
                   "| positions | band | solver | sims | iter | policy optimal | search optimal "
                   "| value sign | read at |", "|---" * 9 + "|"]
         for key in sorted(latest, key=lambda k: (k[:5], int(k[5]))):
