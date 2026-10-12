@@ -250,6 +250,9 @@ wall time (both 244 s, measured while self-play ran). Part of that is the positi
 lookahead. On the same positions the net's value head (0.653) beats depth-2 (0.543) and
 depth-4 (0.550) alpha-beta's own values by ten points.
 
+A 16x larger solver table (16.8M entries, 268 MB per agent) gives the same 0.693, in 163 s
+on an idle machine; the 244 s above ran beside self-play, so the timing does not compare.
+
 Changed: the restart runs the solver at 30 with a 100k budget, 400 simulations and the
 flag on, with branched self-play; the solver's reach is confirmed as the main lever.
 
