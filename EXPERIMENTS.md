@@ -350,6 +350,31 @@ with the command above.
 Changed: the next run restores the opening's data (`START_FRACTION=0.25`) and gates
 self-play on the arena champion (`GATE=1`), resuming training from iteration 54.
 
+### The gated restart (`TAG=5x5-gate`, 2026-10-12)
+
+Iterations 55..59 of the chains run under gating (self-play from iteration 15, three
+quarters of games from the empty board) still lost to 15 from random openings (pair score
+0.40..0.45) while their training window was the branched data. Rather than wait eight
+iterations for the window to turn over from weights that carry the drifted opening, the
+run restarts from iteration 15's weights as `5x5-gate/iter0.pt`, with:
+
+- gating (`GATE=1`), a quarter of games branched (`START_FRACTION=0.25`), solver at 30;
+- the search from PR #9: `--shape_terminals 1 --margin_utility_lambda 0.5`, which put the
+  band's searched move at 0.82 for iteration 54 and 0.79 for iteration 15 (from 0.66 /
+  0.68), plus proof propagation and policy temperature 1.0;
+- 200 games per iteration and a 50k solver budget, after timing probes of eight games on
+  an idle machine: the new search costs 1.3 / 1.4 s per move at temperature 1.0 with a
+  100k budget, 1.0 / 0.9 at temperature 0.7 with 50k, and single hard games near the
+  solver boundary run to 2..4 s per move. A reused solver does not slow down across games
+  (its median nodes fall 1154 -> 483 over 900 positions as the table fills), so the cost is
+  the number of boundary solves per move, not accumulated state. Temperature stays at 1.0
+  for the diversity of the policy targets; the budget carries the saving.
+
+Iteration 15 was never especially strong: it tied iterations 8 and 16..21 colour for
+colour. It is the last net trained only on full games, and everything after it lost the
+opening. The question for this run: does a net trained from it, under search targets that
+are about 80% right in the band, beat it in the paired arena from random openings?
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
