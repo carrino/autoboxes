@@ -52,7 +52,12 @@ of 30, then further.
    then on every candidate must reproduce all of them exactly. Also run
    `region_stats.py --positions-tag 5x5-mid --min-undrawn 30 --max-undrawn 32 --solver-nodes 30 32`
    and answer: at a fixed undrawn count, does the solver's cost fall when the largest
-   independent region is small (EXPERIMENTS.md section 10)?
+   independent region is small (EXPERIMENTS.md section 10)? Answered on 2026-10-12: yes,
+   five to nine times from unsplit to a largest region of 20 edges. The open question is
+   what decomposition could still add: for split positions, time the largest region alone
+   (draw every edge of the other regions, then solve) against the whole position. The
+   ratio bounds decomposition's gain; build it only if that bound is large where the
+   budget binds.
 3. Make it faster, one change at a time: build, check exactness on the whole benchmark and
    the existing solver tests (`tests/test_boxes_cpp_solver.py`, `tests/test_boxes_solver.py`,
    the Catch2 binaries), measure, keep or revert, log every attempt with its numbers.
@@ -85,7 +90,9 @@ where the solver already plays. This produces exact best moves and outcomes at 3
    positions per undrawn count and the distribution of final margins.
 5. `tar czf` the output folder and report its path and size (it stays out of git).
 
-If Task 1 lands first, rerun this with its solver and go higher (36..38).
+If Task 1 lands first, rerun this with its solver and go higher (36..38). This task is pure
+compute: on a box with four cores it yields a few thousand labels a day at most, so give
+such a box the engineering tasks (1 and 3) and run labelling where the cores are.
 
 ## Task 3: a strong classical engine as a yardstick
 

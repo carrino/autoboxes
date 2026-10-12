@@ -375,12 +375,30 @@ from 0.61 to 0.69. Whether the solver already gets that on its own (it merges th
 independent chains) is the next measurement: nodes by largest-region size at a fixed
 undrawn count (`--solver-nodes`).
 
-A first look on local games between depth-4 alpha-beta agents (their boards fragment more:
-96% split at 30 undrawn, largest region median 16 edges): at 30 undrawn the solver's median
-nodes go from about 630 with a largest region of 10 edges to 2,860 unsplit. Four to five
-times, where solving a 10-edge region alone costs a few dozen nodes. So the solver gets
-little of the split's benefit; the interaction between regions is what it pays for. These
-positions are easy for it; the real read is on the `5x5-mid` positions.
+A first look on local games between depth-4 alpha-beta agents suggested the solver gets
+little of the split's benefit. That was wrong: those positions are fragmented and easy. The
+real read, on `5x5-mid` positions (cloud agent, `experiments/2026-10-12_10-11-boxes-cpu-solver-work/`,
+fresh table per position):
+
+| undrawn | largest region | median nodes | p90 nodes |
+|---|---|---|---|
+| 30 | 10 to 14 | 1,000 to 2,600 | 2,000 to 5,900 |
+| 30 | 20 | 4,166 | 7,312 |
+| 30 | 30 (unsplit) | 20,481 | 167,777 |
+| 32 | 12 to 16 | 4,000 to 7,900 | 5,600 to 23,000 |
+| 32 | 20 | 10,205 | 19,000 |
+| 32 | 32 (unsplit) | 88,469 | 573,373 |
+
+At a fixed undrawn count the solver already runs five to nine times cheaper when the board
+has split, so it captures much of the split's benefit by itself. The expensive positions,
+the ones that set the node budget, are the unsplit or nearly unsplit ones, which
+decomposition cannot help. Self-play positions (warm table across positions, solver_bench):
+median 4.5k / 22k / 113k nodes at 30 / 32 / 34 undrawn, 97% / 86% / 71% settled within 200k
+nodes, about five times the nodes per two edges.
+
+Changed: the solver work aims at single-region search first (ordering, Nimstring and
+controlled-value bounds, the table), and measures what decomposition could still add by
+timing the largest region alone against the whole position before building it.
 
 ## What we believe now
 
