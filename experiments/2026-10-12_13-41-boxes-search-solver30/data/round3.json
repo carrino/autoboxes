@@ -1,0 +1,46 @@
+{
+  "parent": "dev-lambda05",
+  "candidates": {
+    "dev-k3": {
+      "margin_utility_k": 3.0
+    },
+    "dev-k12": {
+      "margin_utility_k": 12.0
+    },
+    "dev-proof0": {
+      "prove_terminals": false
+    },
+    "dev-batch8": {
+      "leaf_batch_size": 8
+    }
+  },
+  "retained": "dev-lambda05",
+  "diagnostics": [],
+  "rule": "Require at least 9 additional correct moves out of 300; otherwise retain parent.",
+  "results": [
+    {
+      "name": "dev-k3",
+      "correct": 211,
+      "delta": -7,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-k12",
+      "correct": 215,
+      "delta": -3,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-proof0",
+      "correct": 212,
+      "delta": -6,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-batch8",
+      "correct": 221,
+      "delta": 3,
+      "decision": "discard"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "parent": "dev-baseline",
+  "retained": "dev-lambda05",
+  "rule": "At least 9/300 gain over baseline; largest observed score retained. Differences among nonzero lambdas are under 3 points and not evidence for a precise optimum.",
+  "results": [
+    {
+      "name": "dev-baseline",
+      "correct": 176,
+      "delta": 0,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-lambda025",
+      "correct": 213,
+      "delta": 37,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-lambda05",
+      "correct": 218,
+      "delta": 42,
+      "decision": "keep"
+    },
+    {
+      "name": "dev-lambda1",
+      "correct": 214,
+      "delta": 38,
+      "decision": "discard"
+    }
+  ]
+}

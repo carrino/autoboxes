@@ -345,6 +345,10 @@ PYBIND11_MODULE(alpha_go_cpp, m) {
                       "Temperature for sampling during fast rollouts (default: 1.0)")
         .def_readwrite("prove_terminals", &alpha_go::MCTSConfig::prove_terminals,
                       "MCTS-Solver: back up exact subtree values by minimax, not by averaging (default: False)")
+        .def_readwrite("terminal_margin_lambda", &alpha_go::MCTSConfig::terminal_margin_lambda,
+             "Boxes only: exact-leaf margin utility coefficient; zero preserves the original search.")
+        .def_readwrite("terminal_margin_k", &alpha_go::MCTSConfig::terminal_margin_k,
+             "Boxes only: exact-leaf margin utility scale.")
         .def_readwrite("pcr_sims", &alpha_go::MCTSConfig::pcr_sims,
                       "Playout cap randomization: list of sim counts to sample from.")
         .def_readwrite("pcr_probs", &alpha_go::MCTSConfig::pcr_probs,

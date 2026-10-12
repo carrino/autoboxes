@@ -1,0 +1,16 @@
+{
+  "selected_run": "dev-lambda05",
+  "flags": {
+    "c_puct": 1.5,
+    "leaf_batch_size": 16,
+    "prove_terminals": true,
+    "shape_terminals": true,
+    "solver_table_entries": 1048576,
+    "policy_temperature": 1.0,
+    "margin_utility_lambda": 0.5,
+    "margin_utility_k": 6.0
+  },
+  "development_correct": 218,
+  "development_n": 300,
+  "rule": "Fixed before reading or scoring 5x5-mid; no subsequent tuning."
+}

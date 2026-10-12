@@ -1,0 +1,37 @@
+{
+  "name": "dev-baseline",
+  "iteration": 54,
+  "positions_tag": "5x5-chains",
+  "num_positions": 300,
+  "search_optimal": 0.5866666666666667,
+  "correct": 176,
+  "seconds": 336.6729794150001,
+  "oracle_seconds": 447.713352038,
+  "search_flags": {
+    "c_puct": 1.5,
+    "leaf_batch_size": 16,
+    "prove_terminals": true,
+    "shape_terminals": false,
+    "solver_table_entries": 1048576,
+    "policy_temperature": 1.0,
+    "margin_utility_lambda": 0.0,
+    "margin_utility_k": 6.0
+  },
+  "num_simulations": 400,
+  "solver_max_undrawn": 30,
+  "solver_node_budget": 100000,
+  "seed": 0,
+  "torch_threads": 1,
+  "positions_sha256": "5a147a9f4275707e18859a9595586ac85fa202789dad4cdcef4e06f023a4195c",
+  "checkpoint_sha256": "8c4fce6abf97fae2890d0e5c158f52e74bfdc7a65ccab9577211bb122f90b1c1",
+  "command": [
+    "experiments/2026-10-12_13-41-boxes-search-solver30/bench.py",
+    "evaluate",
+    "--positions",
+    "experiments/2026-10-12_13-41-boxes-search-solver30/data/development.json",
+    "--name",
+    "dev-baseline",
+    "--prove_terminals",
+    "1"
+  ]
+}

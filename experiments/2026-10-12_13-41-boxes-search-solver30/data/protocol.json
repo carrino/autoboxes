@@ -1,0 +1,13 @@
+{
+  "development": "5x5-chains, seed 0, 300 unique positions, iteration 54",
+  "holdout": "5x5-mid, seed 0, 300 unique positions; baseline and frozen winner on iterations 54 and 15",
+  "selection_rule": "Retain a candidate only with at least 9/300 additional correct moves; otherwise retain the parent. No held-out selection.",
+  "rounds": [
+    "lambda 0, 0.25, 0.5, 1, at k=6",
+    "single-change search candidates around the retained lambda",
+    "single-change refinement including k, then freeze"
+  ],
+  "primary_metric": "Exact margin-optimal searched move, 29..34 undrawn",
+  "secondary_metric": "Same metric at 31..34 undrawn (above root solver threshold)",
+  "uncertainty": "Paired bootstrap over positions, 10000 resamples, seed 20261012; descriptive intervals do not model within-game correlation."
+}

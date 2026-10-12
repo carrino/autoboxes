@@ -10,7 +10,6 @@ shaped by the margin-utility term from PLAN.md decision 4).
 from __future__ import annotations
 
 import argparse
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,6 +24,7 @@ from alpha_go.boxes.encode import encode_batch
 from alpha_go.boxes.inference import PlaneBatchedEngine
 from alpha_go.boxes.model import BoxesNet
 from alpha_go.boxes.rules import BoxesGeometry, geometry
+from alpha_go.boxes.utility import exact_value, shaped_value
 
 Evaluation = tuple[dict[int, float], float]
 
@@ -60,11 +60,6 @@ def policy_dict(
     return dict(zip(legal, probs.tolist()))
 
 
-def shaped_value(win: float, expected_margin: float, lam: float, k: float) -> float:
-    """Decision 4: u = win_prob + lambda * tanh(expected_margin / k); lambda=0 is plain win prob."""
-    return win + lam * math.tanh(expected_margin / k)
-
-
 def add_search_flags(parser: argparse.ArgumentParser) -> None:
     """The search knobs every Boxes CLI exposes, with the loop's original values as defaults.
 
@@ -79,6 +74,9 @@ def add_search_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--margin_utility_lambda", type=float, default=0.0,
                         help="leaf value = P(win) + lambda * tanh(E[margin] / k)")
     parser.add_argument("--margin_utility_k", type=float, default=6.0)
+    parser.add_argument("--shape_terminals", type=int, choices=(0, 1), default=0,
+                        help="1: use the evaluator's margin utility for exact leaves too; "
+                             "proofs then require every child, since wins differ in margin")
     parser.add_argument("--prove_terminals", type=int, default=0,
                         help="1: MCTS-Solver, exact subtree values back up by minimax")
     parser.add_argument("--solver_table_entries", type=int, default=1 << 20,
@@ -91,6 +89,7 @@ def search_flags(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, An
     return (
         dict(c_puct=args.c_puct, leaf_batch_size=args.leaf_batch_size,
              prove_terminals=bool(args.prove_terminals),
+             shape_terminals=bool(args.shape_terminals),
              solver_table_entries=args.solver_table_entries),
         dict(policy_temperature=args.policy_temperature,
              margin_utility_lambda=args.margin_utility_lambda,
@@ -219,6 +218,8 @@ class BoxesSolvedResult:
 
     optimal: list[int]
     final_margin: int  # exact final margin for the side to move (score so far + remaining)
+    margin_utility_lambda: float = 0.0
+    margin_utility_k: float = 6.0
 
     @property
     def tree(self) -> BoxesSolvedResult:
@@ -239,13 +240,17 @@ class BoxesSolvedResult:
         return {e: 1 for e in self.optimal}
 
     def get_child_q_values(self) -> dict[int, float]:
-        return {e: self.win() for e in self.optimal}
+        return {e: self.utility() for e in self.optimal}
+
+    def utility(self) -> float:
+        """Exact outcome on the same scale as the search's network leaves."""
+        return exact_value(self.final_margin, self.margin_utility_lambda, self.margin_utility_k)
 
     def get_root_policy_priors(self) -> dict[int, float]:
         return {e: 1.0 / len(self.optimal) for e in self.optimal}
 
     def get_root_q_value(self) -> float:  # from the parent's (opponent's) perspective, as a tree
-        return 1.0 - self.win()
+        return 1.0 - self.utility()
 
     def get_root_visit_count(self) -> int:
         return len(self.optimal)
@@ -277,6 +282,7 @@ class BoxesMCTSAgent(Agent):
         solver_table_entries: int = 1 << 20,
         merge_equivalent: bool = False,
         prove_terminals: bool = False,
+        shape_terminals: bool = False,
     ) -> None:
         self.evaluator = evaluator
         self.num_simulations = num_simulations
@@ -306,6 +312,10 @@ class BoxesMCTSAgent(Agent):
         # MCTS-Solver: terminal and solver-settled leaves are proven and their exact values
         # back up by minimax instead of averaging (PLAN.md, "high/low vs average").
         self.cpp_config.prove_terminals = prove_terminals
+        if shape_terminals:
+            assert evaluator.margin_utility_lambda >= 0 and evaluator.margin_utility_k > 0
+            self.cpp_config.terminal_margin_lambda = evaluator.margin_utility_lambda
+            self.cpp_config.terminal_margin_k = evaluator.margin_utility_k
         if pcr_sims is not None and pcr_probs is not None:
             assert len(pcr_sims) == len(pcr_probs) and abs(sum(pcr_probs) - 1.0) < 1e-4
             self.cpp_config.pcr_sims = list(pcr_sims)
@@ -359,7 +369,9 @@ class BoxesMCTSAgent(Agent):
                 return int(row), int(col)
             if state.solved():  # exact endgame: one of the optimal edges, no search needed
                 solved = BoxesSolvedResult(optimal_edges(self.solver, board, self.geo),
-                                           int(state.solved_margin()))
+                                           int(state.solved_margin()),
+                                           self.cpp_config.terminal_margin_lambda,
+                                           self.cpp_config.terminal_margin_k)
                 self.last_search_result = solved
                 edge = solved.optimal[np.random.default_rng(seed).integers(len(solved.optimal))]
                 row, col = board.row_col(edge)
