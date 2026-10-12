@@ -1,0 +1,7 @@
+{
+  "budget": 1024,
+  "threshold": null,
+  "rule": "largest threshold24..26 with >=90% solved at each sampled undrawn count at or below it; development only, seed73",
+  "positions": 1400,
+  "fresh_tables": true
+}

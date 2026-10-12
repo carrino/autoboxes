@@ -147,17 +147,22 @@ int BoxesClassic::search(uint64_t mask, int depth, int alpha, int beta, int& mov
     }
     if (!root && solver_max_undrawn_ > 0 &&
         __builtin_popcountll(full_ & ~mask) <= solver_max_undrawn_) {
-        if (expired()) {
-            return 0;
-        }
-        const auto exact = solver_.value_within(mask, 1024);
-        solver_nodes_ += solver_.nodes();
-        if (expired()) {
-            return 0;
-        }
-        if (exact) {
-            slot = Entry{mask, static_cast<int16_t>(*exact * kScale), kSolved, kExact, -1};
-            return *exact * kScale;
+        uint64_t spent = 0;
+        while (spent < kProbeBudget) {
+            if (expired()) {
+                return 0;
+            }
+            const auto exact = solver_.value_within(
+                mask, std::min(kProbeSlice, kProbeBudget - spent));
+            spent += solver_.nodes();
+            solver_nodes_ += solver_.nodes();
+            if (expired()) {
+                return 0;
+            }
+            if (exact) {
+                slot = Entry{mask, static_cast<int16_t>(*exact * kScale), kSolved, kExact, -1};
+                return *exact * kScale;
+            }
         }
     }
     if (depth == 0) {
