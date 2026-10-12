@@ -185,13 +185,15 @@ export GAME_DATA_DIR=$HOME/autoboxes-data/game_data_root
 EXP=experiments/2026-10-08_14-42-boxes-3x3-loop
 ```
 
-Copy the games it reads from the WSL machine (they are small; checkpoints only for
-evaluations, which then take `--cpu`):
+Copy the games it reads from the WSL machine. The solver jobs only replay move lists, so
+`slim_games.py` packs just those, about 250 bytes a game instead of 20 KB, in the same layout
+(checkpoints are needed only for evaluations, which then take `--cpu`):
 
 ```bash
 # on the WSL machine
-D=experiments/2026-10-08_14-42-boxes-3x3-loop
-rsync -a $GAME_DATA_DIR/$D/5x5-solver $GAME_DATA_DIR/$D/5x5-chains box:autoboxes-data/game_data_root/$D/
+uv run $EXP/slim_games.py --tags 5x5-chains 5x5-mid --out ~/boxes-games-slim.tgz
+# on the box, after uploading it
+tar xzf boxes-games-slim.tgz -C $GAME_DATA_DIR
 ```
 
 Exact labels above the solver's reach are the main job: `solver_label.py` with `--shard K
