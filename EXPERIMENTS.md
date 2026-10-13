@@ -532,6 +532,12 @@ Measured on s1600 (entropy in nats / top-move share, by undrawn band):
 The flattening is real but confined to the opening (41+ undrawn, where most moves are
 exactly equal and the arena randomises the first four edges); the decisive 35..40 zone is
 stable, undecided (top move 0.38 of the visits among about 37 legal moves) and not drifting.
+The gate run, where one net plays every iteration, is the control: nothing moves in any
+band (2.15 / 2.53 / 2.10 at iterations 0 and 10), so target entropy is a property of the
+playing net. The chains run went the other way in the opening (2.76 -> 1.84 from iteration
+0 to 20, top-move share 0.11 -> 0.30) while it was still improving, with 35..40 at 2.6..2.8.
+In the decisive zone the 1600-simulation search is the most decided of the three runs
+(top-move share 0.38 against 0.23 and 0.14..0.17) and its nets are no stronger for it.
 So the policy targets are not the lever; the value head is. (Iteration 0 holds 139 games:
 self-play files carry a timestamp prefix, so a restart adds games beside those of a killed
 attempt instead of replacing them.)
