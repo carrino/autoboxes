@@ -485,9 +485,12 @@ vectors, and transposition entries that keep both proven bounds (the entry stays
 Cutoffs read `lower >= beta` / `upper <= alpha`, bounds only tighten, and an exact entry
 sets `lower == upper`. Every one of 6,000 benchmark values is unchanged; the new
 `test_boxes_solver_bounds.py` checks tiny tables (2 entries, so constant collisions),
-budget restarts and symmetric images against the oracle. Merged into this branch in a
-worktree: builds, 417 tests pass. Gain: 1.4x at equal nodes (15..17% fewer nodes), memory
-unchanged. Solver 32 still costs 2.5..3.7x solver 30, so `SOLVER_N` stays at 30.
+budget restarts and symmetric images against the oracle. Merged into this branch on
+2026-10-13 together with the label reports (#4, #8): builds, 417 tests pass. Gain: 1.4x at
+equal nodes (15..17% fewer nodes), memory unchanged. Solver 32 still costs 2.5..3.7x solver
+30, so `SOLVER_N` stays at 30. The 7,445 labels from #4 (`5x5-oracle-31-36`) are the set to
+train on; #8's 2,891 were sampled from the same games with the same seed and are a prefix
+of them.
 
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
