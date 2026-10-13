@@ -1,0 +1,8 @@
+{
+  "utc": "2026-10-13T03:16:44.098644+00:00",
+  "dataset": "candidate1-chains",
+  "completed_positions_preserved": 1695,
+  "previous_workers": 1,
+  "new_workers": 2,
+  "reason": "Arena complete, freeing one CPU core; restart from flushed CSV with the same frozen extension and per-position settings."
+}

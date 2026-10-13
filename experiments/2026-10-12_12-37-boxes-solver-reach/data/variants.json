@@ -1,0 +1,14 @@
+{
+  "baseline": {
+    "extension_sha256": "9fe29e1eb9176cf9c90ea34f7ddc9d8a5ff8c32ac86142eb9976bc469f5f977b",
+    "memory_bytes": 16777216
+  },
+  "candidate1": {
+    "extension_sha256": "7c7d0a35263136982be92ae9e372a06a960af81f398044af835d30152c7c446b",
+    "memory_bytes": 16777216
+  },
+  "candidate2": {
+    "extension_sha256": "50a68d3d0b13dfcc7f87dcff0431001c8b9eef82b1e0d72c5d1ab2a3a99b49d5",
+    "memory_bytes": 16777216
+  }
+}

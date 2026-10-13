@@ -1,0 +1,36 @@
+100/3000 positions, 391.2s
+200/3000 positions, 764.6s
+300/3000 positions, 1019.4s
+400/3000 positions, 1223.8s
+500/3000 positions, 1730.9s
+600/3000 positions, 2119.9s
+700/3000 positions, 2305.2s
+800/3000 positions, 2444.4s
+900/3000 positions, 2639.8s
+1000/3000 positions, 2806.8s
+1100/3000 positions, 3186.4s
+1200/3000 positions, 3552.5s
+1300/3000 positions, 3969.4s
+1400/3000 positions, 4521.3s
+1500/3000 positions, 4900.1s
+1600/3000 positions, 5276.3s
+1700/3000 positions, 132.5s
+1800/3000 positions, 373.0s
+1900/3000 positions, 897.7s
+2000/3000 positions, 1229.8s
+2100/3000 positions, 1386.2s
+2200/3000 positions, 1514.0s
+2300/3000 positions, 1637.4s
+2400/3000 positions, 1831.8s
+2500/3000 positions, 2175.2s
+2600/3000 positions, 2299.3s
+2700/3000 positions, 2506.9s
+2800/3000 positions, 2672.8s
+2900/3000 positions, 2868.9s
+3000/3000 positions, 3213.5s
+{"undrawn": 30, "positions": 627, "exact_nodes_median": 25881.0, "exact_nodes_p90": 214413.19999999966, "exact_nodes_max": 2410411.0, "exact_ms_median": 77.651082, "exact_ms_p90": 681.9451035999994, "exact_ms_max": 9278.919407, "100k_solved": 0.7799043062200957, "1m_solved": 0.9920255183413078}
+{"undrawn": 31, "positions": 662, "exact_nodes_median": 77667.5, "exact_nodes_p90": 472624.99999999994, "exact_nodes_max": 6451297.0, "exact_ms_median": 196.627238, "exact_ms_p90": 1391.3443647, "exact_ms_max": 26262.640162, "100k_solved": 0.554380664652568, "1m_solved": 0.972809667673716}
+{"undrawn": 32, "positions": 552, "exact_nodes_median": 127899.5, "exact_nodes_p90": 1045587.3, "exact_nodes_max": 5453844.0, "exact_ms_median": 370.26664900000003, "exact_ms_p90": 2958.4143406000017, "exact_ms_max": 20964.181975, "100k_solved": 0.427536231884058, "1m_solved": 0.8840579710144928}
+{"undrawn": 33, "positions": 640, "exact_nodes_median": 406860.0, "exact_nodes_p90": 2824645.9000000004, "exact_nodes_max": 37640843.0, "exact_ms_median": 1158.5492625, "exact_ms_p90": 7526.510444700012, "exact_ms_max": 132656.526282, "100k_solved": 0.2, "1m_solved": 0.71875}
+{"undrawn": 34, "positions": 519, "exact_nodes_median": 1032611.0, "exact_nodes_p90": 5532679.6, "exact_nodes_max": 190849217.0, "exact_ms_median": 2464.880642, "exact_ms_p90": 16112.681217599998, "exact_ms_max": 604479.972908, "100k_solved": 0.13680154142581888, "1m_solved": 0.4932562620423892}
+validated 3000 values; wall_seconds=3213.704

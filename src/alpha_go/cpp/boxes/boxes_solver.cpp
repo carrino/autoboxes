@@ -51,7 +51,7 @@ BoxesSolver::BoxesSolver(int rows, int cols, std::size_t table_entries, bool use
     while ((std::size_t{1} << log2_size_) < table_entries) {
         ++log2_size_;
     }
-    table_.assign(std::size_t{1} << log2_size_, Entry{0, 0, kEmpty, -1});
+    table_.assign(std::size_t{1} << log2_size_, Entry{0, -kInf, kInf, 0, kEmpty, -1});
     history_.assign(static_cast<std::size_t>(geo.num_edges), 0);
 }
 
@@ -162,20 +162,20 @@ int BoxesSolver::search(uint64_t mask, int alpha, int beta) {
     const BoxesGeometry& geo = proto_.geometry();
     const uint64_t key = canonical(mask);
     Entry& slot = table_[index(key)];
-    int first = -1;  // the table's move, read now: child searches may overwrite the slot
+    int first = -1;  // child searches may overwrite this direct-mapped slot
+    int lower = -kInf, upper = kInf;
     if (slot.flag != kEmpty && slot.key == key) {
         first = slot.move;
-        if (slot.flag == kExact) {
-            return slot.value;
+        lower = slot.lower;
+        upper = slot.upper;
+        if (lower == upper || lower >= beta) {
+            return lower;
         }
-        if (slot.flag == kLower) {
-            alpha = std::max(alpha, static_cast<int>(slot.value));
-        } else {
-            beta = std::min(beta, static_cast<int>(slot.value));
+        if (upper <= alpha) {
+            return upper;
         }
-        if (alpha >= beta) {
-            return slot.value;
-        }
+        alpha = std::max(alpha, lower);
+        beta = std::min(beta, upper);
     }
     const int alpha0 = alpha;
     const int beta0 = beta;
@@ -236,7 +236,16 @@ int BoxesSolver::search(uint64_t mask, int alpha, int beta) {
             }
         }
     }
+    if (best <= alpha0) {
+        upper = std::min(upper, best);
+    } else if (best >= beta0) {
+        lower = std::max(lower, best);
+    } else {
+        lower = upper = best;
+    }
     slot.key = key;
+    slot.lower = static_cast<int16_t>(lower);
+    slot.upper = static_cast<int16_t>(upper);
     slot.value = static_cast<int16_t>(best);
     slot.flag = best <= alpha0 ? kUpper : (best >= beta0 ? kLower : kExact);
     slot.move = static_cast<int8_t>(best_move);

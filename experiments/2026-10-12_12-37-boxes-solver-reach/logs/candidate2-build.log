@@ -1,0 +1,20 @@
+[  2%] Built target go_game
+[  3%] Building CXX object CMakeFiles/boxes_game.dir/boxes/boxes_solver.cpp.o
+[  4%] Building CXX object CMakeFiles/boxes_game.dir/boxes/boxes_search.cpp.o
+[  5%] Linking CXX static library libboxes_game.a
+[  7%] Built target boxes_game
+[  8%] Building CXX object CMakeFiles/mcts.dir/mcts/mcts.cpp.o
+[  9%] Linking CXX static library libmcts.a
+[  9%] Built target mcts
+[ 10%] Building CXX object CMakeFiles/alpha_go_cpp.dir/bindings/bindings.cpp.o
+[ 11%] Linking CXX shared module alpha_go_cpp.cpython-312-x86_64-linux-gnu.so
+lto-wrapper: warning: using serial compilation of 8 LTRANS jobs
+lto-wrapper: note: see the ‘-flto’ option documentation for more information
+[ 11%] Built target alpha_go_cpp
+[ 95%] Built target Catch2
+[ 96%] Built target Catch2WithMain
+[ 97%] Built target go_game_test
+[ 98%] Linking CXX executable boxes_game_test
+[ 98%] Built target boxes_game_test
+[ 99%] Linking CXX executable mcts_test
+[100%] Built target mcts_test
