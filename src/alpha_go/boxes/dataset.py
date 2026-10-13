@@ -62,10 +62,11 @@ class BoxesDataset(Dataset[dict[str, Any]]):
     def __init__(self, data_dirs: list[str | Path], smooth_eps: float = 0.1,
                  games: list[dict[str, Any]] | None = None,
                  like: BoxesDataset | None = None, min_undrawn: int = 0,
-                 features: str = "basic") -> None:
+                 features: str = "basic", use_exact: bool = True) -> None:
         self.smooth_eps = smooth_eps
         self.min_undrawn: int = like.min_undrawn if like is not None else min_undrawn
         self.features: str = like.features if like is not None else features
+        self.use_exact: bool = like.use_exact if like is not None else use_exact
         paths = [p for d in data_dirs for p in sorted(Path(d).rglob("*.npz"))]
         self.games = [dict(np.load(p)) for p in paths] if games is None else games
         assert self.games or like is not None, f"no .npz games under {data_dirs}"
@@ -94,6 +95,11 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         train = [self.games[i] for i in order[n_val:]]
         return (BoxesDataset([], self.smooth_eps, games=train, like=self),
                 BoxesDataset([], self.smooth_eps, games=val, like=self))
+
+    def num_exact(self) -> int:
+        """Kept positions whose value target is an exact margin."""
+        return sum(int((g["exact_margin_p1"][:self.kept(g)] != EXACT_UNKNOWN).sum())
+                   for g in self.games if self.use_exact and "exact_margin_p1" in g)
 
     def footprint_bytes(self) -> int:
         return sum(
@@ -126,7 +132,8 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         planes = encode_grid(game["boards"][local], to_play, self.features)
         # The exact final margin from the solver (relabel.py) where it is known; the game's
         # outcome elsewhere.
-        exact = int(game["exact_margin_p1"][local]) if "exact_margin_p1" in game else EXACT_UNKNOWN
+        exact = (int(game["exact_margin_p1"][local])
+                 if self.use_exact and "exact_margin_p1" in game else EXACT_UNKNOWN)
         score_p1 = float(exact) if exact != EXACT_UNKNOWN else parse_score_from_result(
             str(game["result"]))
         margin = int(score_p1) if to_play == 1 else -int(score_p1)
