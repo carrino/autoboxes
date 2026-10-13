@@ -145,6 +145,9 @@ def main() -> None:
                    help="also score the C++ alpha-beta's own value at these depths (value "
                         "sign and margin error): how visible the band's value is to a "
                         "shallow hand-written evaluation")
+    p.add_argument("--values-only", action="store_true",
+                   help="solve root values only (no child values): value sign and margin "
+                        "error per checkpoint, no move columns; far cheaper above 34 undrawn")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--cpu", action="store_true")
     add_search_flags(p)
@@ -176,8 +179,12 @@ def main() -> None:
     # skips the solve. Entries from before the child values were stored are solved again.
     cache_path = EXP_DIR / "data" / f"oracle_labels-{positions_tag}.json"
     cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
-    missing = [b for b in boards if len(cache.get(str(b.edges()), [])) < 3]
-    cache.update({str(b.edges()): [solver.value(b.edges()), [], child_values(solver, b, geo)]
+    def complete(entry: list[Any]) -> bool:  # a values-only entry serves a values-only read
+        return len(entry) == 3 and (args.values_only or bool(entry[2]))
+
+    missing = [b for b in boards if not complete(cache.get(str(b.edges()), []))]
+    cache.update({str(b.edges()): [solver.value(b.edges()), [],
+                                   {} if args.values_only else child_values(solver, b, geo)]
                   for b in missing})
     cache_path.write_text(json.dumps(cache))
     labels = [cache[str(b.edges())] for b in boards]
@@ -211,7 +218,7 @@ def main() -> None:
         rows_out.append(row)
         print(f"{row['agent']:>14}: value sign {row['value_sign']:.3f}  margin MAE "
               f"{row['margin_mae']:.2f} ({time.time() - t1:.0f}s)")
-    for name in [n for n in args.baselines.split(",") if n]:
+    for name in [n for n in args.baselines.split(",") if n and not args.values_only]:
         t1 = time.time()
         moves = agent_moves(get_agent(name), boards, args.seed)
         rate, lost = optimal_rate(moves), margin_lost(moves)
@@ -223,6 +230,15 @@ def main() -> None:
         t1 = time.time()
         model = load_boxes_net(ckpt_dir / f"iter{it}.pt", device)
         argmax, win, expected = raw_net(model, device, boards)
+        if args.values_only:
+            row = {"agent": f"iter{it}", "iteration": it,
+                   "value_sign": round(float(np.mean((win[decided] > 0.5)
+                                                     == (final[decided] > 0))), 4),
+                   "margin_mae": round(float(np.mean(np.abs(expected - final))), 3)}
+            rows_out.append(row)
+            print(f"{row['agent']:>14}: value sign {row['value_sign']:.3f}  margin MAE "
+                  f"{row['margin_mae']:.2f} ({time.time() - t1:.0f}s)")
+            continue
         agent = BoxesMCTSAgent(BoxesLeafEvaluator(model, device, **evaluator_flags),
                                temperature=0.0, num_simulations=args.num_simulations,
                                solver_max_undrawn=args.solver_max_undrawn,
