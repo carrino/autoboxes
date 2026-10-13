@@ -1,9 +1,9 @@
 """Arena promotion for one iteration.
 
 Plays the iter N checkpoint against the current champion in colour-swapped pairs from the
-same random --opening_moves-edge opening (the pair is scored on its summed margin, so the
-side-to-move advantage of an opening cancels), promotes it when the pair score is at least
---threshold and its 95% interval excludes a tie, and also scores it against --baselines (default
+same random --opening_moves-edge opening. Promotion needs game score >= --threshold and
+a two-sided paired label-swap p < 0.05; box margins remain diagnostic. Also scores against
+--baselines (default
 boxes-greedy and boxes-ab-d4; boxes-ab-d4-s28 plays the endgame exactly from the loop's
 default solver depth, so beating it is the net's midgame) so progress is visible on an
 absolute scale. Checkpoints are
@@ -47,7 +47,7 @@ def main() -> None:
     p.add_argument("--num_simulations", type=int, default=200)
     p.add_argument("--num_workers", type=int, default=8)
     p.add_argument("--threshold", type=float, default=0.55,
-                   help="promote at a pair score >= this whose 95%% interval excludes a tie")
+                   help="minimum game score; also requires paired label-swap p < 0.05")
     p.add_argument("--baselines", default="boxes-greedy,boxes-ab-d4",
                    help="comma-separated registered agents for the absolute-scale columns")
     p.add_argument("--opening_moves", type=int, default=4,
@@ -89,7 +89,8 @@ def main() -> None:
     candidate = register_boxes_mcts_agent(f"cand-it{args.iteration}", candidate_ckpt, args.rows,
                                           args.cols, engine=shared_engine(candidate_ckpt), **mcts)
     state = load_state(state_file)
-    entry: dict = {"iteration": args.iteration}
+    entry: dict = {"iteration": args.iteration, "promotion_metric": "game_score_paired_swap",
+                   "promotion_threshold": args.threshold, "promotion_alpha": 0.05}
     if state["champion"] is None:
         promoted, vs_champion = True, None
     else:
@@ -101,7 +102,7 @@ def main() -> None:
                            seed=1000 + args.iteration, num_workers=args.num_workers,
                            opening_moves=args.opening_moves)
         vs_champion = match.summary()
-        promoted = match.pair_score >= args.threshold and match.pair_wilson()[0] > 0.5
+        promoted = match.wins_promotion(args.threshold)
         print(f"iter{args.iteration} vs champion iter{state['champion']}: {vs_champion}")
     for baseline in [b for b in args.baselines.split(",") if b]:
         result = play_match(candidate, baseline, args.rows, args.cols, args.baseline_games,
