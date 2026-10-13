@@ -407,6 +407,26 @@ not the true values. The game-split validation set shares that distribution (one
 branched games with shared prefixes), so it overstates generalisation. The bottleneck is
 the targets, not the amount of training.
 
+### First absolute yardstick: the classical engine (PR #6)
+
+`boxes-classic` is one-second iterative-deepening alpha-beta with a chain/control evaluation
+and exact probes at 26 undrawn or fewer. In 200-game paired matches it scores 0.935 against
+`boxes-ab-d6`. Against it, `5x5-gate/iter12` (400 simulations, solver 30 with a 50k budget,
+the #9 search) played 200 games:
+
+- **Games:** 135-65, a win rate of 0.675 [0.61, 0.74]. It won 0.69 as first player and 0.66
+  as second.
+- **Pairs and margin:** pair score 0.585 [0.49, 0.68], mean margin +0.26 ± 6.6.
+- **Time:** 0.16 s per move, against classic's 0.42.
+
+The net wins two games in three, but the margin is even: its wins are narrow and its losses
+are large. Two causes look likely. The margin utility makes the net value winning over
+margin. And a lost control fight costs most of the long chains.
+
+`arena --save_games` with `arena_exact.py` replays the games against the solver from 34
+undrawn edges. It reports whether each loss was already decided when the game came within
+reach, or was given away inside it. The 31..36 labels can only fix the second kind.
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
