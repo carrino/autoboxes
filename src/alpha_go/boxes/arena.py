@@ -204,7 +204,9 @@ def play_match(
 
 def register_checkpoint(name: str, args: argparse.Namespace) -> None:
     """`ckpt:<path>` names become MCTS agents on that checkpoint, one shared GPU engine
-    per checkpoint across the game threads, with the search flags of the CLI."""
+    per checkpoint across the game threads, with the search flags of the CLI.
+    `ckpt:<path>@<sims>` overrides --sims for that agent, so one checkpoint can play itself
+    at two search budgets."""
     from alpha_go.boxes.inference import PlaneBatchedEngine
     from alpha_go.boxes.nn_agent import (
         load_boxes_net,
@@ -213,13 +215,13 @@ def register_checkpoint(name: str, args: argparse.Namespace) -> None:
         search_flags,
     )
     device = pick_device("cpu" if args.cpu else None)
-    path = name[len("ckpt:"):]
+    path, _, sims = name[len("ckpt:"):].partition("@")
     engine = PlaneBatchedEngine(load_boxes_net(path, device), device, batch_size=64)
     engine.start()
     mcts_flags, evaluator_flags = search_flags(args)
     # Greedy from the first searched move: the random opening of the pair gives the variety.
     register_boxes_mcts_agent(name, path, args.rows, args.cols, engine=engine,
-                              num_simulations=args.sims, temperature=1.0,
+                              num_simulations=int(sims or args.sims), temperature=1.0,
                               temperature_cutoff=0,
                               solver_max_undrawn=args.solver,
                               solver_node_budget=args.solver_budget,
@@ -230,8 +232,8 @@ def register_checkpoint(name: str, args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Boxes arena: agent A vs agent B")
     parser.add_argument("--a", required=True,
-                        help="Registered agent name, or ckpt:<path> for an MCTS agent on it")
-    parser.add_argument("--b", required=True, help="Registered agent name or ckpt:<path>")
+                        help="Registered agent name, or ckpt:<path>[@<sims>] for an MCTS agent")
+    parser.add_argument("--b", required=True, help="Registered agent name or ckpt:<path>[@<sims>]")
     parser.add_argument("--rows", type=int, default=5)
     parser.add_argument("--cols", type=int, default=None)
     parser.add_argument("--num_games", type=int, default=20)
