@@ -183,9 +183,12 @@ def main() -> None:
         return len(entry) == 3 and (args.values_only or bool(entry[2]))
 
     missing = [b for b in boards if not complete(cache.get(str(b.edges()), []))]
-    cache.update({str(b.edges()): [solver.value(b.edges()), [],
-                                   {} if args.values_only else child_values(solver, b, geo)]
-                  for b in missing})
+    for i, b in enumerate(missing, 1):
+        cache[str(b.edges())] = [solver.value(b.edges()), [],
+                                 {} if args.values_only else child_values(solver, b, geo)]
+        if i % 25 == 0 or i == len(missing):
+            print(f"  solved {i}/{len(missing)} positions ({time.time() - t0 - sampled:.0f}s)",
+                  flush=True)
     cache_path.write_text(json.dumps(cache))
     labels = [cache[str(b.edges())] for b in boards]
     values = [v for v, _, _ in labels]
