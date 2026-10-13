@@ -587,6 +587,20 @@ is `quick-exact/iter3`, 12 epochs from the same start.)
 
 Whether the x8 fit generalises is the 35..36 read on `5x5-mid` (200 positions), pending.
 
+**Astra's `exact_ab.py` run** (`logs/exact-ab-20261013-140131`, natural weight, 4 epochs,
+raw net, 100 positions per band on `5x5-mid`; value sign / margin MAE):
+
+| band | reference (iter20) | control | exact |
+|---|---|---|---|
+| 33..36 | 0.68 / 2.71 | 0.66 / 2.72 | 0.69 / 2.63 |
+| 37..38 | 0.49 / 2.38 | 0.50 / 2.40 | 0.59 / 2.28 |
+
+At 37..38 the current value head is a coin flip (Brier 0.245: it outputs about 0.5 for
+everything), which is the decisive zone of the replay. Exact labels are the first thing to
+move it: +9 points on the same 98 positions, about 1.8 standard errors, with MAE and Brier
+improving in step. At 33..36 the arms tie, as in the quick A/B, because few labels changed
+there.
+
 A second lead to check first (`target_entropy.py`): iteration 19's candidate took 1.10 s a
 move against the champion's 0.49 at equal simulations and solver, which is what a flatter
 prior does (more distinct leaves, more solver calls), and s1600's policy cross-entropy is
