@@ -113,6 +113,40 @@ A classical engine built on chain theory is the closest stand-in we can run.
 3. The GPU machine then plays it against the nets; say in the report which registered name
    and settings to use.
 
+## Task 5: exact labels where the games are decided (35..40 undrawn)
+
+Why: replaying 200 games against the classical engine (EXPERIMENTS.md, "Replay from 38
+undrawn") showed the games are decided between 38 and 34 undrawn edges, where the net loses
+exact margin on two of every three moves. The 31..36 labels (Task 2) cover the lower half of
+that zone. This produces labels for its upper half. Use the merged solver (#7, 1.4x faster).
+
+1. Values along game lines, cheap: `uv run $EXP/arena_exact.py` solves every position of a
+   game from 38 down at about 2.4 CPU-seconds each with one solver per game. Write a
+   `line_label.py` that does the same for stored `5x5-chains` games (never `5x5-mid`), and
+   saves, per game, the exact player-1 final margin of every position from --max-undrawn
+   down (the `exact_margin_p1` array of `alpha_go/boxes/relabel.py`, which `BoxesDataset`
+   reads) into a copy of the game under a new dataset name, e.g. `5x5-chains-exact40`.
+   Report positions labelled by undrawn count and the mean |outcome - exact| by band.
+2. Policies, expensive: `solver_label.py --min-undrawn 37 --max-undrawn 40` with the
+   pilot / sizing procedure of Task 2 (expect several times Task 2's cost per position;
+   measure it in the pilot and size the full run to about 24 hours). Both the value-only set
+   and the policy set are useful; deliver the value set first.
+3. Archive both outside git; report paths, sizes and hashes as in Task 2.
+
+## Task 6: a stronger yardstick
+
+Why: the nets beat `boxes-classic` two games in three. When they pass it clearly, the
+measurement saturates like the earlier baselines did.
+
+1. Register `boxes-classic-5s` (five seconds a move) and `boxes-classic-solver30` (exact
+   probes at <= 30 undrawn with a 50k-node budget, the nets' own solver setting) in
+   `src/alpha_go/boxes/agents.py`; measure both against `boxes-classic` with the paired
+   arena (200 games) and report pair scores and seconds per move.
+2. Investigate a stdio bridge to an external 5x5 engine that runs on Linux (PLAN.md §3):
+   which engines exist, their licences, and a working prototype that plays one game
+   through `alpha_go.boxes.arena` if one is feasible. Windows-only programs are out of
+   scope here.
+
 ## Task 4: tune the search at solver 30 (needs two checkpoints)
 
 Needs `iter15.pt` and `iter54.pt` (about 12 MB each) uploaded to

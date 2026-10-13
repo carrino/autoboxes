@@ -477,6 +477,49 @@ labels would matter most; the replay solved every position from 38 along a game 
 about 2.4 CPU-seconds each with the table carried along the line, far cheaper than the
 labeller's root-plus-children solves (22 CPU-seconds per position at 31..36).
 
+### Why the loop is stalled, and the fix being built (2026-10-13)
+
+Thirty-odd nets trained over two days (gate 1..12, s1600 1..20) tie iteration 0 in the
+arena (pooled pair score 0.48; a promotion needs about 0.68 over 30 pairs, which equal
+nets clear 3..5% of the time, so zero promotions is what equal nets produce). The classic
+column of s1600 is flat at about 0.75 and the band reads are flat. Three measurements say
+why:
+
+1. games are decided at 35..38 undrawn, where the net loses exact margin on two of every
+   three moves (the replay from 38);
+2. there the search cannot reach the solver, so its leaves are scored by the value head,
+   which gets the sign right 64% of the time;
+3. the value head's targets are the outcomes of games both sides misplay in that zone, and
+   training harder on them fits the net's own games and worsens the clean read (the
+   fitting probe).
+
+That is a fixed point: bad play at 35..38 -> noisy outcome targets -> bad value head -> bad
+search at 35..38. More simulations did not break it (s1600). AlphaZero escapes it with
+millions of games; this loop has 100 per iteration, and the solver has only been used at
+<= 30 in play and <= 34 in labels, never in the decisive zone.
+
+**Exact value relabelling** (`alpha_go/boxes/relabel.py`, `relabel_exact.py`, loop knob
+`RELABEL_N`): after each self-play batch, every game is replayed against the solver from
+`RELABEL_N` undrawn edges down, one solver per game with the table carried along the line
+(the replay did 200 games from 38 in 37 CPU-minutes), and every position within reach gets
+its exact final margin as the value target (`exact_margin_p1` in the NPZ, which
+`BoxesDataset` prefers over the outcome). The script also prints how far the outcomes were
+from the exact values by undrawn band: the noise it removes. Tests against the brute-force
+oracle on 2x2 and 2x3, branched games included, in `tests/test_boxes_relabel.py`.
+
+Plan: relabel the s1600 window offline, train iteration 20 on it once, band-read and play
+200 games against classic (the fitting-probe pattern). Pass = value sign on the clean band
+from 0.64 to >= 0.70 or classic clearly above 0.75; then the next run is the s1600 recipe +
+`RELABEL_N=38` + the 7,445 labels from #4 + the #7 solver. Fail = the net cannot represent
+the value function, and the next step is architecture.
+
+A second lead to check first (`target_entropy.py`): iteration 19's candidate took 1.10 s a
+move against the champion's 0.49 at equal simulations and solver, which is what a flatter
+prior does (more distinct leaves, more solver calls), and s1600's policy cross-entropy is
+2.85 against the gate run's 2.6. If the visit-target entropy climbs with iteration, the
+targets are flattening themselves (Dirichlet noise plus temperature-1 visits at a few
+hundred simulations), and the fix is sharper targets and a lower `c_puct`.
+
 ### Solver PR #7 (reviewed 2026-10-13)
 
 Two changes to `boxes_solver.cpp` / `boxes_chains.cpp`: chain walking without temporary
