@@ -1,0 +1,20 @@
+{
+  "a": "boxes-classic",
+  "b": "boxes-ab-d4-s28",
+  "rows": 5,
+  "cols": 5,
+  "games": 200,
+  "seed": 0,
+  "opening_moves": 4,
+  "classic_settings": {
+    "solver_max_undrawn": 26,
+    "probe_node_budget": 16384,
+    "probe_slice_nodes": 1024,
+    "seconds": {
+      "boxes-classic": 1.0,
+      "boxes-classic-fast": 0.1,
+      "boxes-classic-tiny": 0.02
+    }
+  },
+  "extension_sha256": "f4e170317b6d77a1d5a9e66675d6694a376066982fb53242b781665e3c45c441"
+}

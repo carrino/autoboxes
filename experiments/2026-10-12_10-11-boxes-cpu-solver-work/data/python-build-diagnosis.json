@@ -1,0 +1,12 @@
+{
+  "executable": "/workspace/work/cpu-solver/autoboxes/.venv/bin/python",
+  "base_prefix": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python",
+  "LIBDIR": "/install/lib",
+  "LDLIBRARY": "libpython3.12.so",
+  "candidate_libraries": {
+    "/install/lib/libpython3.12.so": false,
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/libpython3.12.so": true,
+    "/usr/lib/x86_64-linux-gnu/libpython3.12.so": false
+  },
+  "Python_h_exists": true
+}

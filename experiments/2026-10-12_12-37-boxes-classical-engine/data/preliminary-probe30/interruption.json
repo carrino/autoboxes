@@ -1,0 +1,9 @@
+{
+  "utc": "2026-10-12T22:00:09.366813+00:00",
+  "reason": "User flagged the 1024-node probe budget at30; preserve preliminary results, calibrate and rerun final matches.",
+  "games_preserved": 116,
+  "stopped_orchestrator": 5441,
+  "stopped_arena": 5445,
+  "baseline_parent_still_running": 5444,
+  "baseline_worker_still_running": 5453
+}

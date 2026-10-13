@@ -1,4 +1,4 @@
-"""Built-in Boxes baselines: random, greedy, and depth-limited alpha-beta.
+"""Built-in Boxes baselines: random, greedy, depth-limited and classical alpha-beta.
 
 All agents play on the C++ `alpha_go_cpp.BoxesBoard` the shared play loop passes in and
 return the chosen edge as lattice (row, col), like Go agents return board coordinates.
@@ -219,3 +219,39 @@ for _depth, _undrawn in ((0, 24), (2, 24), (2, 28), (4, 28)):
     _cls = type(f"BoxesSolverBacked{_depth}s{_undrawn}", (BoxesSolverBackedAgent,),
                 {"depth": _depth, "undrawn": _undrawn})
     register_agent(_name)(_cls)
+
+
+@register_agent("boxes-classic")
+class BoxesClassicAgent(Agent):
+    """One-core iterative-deepening engine: chain evaluation, TT, and probes below 27 edges.
+
+    The default is one second per searched move. Forced captures return immediately;
+    Exact probes retain their table across 1,024-node slices, up to 16,384 nodes,
+    with deadline checks between slices. Unfinished probes fall back to evaluation.
+    """
+
+    seconds = 1.0
+    solver_max_undrawn = 26
+
+    def __init__(self) -> None:
+        self.searcher: Any = None
+        self.shape: tuple[int, int] | None = None
+
+    def start_game(self, board_size: int) -> None:
+        """Begin with fresh tables so arena games cannot benefit from earlier pairs."""
+        self.searcher = None
+        self.shape = None
+
+    def select_move(self, board: Any, seed: int) -> tuple[int, int]:
+        shape = (int(board.rows()), int(board.cols()))
+        if self.searcher is None or self.shape != shape:
+            self.searcher = alpha_go_cpp.BoxesClassic(
+                *shape, self.seconds, self.solver_max_undrawn,
+            )
+            self.shape = shape
+        return lattice(board, int(self.searcher.best_edge(int(board.edges()), seed)))
+
+
+for _name, _seconds in (("fast", 0.1), ("tiny", 0.02)):
+    _cls = type(f"BoxesClassic{_name.title()}", (BoxesClassicAgent,), {"seconds": _seconds})
+    register_agent(f"boxes-classic-{_name}")(_cls)

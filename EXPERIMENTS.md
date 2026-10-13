@@ -350,6 +350,148 @@ with the command above.
 Changed: the next run restores the opening's data (`START_FRACTION=0.25`) and gates
 self-play on the arena champion (`GATE=1`), resuming training from iteration 54.
 
+### The gated restart (`TAG=5x5-gate`, 2026-10-12)
+
+Iterations 55..59 of the chains run under gating (self-play from iteration 15, three
+quarters of games from the empty board) still lost to 15 from random openings (pair score
+0.40..0.45) while their training window was the branched data. Rather than wait eight
+iterations for the window to turn over from weights that carry the drifted opening, the
+run restarts from iteration 15's weights as `5x5-gate/iter0.pt`, with:
+
+- gating (`GATE=1`), a quarter of games branched (`START_FRACTION=0.25`), solver at 30;
+- the search from PR #9: `--shape_terminals 1 --margin_utility_lambda 0.5`, which put the
+  band's searched move at 0.82 for iteration 54 and 0.79 for iteration 15 (from 0.66 /
+  0.68), plus proof propagation and policy temperature 1.0;
+- 200 games per iteration and a 50k solver budget, after timing probes of eight games on
+  an idle machine: the new search costs 1.3 / 1.4 s per move at temperature 1.0 with a
+  100k budget, 1.0 / 0.9 at temperature 0.7 with 50k, and single hard games near the
+  solver boundary run to 2..4 s per move. A reused solver does not slow down across games
+  (its median nodes fall 1154 -> 483 over 900 positions as the table fills), so the cost is
+  the number of boundary solves per move, not accumulated state. Temperature stays at 1.0
+  for the diversity of the policy targets; the budget carries the saving.
+
+Iteration 15 was never especially strong: it tied iterations 8 and 16..21 colour for
+colour. It is the last net trained only on full games, and everything after it lost the
+opening. The question for this run: does a net trained from it, under search targets that
+are about 80% right in the band, beat it in the paired arena from random openings?
+
+Answer after 12 iterations: no. Nothing was promoted, so all self-play came from
+iteration 0 and the run distilled it.
+- **Arena.** Pooled over the 12 arenas (different openings each), the challengers scored
+  171.5 of 360 pairs (0.48, about [0.42, 0.53]), with a mean margin of -0.1.
+- **Clean band read** (`5x5-mid`, 29..34, solver 28, default search). The policy rose from
+  0.390 to 0.41..0.43 by iteration 5 and then stayed flat. The searched move went from
+  0.51 to 0.51..0.53, value sign stayed at 0.62..0.65 (0.637 at iteration 0), and margin
+  MAE went from 3.50 to 3.43.
+
+The weights carry over between iterations (training resumes from the latest), but the
+data never advanced. The ungated chains run (16..55), whose data did advance, stalled at
+the same level. The striking number is the gap between student and teacher: self-play
+targets are about 80% optimal in the band, yet the net's policy is at 42%. Each iteration
+trains for 2 epochs (about 400 steps, 30..70 s, from a fresh optimizer and cosine
+schedule), so the first thing to rule out is underfitting: train iteration 12 on its own
+window to convergence and band-read it.
+
+Underfitting ruled out (`5x5-fit/iter1`: iteration 12 trained for 20 epochs, 4,080 steps,
+on its own window).
+- **Policy.** The policy loss stayed at 2.55..2.65 nats the whole time, and policy accuracy
+  stayed at 0.357 (train) / 0.366 (val). The policy already matches its diffuse targets
+  (temperature-1 visits plus 0.1 label smoothing) as closely as this net can.
+- **Value.** The value fit its own games much better: value accuracy went 0.65 -> 0.76
+  (train) and 0.63 -> 0.74 (val, held-out games from the same window). On the clean band,
+  though, value sign fell 0.643 -> 0.610, margin MAE rose 3.43 -> 3.52, and the policy
+  stayed at 0.427.
+
+More training fits the outcomes and the position distribution of iteration 0's own games,
+not the true values. The game-split validation set shares that distribution (one champion,
+branched games with shared prefixes), so it overstates generalisation. The bottleneck is
+the targets, not the amount of training.
+
+### First absolute yardstick: the classical engine (PR #6)
+
+`boxes-classic` is one-second iterative-deepening alpha-beta with a chain/control evaluation
+and exact probes at 26 undrawn or fewer. In 200-game paired matches it scores 0.935 against
+`boxes-ab-d6`. Against it, `5x5-gate/iter12` (400 simulations, solver 30 with a 50k budget,
+the #9 search) played 200 games:
+
+- **Games:** 135-65, a win rate of 0.675 [0.61, 0.74]. It won 0.69 as first player and 0.66
+  as second.
+- **Pairs and margin:** pair score 0.585 [0.49, 0.68], mean margin +0.26 ± 6.6.
+- **Time:** 0.16 s per move, against classic's 0.42.
+
+The net wins two games in three, but the margin is even: its wins are narrow and its losses
+are large. Two causes look likely. The margin utility makes the net value winning over
+margin. And a lost control fight costs most of the long chains.
+
+`arena --save_games` with `arena_exact.py` replays the games against the solver from 34
+undrawn edges. It reports whether each loss was already decided when the game came within
+reach, or was given away inside it. The 31..36 labels can only fix the second kind.
+
+**Replay of a rerun from the same 200 openings.** The net won 146-54 (0.73 [0.67, 0.79]);
+the self-play loop shared the CPU part of the time, which slows the timed engine. Games were
+replayed against the solver from 34 undrawn edges (13 s for all 200):
+
+| net's result | games | net winning at 34 | mean exact margin at 34 | net error boxes | classic error boxes | final margin |
+|---|---|---|---|---|---|---|
+| won | 146 | 0.98 | +4.92 | 1.14 | 0.75 | +4.53 |
+| lost | 54 | 0.11 | -4.67 | 3.19 | 0.33 | -7.52 |
+
+- **Where the games are decided: above 34 undrawn edges.** 48 of the 54 losses were already
+  lost at 34, and only 6 were thrown away inside the reach. Likewise, 143 of the 146 wins
+  were already won at 34. Both sides' results come from the midgame control fight, and the
+  net wins it about three times in four.
+- **Inside the reach, classic plays better than the net.** The net gives away 1.7 boxes a
+  game against classic's 0.6. Its error moves fall at 34 (43), 33 (23) and 32 (7), none
+  lower: below 32 its search reaches the solver at 30. Classic's full-width alpha-beta is
+  more accurate four edges above the net's solver than 400 simulations of the net are.
+- **The net loses big because it plays lost positions badly** (3.2 error boxes in lost
+  games, 1.1 in won ones). With the win term dominating the utility, there is little
+  incentive to fight for margin once the game is lost.
+
+What follows: the 31..36 labels and more solver reach can repair the 32..34 errors (margin,
+plus about 6 of 54 losses). Most of the losses happen above 34. Replaying from 38 undrawn
+shows how much higher they happen.
+
+**Replay from 38 undrawn** (2,196 s on two workers, 100M-node budget, nothing skipped):
+
+| net's result | games | net winning at 38 | mean exact margin at 38 | net error boxes | classic error boxes | final margin |
+|---|---|---|---|---|---|---|
+| won | 146 | 0.58 | +0.48 | 5.85 | 9.90 | +4.53 |
+| lost | 54 | 0.30 | -2.33 | 10.96 | 5.78 | -7.52 |
+| all | 200 | 0.50 | -0.28 | 7.23 | 8.79 | +1.28 |
+
+- **The games are decided between 38 and 34 undrawn edges.** At 38 the net is winning in
+  half the games (mean exact margin -0.3); at 34 it is winning in three quarters. 62 of the
+  146 wins were lost positions at 38, and 16 of the 54 losses were won ones.
+- **Both players play that zone badly, the net less badly.** From 38 to 35 the net gives
+  away 5.5 boxes a game and classic 8.2. The net's error moves by undrawn count: 38: 74,
+  37: 65, 36: 65, 35: 33, 34: 43, 33: 23, 32: 7. About 100 of the 200 games have the net
+  to move at a given count, so at 36..38 roughly two thirds of its moves lose exact margin,
+  one third at 34..35, and almost none from 32 down, where the search reaches the solver.
+- **So the net's edge over classic is the 35..38 zone,** and its remaining losses are
+  mostly decided there too: 38 of 54 were already lost at 38, and those positions reached
+  38 through the same zone of a previous capture fight.
+
+The 31..36 labels cover the lower half of the zone. The upper half, 36..40, is where exact
+labels would matter most; the replay solved every position from 38 along a game line at
+about 2.4 CPU-seconds each with the table carried along the line, far cheaper than the
+labeller's root-plus-children solves (22 CPU-seconds per position at 31..36).
+
+### Solver PR #7 (reviewed 2026-10-13)
+
+Two changes to `boxes_solver.cpp` / `boxes_chains.cpp`: chain walking without temporary
+vectors, and transposition entries that keep both proven bounds (the entry stays 16 bytes;
+`lower`/`upper` replace the single value for cutoffs, `value` stays the MTD(f) guess).
+Cutoffs read `lower >= beta` / `upper <= alpha`, bounds only tighten, and an exact entry
+sets `lower == upper`. Every one of 6,000 benchmark values is unchanged; the new
+`test_boxes_solver_bounds.py` checks tiny tables (2 entries, so constant collisions),
+budget restarts and symmetric images against the oracle. Merged into this branch on
+2026-10-13 together with the label reports (#4, #8): builds, 417 tests pass. Gain: 1.4x at
+equal nodes (15..17% fewer nodes), memory unchanged. Solver 32 still costs 2.5..3.7x solver
+30, so `SOLVER_N` stays at 30. The 7,445 labels from #4 (`5x5-oracle-31-36`) are the set to
+train on; #8's 2,891 were sampled from the same games with the same seed and are a prefix
+of them.
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
@@ -375,12 +517,30 @@ from 0.61 to 0.69. Whether the solver already gets that on its own (it merges th
 independent chains) is the next measurement: nodes by largest-region size at a fixed
 undrawn count (`--solver-nodes`).
 
-A first look on local games between depth-4 alpha-beta agents (their boards fragment more:
-96% split at 30 undrawn, largest region median 16 edges): at 30 undrawn the solver's median
-nodes go from about 630 with a largest region of 10 edges to 2,860 unsplit. Four to five
-times, where solving a 10-edge region alone costs a few dozen nodes. So the solver gets
-little of the split's benefit; the interaction between regions is what it pays for. These
-positions are easy for it; the real read is on the `5x5-mid` positions.
+A first look on local games between depth-4 alpha-beta agents suggested the solver gets
+little of the split's benefit. That was wrong: those positions are fragmented and easy. The
+real read, on `5x5-mid` positions (cloud agent, `experiments/2026-10-12_10-11-boxes-cpu-solver-work/`,
+fresh table per position):
+
+| undrawn | largest region | median nodes | p90 nodes |
+|---|---|---|---|
+| 30 | 10 to 14 | 1,000 to 2,600 | 2,000 to 5,900 |
+| 30 | 20 | 4,166 | 7,312 |
+| 30 | 30 (unsplit) | 20,481 | 167,777 |
+| 32 | 12 to 16 | 4,000 to 7,900 | 5,600 to 23,000 |
+| 32 | 20 | 10,205 | 19,000 |
+| 32 | 32 (unsplit) | 88,469 | 573,373 |
+
+At a fixed undrawn count the solver already runs five to nine times cheaper when the board
+has split, so it captures much of the split's benefit by itself. The expensive positions,
+the ones that set the node budget, are the unsplit or nearly unsplit ones, which
+decomposition cannot help. Self-play positions (warm table across positions, solver_bench):
+median 4.5k / 22k / 113k nodes at 30 / 32 / 34 undrawn, 97% / 86% / 71% settled within 200k
+nodes, about five times the nodes per two edges.
+
+Changed: the solver work aims at single-region search first (ordering, Nimstring and
+controlled-value bounds, the table), and measures what decomposition could still add by
+timing the largest region alone against the whole position before building it.
 
 ## What we believe now
 

@@ -181,18 +181,21 @@ class TestAgent:
         add_search_flags(parser)
         defaults = search_flags(parser.parse_args([]))
         assert defaults == ({"c_puct": 1.5, "leaf_batch_size": 16, "prove_terminals": False,
-                             "solver_table_entries": 1 << 20},
+                             "solver_table_entries": 1 << 20, "shape_terminals": False},
                             {"policy_temperature": 1.0, "margin_utility_lambda": 0.0,
                              "margin_utility_k": 6.0})
         mcts, evaluator = search_flags(parser.parse_args(
             ["--c_puct", "2.5", "--leaf_batch_size", "4", "--policy_temperature", "0.7",
              "--margin_utility_lambda", "0.75", "--margin_utility_k", "3",
-             "--prove_terminals", "1", "--solver_table_entries", "4096"]))
+             "--prove_terminals", "1", "--shape_terminals", "1",
+             "--solver_table_entries", "4096"]))
         name = register_boxes_mcts_agent("boxes-mcts-test-flags", path, 2, 3, device="cpu",
                                          num_simulations=4, evaluator_kwargs=evaluator, **mcts)
         agent = get_agent(name)
         assert (agent.cpp_config.c_puct, agent.leaf_batch_size) == (2.5, 4)
         assert agent.cpp_config.prove_terminals is True and agent.solver_table_entries == 4096
+        assert agent.cpp_config.terminal_margin_lambda == 0.75
+        assert agent.cpp_config.terminal_margin_k == 3.0
         assert (agent.evaluator.policy_temperature, agent.evaluator.margin_utility_lambda,
                 agent.evaluator.margin_utility_k) == (0.7, 0.75, 3.0)
         board = alpha_go_cpp.BoxesBoard(2, 3)

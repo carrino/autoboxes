@@ -1,0 +1,74 @@
+{
+  "name": "5x5-oracle-31-36",
+  "requested": 2947,
+  "budget": 20000000,
+  "seed": 1,
+  "workers": 2,
+  "wall_seconds": 28971.492193074,
+  "labelled": 2891,
+  "skipped": 56,
+  "shards": [
+    {
+      "shard": 0,
+      "labelled": 1448,
+      "skipped": 26,
+      "solve_seconds": 26970,
+      "files": 16
+    },
+    {
+      "shard": 1,
+      "labelled": 1443,
+      "skipped": 30,
+      "solve_seconds": 28938,
+      "files": 16
+    }
+  ],
+  "commands": [
+    [
+      "/workspace/work/exact-labels/.venv/bin/python",
+      "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py",
+      "--positions-tag",
+      "5x5-chains",
+      "--min-undrawn",
+      "31",
+      "--max-undrawn",
+      "36",
+      "--num-positions",
+      "2947",
+      "--node-budget",
+      "20000000",
+      "--save-name",
+      "5x5-oracle-31-36",
+      "--shard",
+      "0",
+      "--num-shards",
+      "2",
+      "--seed",
+      "1"
+    ],
+    [
+      "/workspace/work/exact-labels/.venv/bin/python",
+      "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py",
+      "--positions-tag",
+      "5x5-chains",
+      "--min-undrawn",
+      "31",
+      "--max-undrawn",
+      "36",
+      "--num-positions",
+      "2947",
+      "--node-budget",
+      "20000000",
+      "--save-name",
+      "5x5-oracle-31-36",
+      "--shard",
+      "1",
+      "--num-shards",
+      "2",
+      "--seed",
+      "1"
+    ]
+  ],
+  "output": "/workspace/work/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36",
+  "state": "complete"
+}

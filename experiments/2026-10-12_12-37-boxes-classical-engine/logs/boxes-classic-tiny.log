@@ -1,0 +1,21 @@
+boxes-classic vs boxes-classic-tiny: 10/200, wall_seconds=128.5
+boxes-classic vs boxes-classic-tiny: 20/200, wall_seconds=254.5
+boxes-classic vs boxes-classic-tiny: 30/200, wall_seconds=377.2
+boxes-classic vs boxes-classic-tiny: 40/200, wall_seconds=502.6
+boxes-classic vs boxes-classic-tiny: 50/200, wall_seconds=626.4
+boxes-classic vs boxes-classic-tiny: 60/200, wall_seconds=747.9
+boxes-classic vs boxes-classic-tiny: 70/200, wall_seconds=865.4
+boxes-classic vs boxes-classic-tiny: 80/200, wall_seconds=989.5
+boxes-classic vs boxes-classic-tiny: 90/200, wall_seconds=1113.3
+boxes-classic vs boxes-classic-tiny: 100/200, wall_seconds=1231.4
+boxes-classic vs boxes-classic-tiny: 110/200, wall_seconds=1351.5
+boxes-classic vs boxes-classic-tiny: 120/200, wall_seconds=1470.4
+boxes-classic vs boxes-classic-tiny: 130/200, wall_seconds=1591.0
+boxes-classic vs boxes-classic-tiny: 140/200, wall_seconds=1717.6
+boxes-classic vs boxes-classic-tiny: 150/200, wall_seconds=1841.4
+boxes-classic vs boxes-classic-tiny: 160/200, wall_seconds=1961.6
+boxes-classic vs boxes-classic-tiny: 170/200, wall_seconds=2087.1
+boxes-classic vs boxes-classic-tiny: 180/200, wall_seconds=2212.4
+boxes-classic vs boxes-classic-tiny: 190/200, wall_seconds=2330.5
+boxes-classic vs boxes-classic-tiny: 200/200, wall_seconds=2451.6
+{"a": "boxes-classic", "b": "boxes-classic-tiny", "board": "5x5", "games": 200, "a_wins": 183, "b_wins": 17, "draws": 0, "a_win_rate": 0.915, "a_win_rate_ci95": "[0.868, 0.946]", "a_first_win_rate": 0.92, "a_second_win_rate": 0.91, "a_pair_score": 0.955, "a_pair_score_ci95": "[0.895, 0.981]", "a_mean_margin": 7.55, "a_margin_std": 5.678, "a_sec_per_move": 0.3714, "b_sec_per_move": 0.0128}

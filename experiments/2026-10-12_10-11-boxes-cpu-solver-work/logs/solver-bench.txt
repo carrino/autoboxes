@@ -1,0 +1,5 @@
+BoxesSolver 5x5: table 4194304 entries = 67.1 MB; positions from /workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-mid
+N=30: 200 positions, ms p50 10.616 p99 713.67 max 1475.149; nodes p50 4488 p99 386695 max 779741; solved within 2000: 0.285, 20000: 0.8, 200000: 0.975
+N=32: 200 positions, ms p50 52.041 p99 3236.101 max 3662.635; nodes p50 22322 p99 1632968 max 1996706; solved within 2000: 0.015, 20000: 0.475, 200000: 0.86
+N=34: 200 positions, ms p50 372.928 p99 5377.777 max 14029.185; nodes p50 112709 p99 2706182 max 7510664; solved within 2000: 0.0, 20000: 0.02, 200000: 0.71
+wrote /workspace/work/cpu-solver/autoboxes/experiments/2026-10-08_14-42-boxes-3x3-loop/data/solver_bench-5x5-mid.csv

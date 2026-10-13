@@ -1,0 +1,21 @@
+boxes-classic vs boxes-ab-d6: 10/200, wall_seconds=307.6
+boxes-classic vs boxes-ab-d6: 20/200, wall_seconds=676.9
+boxes-classic vs boxes-ab-d6: 30/200, wall_seconds=1062.4
+boxes-classic vs boxes-ab-d6: 40/200, wall_seconds=1353.3
+boxes-classic vs boxes-ab-d6: 50/200, wall_seconds=1762.1
+boxes-classic vs boxes-ab-d6: 60/200, wall_seconds=2113.6
+boxes-classic vs boxes-ab-d6: 70/200, wall_seconds=2412.3
+boxes-classic vs boxes-ab-d6: 80/200, wall_seconds=2738.2
+boxes-classic vs boxes-ab-d6: 90/200, wall_seconds=3203.2
+boxes-classic vs boxes-ab-d6: 100/200, wall_seconds=3600.6
+boxes-classic vs boxes-ab-d6: 110/200, wall_seconds=4068.6
+boxes-classic vs boxes-ab-d6: 120/200, wall_seconds=4637.5
+boxes-classic vs boxes-ab-d6: 130/200, wall_seconds=4984.3
+boxes-classic vs boxes-ab-d6: 140/200, wall_seconds=5401.3
+boxes-classic vs boxes-ab-d6: 150/200, wall_seconds=5913.6
+boxes-classic vs boxes-ab-d6: 160/200, wall_seconds=6322.0
+boxes-classic vs boxes-ab-d6: 170/200, wall_seconds=6721.0
+boxes-classic vs boxes-ab-d6: 180/200, wall_seconds=7164.7
+boxes-classic vs boxes-ab-d6: 190/200, wall_seconds=7551.1
+boxes-classic vs boxes-ab-d6: 200/200, wall_seconds=7941.0
+{"a": "boxes-classic", "b": "boxes-ab-d6", "board": "5x5", "games": 200, "a_wins": 180, "b_wins": 20, "draws": 0, "a_win_rate": 0.9, "a_win_rate_ci95": "[0.851, 0.934]", "a_first_win_rate": 0.9, "a_second_win_rate": 0.9, "a_pair_score": 0.935, "a_pair_score_ci95": "[0.869, 0.969]", "a_mean_margin": 6.17, "a_margin_std": 5.326, "a_sec_per_move": 0.3605, "b_sec_per_move": 1.1636}

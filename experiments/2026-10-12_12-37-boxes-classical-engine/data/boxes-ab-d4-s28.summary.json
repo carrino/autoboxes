@@ -1,0 +1,19 @@
+{
+  "a": "boxes-classic",
+  "b": "boxes-ab-d4-s28",
+  "board": "5x5",
+  "games": 200,
+  "a_wins": 182,
+  "b_wins": 18,
+  "draws": 0,
+  "a_win_rate": 0.91,
+  "a_win_rate_ci95": "[0.862, 0.942]",
+  "a_first_win_rate": 0.93,
+  "a_second_win_rate": 0.89,
+  "a_pair_score": 0.94,
+  "a_pair_score_ci95": "[0.875, 0.972]",
+  "a_mean_margin": 7.28,
+  "a_margin_std": 5.337,
+  "a_sec_per_move": 0.3564,
+  "b_sec_per_move": 0.0471
+}

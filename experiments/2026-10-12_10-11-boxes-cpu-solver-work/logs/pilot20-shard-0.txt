@@ -1,0 +1,4 @@
+100 positions with 31..36 undrawn edges (shard 0 of 4) sampled in 45s
+BoxesSolver table 67 MB, node budget 20000000
+99 positions labelled (1 skipped on budget) in 1669s; 12 files under /workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36-pilot
+margins (player 1): -11: 1, -9: 7, -7: 5, -5: 17, -3: 22, -1: 22, +1: 15, +3: 2, +5: 4, +7: 1, +9: 2, +11: 1

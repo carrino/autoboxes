@@ -1,0 +1,48 @@
+{
+  "parent": "dev-lambda05",
+  "candidates": {
+    "dev-cpuct3": {
+      "c_puct": 3.0
+    },
+    "dev-policy07": {
+      "policy_temperature": 0.7
+    },
+    "dev-batch4": {
+      "leaf_batch_size": 4
+    },
+    "dev-unshaped05": {
+      "shape_terminals": false
+    }
+  },
+  "retained": "dev-lambda05",
+  "diagnostics": [
+    "dev-unshaped05"
+  ],
+  "rule": "Require at least 9 additional correct moves out of 300; otherwise retain parent.",
+  "results": [
+    {
+      "name": "dev-cpuct3",
+      "correct": 217,
+      "delta": -1,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-policy07",
+      "correct": 206,
+      "delta": -12,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-batch4",
+      "correct": 216,
+      "delta": -2,
+      "decision": "discard"
+    },
+    {
+      "name": "dev-unshaped05",
+      "correct": 176,
+      "delta": -42,
+      "decision": "diagnostic"
+    }
+  ]
+}

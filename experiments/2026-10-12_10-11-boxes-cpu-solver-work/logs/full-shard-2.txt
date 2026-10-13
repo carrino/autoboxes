@@ -1,0 +1,5 @@
+1903 positions with 31..36 undrawn edges (shard 2 of 4) sampled in 34s
+BoxesSolver table 67 MB, node budget 20000000
+  1000/1903 solved, 15 skipped, 18241s
+1863 positions labelled (40 skipped on budget) in 35690s; 16 files under /workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36
+margins (player 1): -15: 3, -13: 5, -11: 13, -9: 72, -7: 115, -5: 255, -3: 376, -1: 398, +1: 260, +3: 152, +5: 110, +7: 54, +9: 24, +11: 17, +13: 8, +15: 1

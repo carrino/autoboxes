@@ -1,0 +1,216 @@
+100/1400 development positions
+200/1400 development positions
+300/1400 development positions
+400/1400 development positions
+500/1400 development positions
+600/1400 development positions
+700/1400 development positions
+800/1400 development positions
+900/1400 development positions
+1000/1400 development positions
+1100/1400 development positions
+1200/1400 development positions
+1300/1400 development positions
+1400/1400 development positions
+{
+  "summaries": [
+    {
+      "undrawn": 24,
+      "budget": 4096,
+      "positions": 103,
+      "solved_share": 0.912621359223301,
+      "median_ms": 3.695509,
+      "p90_ms": 17.382487599999997,
+      "max_ms": 34.860823
+    },
+    {
+      "undrawn": 24,
+      "budget": 16384,
+      "positions": 103,
+      "solved_share": 0.9902912621359223,
+      "median_ms": 3.143079,
+      "p90_ms": 19.5310152,
+      "max_ms": 76.103978
+    },
+    {
+      "undrawn": 24,
+      "budget": 65536,
+      "positions": 103,
+      "solved_share": 1.0,
+      "median_ms": 3.841885,
+      "p90_ms": 17.9125436,
+      "max_ms": 168.489451
+    },
+    {
+      "undrawn": 25,
+      "budget": 4096,
+      "positions": 88,
+      "solved_share": 0.8181818181818182,
+      "median_ms": 7.114145499999999,
+      "p90_ms": 21.032996400000002,
+      "max_ms": 30.641304
+    },
+    {
+      "undrawn": 25,
+      "budget": 16384,
+      "positions": 88,
+      "solved_share": 0.9886363636363636,
+      "median_ms": 7.0595735,
+      "p90_ms": 32.73159639999998,
+      "max_ms": 87.452055
+    },
+    {
+      "undrawn": 25,
+      "budget": 65536,
+      "positions": 88,
+      "solved_share": 1.0,
+      "median_ms": 7.819543,
+      "p90_ms": 34.8227446,
+      "max_ms": 135.024158
+    },
+    {
+      "undrawn": 26,
+      "budget": 4096,
+      "positions": 109,
+      "solved_share": 0.7522935779816514,
+      "median_ms": 6.770384,
+      "p90_ms": 22.1938758,
+      "max_ms": 53.993439
+    },
+    {
+      "undrawn": 26,
+      "budget": 16384,
+      "positions": 109,
+      "solved_share": 0.981651376146789,
+      "median_ms": 8.174783,
+      "p90_ms": 43.81509160000001,
+      "max_ms": 91.88068
+    },
+    {
+      "undrawn": 26,
+      "budget": 65536,
+      "positions": 109,
+      "solved_share": 1.0,
+      "median_ms": 7.272912,
+      "p90_ms": 44.499586,
+      "max_ms": 688.995826
+    },
+    {
+      "undrawn": 27,
+      "budget": 4096,
+      "positions": 132,
+      "solved_share": 0.6212121212121212,
+      "median_ms": 12.284897,
+      "p90_ms": 24.3817996,
+      "max_ms": 37.444809
+    },
+    {
+      "undrawn": 27,
+      "budget": 16384,
+      "positions": 132,
+      "solved_share": 0.8636363636363636,
+      "median_ms": 12.887867,
+      "p90_ms": 73.2867117,
+      "max_ms": 131.560711
+    },
+    {
+      "undrawn": 27,
+      "budget": 65536,
+      "positions": 132,
+      "solved_share": 0.9545454545454546,
+      "median_ms": 13.1796225,
+      "p90_ms": 121.60480320000002,
+      "max_ms": 618.671997
+    },
+    {
+      "undrawn": 28,
+      "budget": 4096,
+      "positions": 304,
+      "solved_share": 0.4769736842105263,
+      "median_ms": 18.597734000000003,
+      "p90_ms": 26.756542699999997,
+      "max_ms": 207.224975
+    },
+    {
+      "undrawn": 28,
+      "budget": 16384,
+      "positions": 304,
+      "solved_share": 0.7269736842105263,
+      "median_ms": 25.194389,
+      "p90_ms": 85.7886991,
+      "max_ms": 151.422501
+    },
+    {
+      "undrawn": 28,
+      "budget": 65536,
+      "positions": 304,
+      "solved_share": 0.9046052631578947,
+      "median_ms": 25.063350999999997,
+      "p90_ms": 247.89390429999955,
+      "max_ms": 718.571697
+    },
+    {
+      "undrawn": 29,
+      "budget": 4096,
+      "positions": 327,
+      "solved_share": 0.290519877675841,
+      "median_ms": 20.404851,
+      "p90_ms": 27.1062796,
+      "max_ms": 57.750401
+    },
+    {
+      "undrawn": 29,
+      "budget": 16384,
+      "positions": 327,
+      "solved_share": 0.45871559633027525,
+      "median_ms": 71.803907,
+      "p90_ms": 96.98272280000002,
+      "max_ms": 290.019251
+    },
+    {
+      "undrawn": 29,
+      "budget": 65536,
+      "positions": 327,
+      "solved_share": 0.7828746177370031,
+      "median_ms": 101.700485,
+      "p90_ms": 333.4718892,
+      "max_ms": 1425.451217
+    },
+    {
+      "undrawn": 30,
+      "budget": 4096,
+      "positions": 337,
+      "solved_share": 0.1661721068249258,
+      "median_ms": 21.172177,
+      "p90_ms": 29.325050600000004,
+      "max_ms": 59.101039
+    },
+    {
+      "undrawn": 30,
+      "budget": 16384,
+      "positions": 337,
+      "solved_share": 0.4065281899109792,
+      "median_ms": 74.870545,
+      "p90_ms": 98.526134,
+      "max_ms": 416.033106
+    },
+    {
+      "undrawn": 30,
+      "budget": 65536,
+      "positions": 337,
+      "solved_share": 0.6913946587537092,
+      "median_ms": 139.960072,
+      "p90_ms": 359.45591,
+      "max_ms": 726.135444
+    }
+  ],
+  "choice": {
+    "threshold": 26,
+    "budget": 16384,
+    "slice_nodes": 1024,
+    "rule": "prefer threshold26 (then25,24), smallest cumulative budget4096/16384/65536 with >=90% solved at each sampled count24..threshold; development only",
+    "positions": 1400,
+    "seed": 73,
+    "fresh_tables": true
+  }
+}

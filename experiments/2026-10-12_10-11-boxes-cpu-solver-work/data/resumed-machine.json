@@ -1,0 +1,19 @@
+{
+  "timestamp_utc": "2026-10-12T19:08:17.774293+00:00",
+  "nproc": 5,
+  "memory_bytes": {
+    "MemTotal": 18932244480,
+    "MemFree": 15149719552,
+    "MemAvailable": 17924165632
+  },
+  "cgroup_memory_limit_bytes": 17179869184,
+  "cgroup_memory_current_bytes": 3288444928,
+  "conservative_free_GB": 13.891424256,
+  "memory_process_cap": 23,
+  "N": 4,
+  "GAME_DATA_DIR": "/workspace/autoboxes-data/game_data_root",
+  "game_counts": {
+    "5x5-chains": 24474,
+    "5x5-mid": 1714
+  }
+}

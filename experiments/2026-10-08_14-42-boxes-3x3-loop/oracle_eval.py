@@ -243,7 +243,23 @@ def main() -> None:
                              "search_flags": json.dumps({**mcts_flags, **evaluator_flags}),
                              "positions_tag": positions_tag,
                              "solver_max_undrawn": args.solver_max_undrawn})
-    print(f"wrote {out}")
+    # Every read is also appended to a log, so reads of new checkpoints accumulate and
+    # analyze.py can show the trend.
+    log_path = EXP_DIR / "data" / f"oracle_reads-{tag}.csv"
+    new_log = not log_path.exists()
+    with log_path.open("a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["read_at", *fields])
+        if new_log:
+            writer.writeheader()
+        read_at = time.strftime("%Y-%m-%d %H:%M")
+        for row in rows_out:
+            writer.writerow({**row, "read_at": read_at, "num_positions": len(boards),
+                             "min_undrawn": args.min_undrawn, "max_undrawn": args.max_undrawn,
+                             "num_simulations": args.num_simulations,
+                             "search_flags": json.dumps({**mcts_flags, **evaluator_flags}),
+                             "positions_tag": positions_tag,
+                             "solver_max_undrawn": args.solver_max_undrawn})
+    print(f"wrote {out}, appended to {log_path.name}")
 
 
 if __name__ == "__main__":

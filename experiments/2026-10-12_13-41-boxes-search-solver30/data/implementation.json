@@ -1,0 +1,8 @@
+{
+  "src/alpha_go/boxes/nn_agent.py": "62bc8459e592f578b9b4c12bd8f5118790a99265b94236c016ed342c319f400d",
+  "src/alpha_go/boxes/utility.py": "cbf87db89db651a12335952bd3f7d8994b7968de35070933dfd4467d6ede7542",
+  "src/alpha_go/cpp/boxes/boxes_utility.h": "c70e09b7f1825f5d9153a5b722955f3ebe626a4d2af194f85e6b67f3f472ca9d",
+  "src/alpha_go/cpp/mcts/mcts.h": "2f97f6491a567ebaa890029e21985d4b9678923b44daa1760ba9d6d3c520a9ed",
+  "src/alpha_go/cpp/mcts/mcts.cpp": "31f6171377516ee29329437b10b411015560e39c77da5736186fdf1d1f138535",
+  "src/alpha_go/cpp/bindings/bindings.cpp": "cc0005358c1fbefc7a255f03fe0a3d01d5f58ba56be4b9ad6d861b4706f27162"
+}

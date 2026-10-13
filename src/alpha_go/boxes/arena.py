@@ -8,6 +8,8 @@ advantage of an opening cancels inside the pair. The pair score (share of pairs 
 summed margin) is the strength signal; the per-colour win rates show how much colour decides.
 With --start_positions the pairs start instead from stored games cut where --start_undrawn
 edges remain (self-play's branching sampler), which isolates the middle game from the opening.
+--save_games writes every game's moves (opening included) as JSON lines, for replaying the games
+against the exact solver.
 
     uv run -m alpha_go.boxes.arena --rows 3 --a boxes-ab-d4 --b boxes-greedy --num_games 20
 """
@@ -19,7 +21,7 @@ import math
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -44,6 +46,8 @@ class MatchResult:
     margins: list[int]  # final margin for A, one per game; A moves first in the even games
     a_seconds_per_move: float
     b_seconds_per_move: float
+    moves: list[list[tuple[int, int]]] = field(default_factory=list)  # per game, opening included
+    openings: list[list[tuple[int, int]]] = field(default_factory=list)  # per pair
 
     @property
     def a_win_rate(self) -> float:
@@ -145,6 +149,14 @@ def _one_game(
 
     Returns (margin for A, A seconds, A moves, B seconds, B moves).
     """
+    return _play_one(a, b, rows, cols, index, seed, start_moves)[0]
+
+
+def _play_one(
+    a: str, b: str, rows: int, cols: int, index: int, seed: int,
+    start_moves: list[tuple[int, int]] | None = None,
+) -> tuple[tuple[int, float, int, float, int], list[tuple[int, int]]]:
+    """`_one_game`'s statistics plus every move of the game, opening included."""
     agent_a, agent_b = _agents(a, b)
     a_first = index % 2 == 0
     first, second = (agent_a, agent_b) if a_first else (agent_b, agent_a)
@@ -160,7 +172,7 @@ def _one_game(
     black = (record.black_move_seconds, record.black_move_count)
     white = (record.white_move_seconds, record.white_move_count)
     (a_sec, a_moves), (b_sec, b_moves) = (black, white) if a_first else (white, black)
-    return a_margin, a_sec, a_moves, b_sec, b_moves
+    return (a_margin, a_sec, a_moves, b_sec, b_moves), [*record.start_moves, *record.moves]
 
 
 def play_match(
@@ -184,9 +196,11 @@ def play_match(
     every = max(1, num_games // 10)
     with ThreadPoolExecutor(max_workers=num_workers) as pool:
         results = []
-        for r in pool.map(lambda i: _one_game(a, b, rows, cols, i, seed, openings[i // 2]),
-                          range(num_games)):
+        games = []
+        for r, moves in pool.map(lambda i: _play_one(a, b, rows, cols, i, seed, openings[i // 2]),
+                                 range(num_games)):
             results.append(r)
+            games.append(moves)
             if len(results) % every == 0:
                 wins = sum(x[0] > 0 for x in results)
                 print(f"  {a} vs {b}: {len(results)}/{num_games} games, {wins} A wins, "
@@ -198,13 +212,15 @@ def play_match(
         a=a, b=b, rows=rows, cols=cols, games=num_games,
         a_wins=sum(m > 0 for m in margins), b_wins=sum(m < 0 for m in margins),
         draws=sum(m == 0 for m in margins), margins=margins,
-        a_seconds_per_move=a_sec, b_seconds_per_move=b_sec,
+        a_seconds_per_move=a_sec, b_seconds_per_move=b_sec, moves=games, openings=openings,
     )
 
 
 def register_checkpoint(name: str, args: argparse.Namespace) -> None:
     """`ckpt:<path>` names become MCTS agents on that checkpoint, one shared GPU engine
-    per checkpoint across the game threads, with the search flags of the CLI."""
+    per checkpoint across the game threads, with the search flags of the CLI.
+    `ckpt:<path>@<sims>` overrides --sims for that agent, so one checkpoint can play itself
+    at two search budgets."""
     from alpha_go.boxes.inference import PlaneBatchedEngine
     from alpha_go.boxes.nn_agent import (
         load_boxes_net,
@@ -213,13 +229,13 @@ def register_checkpoint(name: str, args: argparse.Namespace) -> None:
         search_flags,
     )
     device = pick_device("cpu" if args.cpu else None)
-    path = name[len("ckpt:"):]
+    path, _, sims = name[len("ckpt:"):].partition("@")
     engine = PlaneBatchedEngine(load_boxes_net(path, device), device, batch_size=64)
     engine.start()
     mcts_flags, evaluator_flags = search_flags(args)
     # Greedy from the first searched move: the random opening of the pair gives the variety.
     register_boxes_mcts_agent(name, path, args.rows, args.cols, engine=engine,
-                              num_simulations=args.sims, temperature=1.0,
+                              num_simulations=int(sims or args.sims), temperature=1.0,
                               temperature_cutoff=0,
                               solver_max_undrawn=args.solver,
                               solver_node_budget=args.solver_budget,
@@ -230,8 +246,8 @@ def register_checkpoint(name: str, args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Boxes arena: agent A vs agent B")
     parser.add_argument("--a", required=True,
-                        help="Registered agent name, or ckpt:<path> for an MCTS agent on it")
-    parser.add_argument("--b", required=True, help="Registered agent name or ckpt:<path>")
+                        help="Registered agent name, or ckpt:<path>[@<sims>] for an MCTS agent")
+    parser.add_argument("--b", required=True, help="Registered agent name or ckpt:<path>[@<sims>]")
     parser.add_argument("--rows", type=int, default=5)
     parser.add_argument("--cols", type=int, default=None)
     parser.add_argument("--num_games", type=int, default=20)
@@ -249,6 +265,8 @@ def main() -> None:
                         help="games directory under $GAME_DATA_DIR to start the pairs from")
     parser.add_argument("--start_undrawn", type=int, nargs=2, default=[36, 40],
                         help="with --start_positions: cut the stored games here (min max)")
+    parser.add_argument("--save_games", default=None,
+                        help="write each game's moves and A's margin as JSON lines to this file")
     parser.add_argument("--cpu", action="store_true")
     from alpha_go.boxes.nn_agent import add_search_flags
     add_search_flags(parser)
@@ -272,6 +290,13 @@ def main() -> None:
         f"{summary['a_pair_score_ci95']}; A mean margin {summary['a_mean_margin']} "
         f"± {summary['a_margin_std']}"
     )
+    if args.save_games:
+        with open(args.save_games, "w") as f:
+            for i, (margin, moves) in enumerate(zip(result.margins, result.moves)):
+                f.write(json.dumps({"index": i, "a_first": i % 2 == 0, "a_margin": margin,
+                                    "opening": len(result.openings[i // 2]),
+                                    "moves": [[int(r), int(c)] for r, c in moves]}) + "\n")
+        print(f"wrote {len(result.moves)} games to {args.save_games}")
     print("===RESULT===")
     print(json.dumps(summary))
 

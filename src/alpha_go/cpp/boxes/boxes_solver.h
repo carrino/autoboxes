@@ -21,7 +21,8 @@ namespace alpha_go {
 // and the exact value of simple loony endgames by recursion over component sizes.
 // Move ordering (exactness unaffected): the table's remembered best move first, then safe
 // moves by a history heuristic, loony moves last; value() drives the search with MTD(f)
-// null windows around the table's last value.
+// null windows around the table's last value. Both bounds fit in the same 16-byte
+// entry, so alternating null windows do not discard a previously proven bound.
 // value_within() stops after a node budget so the search can use it at every late leaf.
 // One instance per thread: the table is not synchronised.
 class BoxesSolver {
@@ -51,7 +52,9 @@ private:
     enum Flag : int8_t { kEmpty = 0, kExact = 1, kLower = 2, kUpper = 3 };
     struct Entry {
         uint64_t key;
-        int16_t value;
+        int16_t lower;
+        int16_t upper;
+        int16_t value;  // last result, the MTD(f) starting guess
         int8_t flag;
         int8_t move;  // best move at this node, -1 if none
     };
