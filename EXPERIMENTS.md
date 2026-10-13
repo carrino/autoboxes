@@ -532,6 +532,39 @@ head on positions whose training targets were right, which bounds what exact tar
 give there: the gain to expect is at 35..38, and the probe must read that band (33..36 is
 affordable to solve: 300 positions in minutes; 35..38 costs hours).
 
+**The A/B (2026-10-13, 33..36 band on `5x5-mid`, 300 positions).** Both arms from
+`5x5-s1600/iter20` on its window (`dataset-5x5-s1600-it21.txt`: 845 games, 34k positions,
+6,155 of them with exact targets in the exact arm), same seed and stable split, 4 and 12
+epochs:
+
+| | policy optimal | search optimal | value sign | margin MAE | margin lost policy / search |
+|---|---|---|---|---|---|
+| start, iter20 | 0.300 | 0.343 | 0.700 | 2.63 | 3.78 / 3.34 |
+| exact, 4 epochs | 0.320 | 0.367 | 0.743 | 2.50 | 3.81 / 3.22 |
+| control, 4 epochs | 0.320 | 0.340 | 0.720 | 2.56 | 3.69 / 3.45 |
+| exact, 12 epochs | 0.307 | 0.323 | 0.720 | 2.49 | 4.03 / 3.60 |
+| control, 12 epochs | 0.300 | 0.340 | 0.713 | 2.56 | 3.71 / 3.37 |
+
+No dose response: the 4-epoch gap of 2.3 points on value sign (one standard error) vanished
+at 12 epochs, and the training-set value accuracy was identical in both arms (0.654). The
+relabel changes only the targets that were wrong, about 20% of the 2,600 positions at
+35..38, so some 550 flipped signs among 34,000 positions that also carry the policy loss;
+and half of the 33..36 read (33..34) had correct outcome targets to begin with. At this
+density exact values do not register, and `RELABEL_N` in the loop, with the same density
+per window, would not either.
+
+Two incidental measurements of the band: the search adds almost nothing at 33..36 (policy
+0.30 -> searched 0.34, because it cannot reach the solver) and the searched move gives
+away 3.3 boxes on average, no better than depth-4 alpha-beta (3.25).
+
+Next: make the exact signal dominant and read the band where every exact label differs
+from the outcome. `train.py --exact-weight W` counts an exact-labelled position's value
+loss W times (W = 8 makes the 6,155 exact positions outweigh the 28,000 outcome ones), and
+the read moves to 35..36 with 200 positions. If that moves value sign by several points,
+exact values work and the loop needs many more of them (line labels at 35..40, the #4
+set); if the net fits the weighted labels on the training side and the band still does not
+move, that is the capacity evidence for an architecture change.
+
 A second lead to check first (`target_entropy.py`): iteration 19's candidate took 1.10 s a
 move against the champion's 0.49 at equal simulations and solver, which is what a flatter
 prior does (more distinct leaves, more solver calls), and s1600's policy cross-entropy is
