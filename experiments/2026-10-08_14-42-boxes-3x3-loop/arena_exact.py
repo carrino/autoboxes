@@ -14,8 +14,8 @@ under optimal play from each position on, so every game splits into:
 
 A game A lost from a winning entry was lost inside the reach. One A was already losing at
 entry was decided earlier, above --max-undrawn, where only the nets' search and the classical
-evaluation play. Writes data/arena_exact-<games file stem>.csv (one row per game) and prints
-the summary.
+evaluation play. Writes data/arena_exact-<games file stem>-u<max undrawn>.csv (one row per
+game) and prints the summary.
 
   uv run -m alpha_go.boxes.arena --rows 5 --a ckpt:<iter.pt> --b boxes-classic ... \\
       --save_games experiments/2026-10-08_14-42-boxes-3x3-loop/data/arena-gate12-classic.jsonl
@@ -123,7 +123,7 @@ def main() -> None:
         print("A's error moves by undrawn edges: "
               + ", ".join(f"{u}: {n}" for u, n in counts.items()))
 
-    csv_path = EXP_DIR / "data" / f"arena_exact-{path.stem}.csv"
+    csv_path = EXP_DIR / "data" / f"arena_exact-{path.stem}-u{args.max_undrawn}.csv"
     csv_path.parent.mkdir(exist_ok=True)
     with csv_path.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(out[0]))

@@ -427,6 +427,31 @@ margin. And a lost control fight costs most of the long chains.
 undrawn edges. It reports whether each loss was already decided when the game came within
 reach, or was given away inside it. The 31..36 labels can only fix the second kind.
 
+**Replay of a rerun from the same 200 openings.** The net won 146-54 (0.73 [0.67, 0.79]);
+the self-play loop shared the CPU part of the time, which slows the timed engine. Games were
+replayed against the solver from 34 undrawn edges (13 s for all 200):
+
+| net's result | games | net winning at 34 | mean exact margin at 34 | net error boxes | classic error boxes | final margin |
+|---|---|---|---|---|---|---|
+| won | 146 | 0.98 | +4.92 | 1.14 | 0.75 | +4.53 |
+| lost | 54 | 0.11 | -4.67 | 3.19 | 0.33 | -7.52 |
+
+- **Where the games are decided: above 34 undrawn edges.** 48 of the 54 losses were already
+  lost at 34, and only 6 were thrown away inside the reach. Likewise, 143 of the 146 wins
+  were already won at 34. Both sides' results come from the midgame control fight, and the
+  net wins it about three times in four.
+- **Inside the reach, classic plays better than the net.** The net gives away 1.7 boxes a
+  game against classic's 0.6. Its error moves fall at 34 (43), 33 (23) and 32 (7), none
+  lower: below 32 its search reaches the solver at 30. Classic's full-width alpha-beta is
+  more accurate four edges above the net's solver than 400 simulations of the net are.
+- **The net loses big because it plays lost positions badly** (3.2 error boxes in lost
+  games, 1.1 in won ones). With the win term dominating the utility, there is little
+  incentive to fight for margin once the game is lost.
+
+What follows: the 31..36 labels and more solver reach can repair the 32..34 errors (margin,
+plus about 6 of 54 losses). Most of the losses happen above 34. Replaying from 38 undrawn
+shows how much higher they happen.
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
