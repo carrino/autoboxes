@@ -565,6 +565,28 @@ exact values work and the loop needs many more of them (line labels at 35..40, t
 set); if the net fits the weighted labels on the training side and the band still does not
 move, that is the capacity evidence for an architecture change.
 
+**Does the net fit exact labels at all?** (`exact_fit.py`: value sign / margin MAE on the
+6,155 *training* positions with exact targets, by undrawn band; the `--exact-weight 8` run
+is `quick-exact/iter3`, 12 epochs from the same start.)
+
+| checkpoint | 25..30 (n=997) | 31..34 (n=2680) | 35..38 (n=2476) | all |
+|---|---|---|---|---|
+| s1600 iter20, the start | 0.728 / 2.55 | 0.608 / 2.79 | 0.566 / 2.41 | 0.611 / 2.60 |
+| control, 12 epochs on outcomes | 0.763 / 2.34 | 0.646 / 2.65 | 0.588 / 2.39 | 0.642 / 2.49 |
+| exact x1, 12 epochs | 0.751 / 2.38 | 0.663 / 2.68 | 0.703 / 2.11 | 0.693 / 2.40 |
+| exact x8, 12 epochs | 0.836 / 1.80 | 0.731 / 2.30 | 0.746 / 1.88 | 0.754 / 2.05 |
+
+- The starting net barely knows the value of its own training positions at 35..38 (sign
+  0.57), and twelve more epochs on outcomes cannot teach it (0.59): a fifth of those
+  targets are wrong.
+- Exact labels teach it, and the net can learn them: 0.70 at natural weight, 0.75 at x8,
+  MAE 2.4 -> 1.9. Representation is not the first-order problem.
+- The x8 gains at 25..34, where the targets are identical in both arms, show the value
+  head has been under-trained relative to the policy all along (equal loss weights, two
+  epochs per iteration).
+
+Whether the x8 fit generalises is the 35..36 read on `5x5-mid` (200 positions), pending.
+
 A second lead to check first (`target_entropy.py`): iteration 19's candidate took 1.10 s a
 move against the champion's 0.49 at equal simulations and solver, which is what a flatter
 prior does (more distinct leaves, more solver calls), and s1600's policy cross-entropy is
