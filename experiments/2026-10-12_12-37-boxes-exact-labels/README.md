@@ -20,9 +20,9 @@ mkdir -p "$GAME_DATA_DIR"
 tar xzf boxes-games-slim.tgz -C "$GAME_DATA_DIR"
 uv run -m pytest tests/ --ignore=tests/test_gpu_lease.py -q
 TASK=experiments/2026-10-12_12-37-boxes-exact-labels
-uv run "$TASK/run_labels.py" --game-data "$GAME_DATA_DIR" --workers 4 --full-workers 2 --hours 12 --archive /codex/browser/projectless/0002-files-mentioned-by-the-user-uploaded-file-pointe/output/5x5-oracle-31-36.tgz
-uv run ruff check "$TASK/run_labels.py"
-MYPYPATH=src uv run -m mypy "$TASK/run_labels.py" --follow-imports=silent
+uv run "$TASK/run_labels.py" --game-data "$GAME_DATA_DIR" --workers 4 --full-workers 2 --hours 12 --archive /workspace/work/5x5-oracle-31-36.tgz
+uv run ruff check "$TASK/run_labels.py" "$TASK/archive_completed.py" "$TASK/report.py"
+MYPYPATH=src uv run -m mypy "$TASK/run_labels.py" "$TASK/archive_completed.py" "$TASK/report.py" --follow-imports=silent
 uv run "$TASK/report.py"  # requires the completed manifest and verified archive
 ```
 
@@ -45,6 +45,21 @@ It also checks the chosen move, undrawn range, ordering, player values, and root
 against the stored final margin. `data/*-undrawn.csv`, `*-margins.csv`, and `*-files.csv`
 record distributions, counts, and per-file SHA256 digests. The final manifest records
 archive size and SHA256. All NPZ files and the archive stay outside Git.
+
+The measured run initially requested the chat delivery directory under
+`/codex/browser/projectless/0002-files-mentioned-by-the-user-uploaded-file-pointe/output/`.
+That path does not exist in this cloud environment, and its parent cannot be created
+by the environment user. Generation and verification had completed before packaging
+failed. The original failure log is retained as `logs/run-initial-archive-failure.log`.
+Recovery reverified every file and created the archive in the writable workspace:
+
+```bash
+uv run "$TASK/archive_completed.py" --archive /workspace/work/5x5-oracle-31-36.tgz
+uv run "$TASK/report.py"
+```
+
+`archive_completed.py` only accepts a completed production manifest. It reruns
+verification and packaging, without repeating the pilot or production solves.
 
 The script refuses to mix outputs with an existing stage directory. To inspect a
 long run, read its per-shard logs and stage manifest; a `running` state is not a

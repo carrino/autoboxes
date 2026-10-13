@@ -59,6 +59,10 @@ def main() -> None:
               "per-file counts, per-file SHA256 digests, and both distributions.", "",
               f"Archive: `{archive}` ({result['archive_bytes']:,} bytes).", "",
               f"SHA256: `{result['archive_sha256']}`.", "",
+              "The configured chat delivery directory was absent and could not be created "
+              "in this environment. After generation finished, `archive_completed.py` "
+              "reverified every file and packaged the archive at the workspace path above. "
+              "The original packaging failure log is retained; no solves were repeated.", "",
               "The NPZ data and tar archive stay out of Git. Extract the folder under the "
               "GPU machine's game-data experiment directory, then add "
               "`experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36` to `EXTRA_DATA`.", "",
