@@ -375,6 +375,23 @@ colour. It is the last net trained only on full games, and everything after it l
 opening. The question for this run: does a net trained from it, under search targets that
 are about 80% right in the band, beat it in the paired arena from random openings?
 
+Answer after 12 iterations: no. Nothing was promoted, so all self-play came from
+iteration 0 and the run distilled it.
+- **Arena.** Pooled over the 12 arenas (different openings each), the challengers scored
+  171.5 of 360 pairs (0.48, about [0.42, 0.53]), with a mean margin of -0.1.
+- **Clean band read** (`5x5-mid`, 29..34, solver 28, default search). The policy rose from
+  0.390 to 0.41..0.43 by iteration 5 and then stayed flat. The searched move went from
+  0.51 to 0.51..0.53, value sign stayed at 0.62..0.65 (0.637 at iteration 0), and margin
+  MAE went from 3.50 to 3.43.
+
+The weights carry over between iterations (training resumes from the latest), but the
+data never advanced. The ungated chains run (16..55), whose data did advance, stalled at
+the same level. The striking number is the gap between student and teacher: self-play
+targets are about 80% optimal in the band, yet the net's policy is at 42%. Each iteration
+trains for 2 epochs (about 400 steps, 30..70 s, from a fresh optimizer and cosine
+schedule), so the first thing to rule out is underfitting: train iteration 12 on its own
+window to convergence and band-read it.
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
