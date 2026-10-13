@@ -523,7 +523,9 @@ the running loop):
 | 31..34 | 400 | 0.56 | 0.01 |
 | 35..38 | 375 | 2.28 | 0.24 |
 
-At 35..38, one value target in four has the wrong sign and the mean error is 2.3 boxes; at
+The other iterations of the window (15..19) read the same: 17..25% wrong-signed at 35..38
+with a 2.1..2.8 box error, 0..1% at 31..34, 7..20 positions per 100 games over the budget.
+At 35..38, about one value target in five has the wrong sign and the mean error is 2.3 boxes; at
 31..34 the targets were already clean (the solver at 30 and STOP_WHEN_SOLVED make the tail
 of every game optimal). So the clean band read at 29..34 (value sign 0.64) measures the
 head on positions whose training targets were right, which bounds what exact targets can
