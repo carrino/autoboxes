@@ -148,6 +148,24 @@ training window. Use `--manifest /absolute/path/to/manifest.txt` if it was archi
 it deliberately fails rather than inventing a different window. Evaluation games must
 exist under `$GAME_DATA_DIR/experiments/<this-folder>/5x5-mid/`.
 
+If `relabel_exact.py` already processed the replay window, wait for it to finish and reuse
+those labels instead of paying for the same solves again:
+
+```bash
+uv run "$EXP/exact_ab.py" --reuse-exact --workers 4 \
+    --bands 33:36 37:38 --positions 100 --arena-games 100
+```
+
+This still snapshots both arms, strips exact arrays only from the control, and reads label
+coverage without constructing a relabelling solver. Every sequential game in the manifest
+must have an `exact_margin_p1` array; a missing or malformed array fails before training.
+Existing unknown labels stay unknown and use the outcome fallback. Labels above `--reach`
+are ignored. Stored arrays do not record the attempted solver reach or budget, so inspect
+coverage: `--reach 38` does not extend a previously shallower relabelling run. Clean
+evaluation positions still require solving. This smaller read uses 100 roots in each band;
+the three arena matches remain 100 games each. `--arena-games 0` skips them for a value-only
+probe. This option starts a fresh A/B run; it does not resume an interrupted run.
+
 It performs these steps sequentially:
 
 1. Copy the checkpoint and every NPZ in the manifest into a fresh timestamped run. Record
