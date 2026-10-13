@@ -116,6 +116,8 @@ def main() -> None:
     p.add_argument("--n-blocks", type=int, default=None, help="override the residual depth")
     p.add_argument("--features", choices=["basic", "chains"], default="basic",
                    help="input planes (encode.py): chains adds the chain / loop structure")
+    p.add_argument("--exact-weight", type=float, default=1.0,
+                   help="value loss of a position with an exact target counts this many times")
     p.add_argument("--no-exact", action="store_true",
                    help="train on game outcomes even where exact margins are stored (a control)")
     p.add_argument("--cpu", action="store_true")
@@ -192,8 +194,11 @@ def main() -> None:
                 target_win = ((1 - args.q_mix) * batch["win"]
                               + args.q_mix * batch["root_value"]).to(device)
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=use_amp):
+                weight = None
+                if args.exact_weight != 1.0:
+                    weight = torch.where(batch["exact"], args.exact_weight, 1.0).to(device)
                 total, policy_loss, value_loss = model.compute_loss(planes, policy, margin,
-                                                                    target_win)
+                                                                    target_win, weight)
             optimizer.zero_grad()
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -219,6 +224,7 @@ def main() -> None:
     print(json.dumps({
         "iteration": args.iteration, "train_loss": round(train_eval["loss"], 6),
         "seed": seed, "split_seed": args.split_seed, "batch_size": args.batch_size,
+        "exact_weight": args.exact_weight,
         "train_policy_acc": round(train_eval["policy_acc"], 4),
         "train_value_acc": round(train_eval["value_acc"], 4),
         "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),

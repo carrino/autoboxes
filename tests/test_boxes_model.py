@@ -223,3 +223,21 @@ class TestBoxesNet:
         margin_BM[0, net.num_boxes + 2] = -30.0
         margin_BM[0, net.num_boxes] = 30.0  # margin 0
         assert net.win_prob(margin_BM).item() == pytest.approx(0.5)
+
+
+class TestWeightedValueLoss:
+    def test_ones_match_unweighted_and_weights_scale_the_value_loss(self) -> None:
+        torch.manual_seed(0)
+        net = BoxesNet(2, 2, channels=8, n_blocks=1, value_hidden=8)
+        planes = torch.randn(6, 11, 5, 5)
+        policy = torch.softmax(torch.randn(6, net.num_edges), dim=-1)
+        margin = torch.tensor([3, -1, 0, 2, -4, 1])
+        total, pol, val = net.compute_loss(planes, policy, margin)
+        total1, pol1, val1 = net.compute_loss(planes, policy, margin, weight_B=torch.ones(6))
+        assert torch.allclose(total, total1) and torch.allclose(val, val1)
+        weight = torch.tensor([3.0, 1, 1, 1, 1, 1])
+        _, _, val3 = net.compute_loss(planes, policy, margin, weight_B=weight)
+        per = torch.nn.functional.cross_entropy(
+            net(planes)[1], margin + net.num_boxes, reduction="none")
+        assert torch.allclose(val3, (per * weight).mean(), atol=1e-5)
+        assert not torch.allclose(val3, val)

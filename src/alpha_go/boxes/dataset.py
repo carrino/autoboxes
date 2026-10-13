@@ -162,5 +162,6 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             "win": torch.tensor(float(margin > 0) + 0.5 * float(margin == 0)),
             "root_value": torch.tensor(root_value, dtype=torch.float32),
             "has_mcts": searched,
+            "exact": exact != EXACT_UNKNOWN,
         }
 
