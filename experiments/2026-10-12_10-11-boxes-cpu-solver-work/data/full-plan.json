@@ -1,0 +1,19 @@
+{
+  "pilot_phase": "pilot20",
+  "pilot_sampled": 400,
+  "pilot_labelled": 388,
+  "pilot_skipped": 12,
+  "pilot_wall_seconds": 2270.010937904999,
+  "pilot_attempted_positions_per_second": 0.17621060468068114,
+  "target_wall_seconds": 43200,
+  "cap_positions": 60000,
+  "requested_positions": 7612,
+  "shards": 4,
+  "positions_per_shard": 1903,
+  "node_budget": 20000000,
+  "seed": 1,
+  "save_name": "5x5-oracle-31-36",
+  "estimated_wall_seconds": 43198.30814833213,
+  "formula": "min(60000, floor(43200 * pilot_sampled / pilot_wall_seconds / shards) * shards)",
+  "rate_definition": "All attempted positions (labelled plus skipped) divided by concurrent-group wall time, including sampling and output."
+}

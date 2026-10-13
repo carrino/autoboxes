@@ -1,0 +1,12 @@
+{
+  "root": "/workspace/autoboxes-data/game_data_root",
+  "counts": {
+    "5x5-chains": 24474,
+    "5x5-mid": 1714
+  },
+  "aggregate_sha256": {
+    "5x5-chains": "13c697201cf85564a260f6b285ab9ef2f82b9c710b322366226904b69d0f85d4",
+    "5x5-mid": "fd043fe1dc4712335b045220df4bbe2f2af4d3cf29bc8dfa419cc1b2d3e20027"
+  },
+  "aggregate_definition": "SHA256 of sorted relative-path + space + file SHA256 + newline for each tag"
+}

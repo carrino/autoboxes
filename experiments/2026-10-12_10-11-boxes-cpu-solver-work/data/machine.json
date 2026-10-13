@@ -1,0 +1,18 @@
+{
+  "timestamp_utc": "2026-10-12T17:10:07Z",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "nproc": 5,
+  "memory": {
+    "MemTotal": 18932244480,
+    "MemFree": 13923643392,
+    "MemAvailable": 18018017280
+  },
+  "cgroup_cpu_max": "400000 100000",
+  "cgroup_memory_limit_bytes": 17179869184,
+  "cgroup_memory_current_bytes": 4571602944,
+  "conservative_free_gb_decimal": 12.60826624,
+  "memory_process_cap": 21,
+  "solver_processes": 4,
+  "gpu_device_nodes": [],
+  "cpu_model": "INTEL(R) XEON(R) PLATINUM 8573C"
+}

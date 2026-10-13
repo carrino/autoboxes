@@ -1,0 +1,204 @@
+Resume on 2026-10-12 (America/Los_Angeles).
+The user authorized local environment/build fixes, then explicitly instructed
+that build changes must not be checked in. scripts/build_cpp.sh remains a local
+unstaged edit. No file under src/, tests/, or the existing loop scripts was edited.
+
+Read-only checks reconfirmed that /install/lib/libpython3.12.so is missing, while
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/libpython3.12.so
+exists. Python's sysconfig still reports LIBDIR=/install/lib. The environment
+editor's tools are under /workspace/autoboxes-tools/bin.
+
+All commands below ran from /workspace/work/cpu-solver/autoboxes unless noted.
+
+1. Before the local edit, repeated the gate; same library-path failure:
+
+export PATH=$PATH:/workspace/autoboxes-tools/bin
+export UV_CACHE_DIR=/workspace/.uv-cache
+export XDG_CACHE_HOME=/workspace/work/cpu-solver/cache
+export MPLCONFIGDIR=/workspace/work/cpu-solver/matplotlib
+export PYTHONUNBUFFERED=1
+set -o pipefail
+{ time uv sync && time bash scripts/build_cpp.sh && time uv run -m pytest tests/test_boxes_*.py -q; } 2>&1 | tee /workspace/work/cpu-solver/resume-setup.log
+
+2. Local edit via apply_patch: retain the configured Python library if it exists;
+otherwise look for LDLIBRARY in sys.base_prefix/lib, and fail if neither exists.
+The same command block above was rerun, with the tee destination changed to
+/workspace/work/cpu-solver/fixed-setup.log. uv sync passed; CMake found Python;
+compilation failed in the existing C++ mcts_test.cpp because std::find lacked
+the <algorithm> declaration. The complete output is build-missing-algorithm.txt.
+
+3. Local compiler environment workaround; successful build and required tests:
+
+export PATH=/workspace/autoboxes-tools/bin:$PATH
+export UV_CACHE_DIR=/workspace/.uv-cache
+export XDG_CACHE_HOME=/workspace/work/cpu-solver/cache
+export MPLCONFIGDIR=/workspace/work/cpu-solver/matplotlib
+export PYTHONUNBUFFERED=1
+export CXXFLAGS='-include algorithm'
+set -o pipefail
+{ time bash scripts/build_cpp.sh && time uv run -m pytest tests/test_boxes_*.py -q; } 2>&1 | tee /workspace/work/cpu-solver/fixed-setup-with-header.log
+
+Result: build completed in 104.121 s; 243 tests passed in 63.43 s (shell wall 67.203 s).
+Full output copied to build-and-tests.txt.
+
+4. Relevant inspections and syntax checks:
+
+git status --short --branch
+cat scripts/build_cpp.sh
+cat /workspace/work/cpu-solver/report-path.txt
+ls -l /workspace/attachments/d5247eda-f519-453b-9699-e1cc63a462fb/boxes-games-slim.tgz
+rg --files -g 'AGENTS.md'
+TZ=America/Los_Angeles date +%Y-%m-%d_%H-%M
+git diff --stat
+sed -n '1,110p' experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py
+rg -n 'GAME_DATA_DIR|output|cache' .gitignore
+ls -ld /home/agent /home/agent/autoboxes-data /workspace/autoboxes-data 2>/dev/null
+sed -n '1,75p' src/alpha_go/boxes/dataset.py
+cat /workspace/work/cpu-solver/machine.json
+rg -n 'test_.*solver|parametrize|slow' tests/test_boxes_cpp_solver.py tests/test_boxes_solver.py
+sed -n '1,24p' src/alpha_go/cpp/mcts/mcts_test.cpp
+git diff --exit-code -- src/ tests/
+git diff --check -- scripts/build_cpp.sh
+python3 -m py_compile experiments/2026-10-12_10-11-boxes-cpu-solver-work/run_cpu_jobs.py
+python3 -m py_compile experiments/2026-10-12_10-11-boxes-cpu-solver-work/verify_labels.py
+
+Process monitoring used ps -C cc1plus,cmake,python,python3 (and later lto1/pytest)
+with -o pid,etime,time,rss,comm, free -h, and tail on the corresponding logs.
+Running commands were polled using write_stdin with empty input.
+
+5. Archive validation and extraction, only after tests passed:
+
+A Python tarfile inspection required every member to be a regular .npz file,
+with no absolute path or '..', under one of exactly these two prefixes:
+experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-chains/
+experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-mid/
+The inspection counted 24474 chains games and 1714 mid games.
+
+export GAME_DATA_DIR=$HOME/autoboxes-data/game_data_root
+mkdir -p "$GAME_DATA_DIR"
+
+This mkdir failed even with the tool's additional write permission for
+/home/agent/autoboxes-data:
+mkdir: cannot create directory ‘/home/agent/autoboxes-data’: Read-only file system
+No extraction to the home path occurred.
+
+The environment's configured writable data root was used instead. Before
+extraction, a Python check required both destination tag directories to be
+absent or empty, so no existing games were overwritten.
+
+export GAME_DATA_DIR=/workspace/autoboxes-data/game_data_root
+mkdir -p "$GAME_DATA_DIR"
+tar xzf /workspace/attachments/d5247eda-f519-453b-9699-e1cc63a462fb/boxes-games-slim.tgz -C "$GAME_DATA_DIR"
+
+A Python script enumerated and SHA256-hashed every extracted NPZ, asserted both
+sets were nonempty, and saved the aggregate counts/hashes in data/input-manifest.json.
+The full per-file manifest stays at /workspace/work/cpu-solver/input-manifest-full.json.
+It also recorded nproc, /proc/meminfo, and cgroup memory limits/usage in
+data/resumed-machine.json, choosing N=min(nproc-1,floor(free_bytes/600000000))=4.
+The exact aggregate digest format is documented in input-manifest.json.
+
+6. Job 1 launch:
+
+export GAME_DATA_DIR=/workspace/autoboxes-data/game_data_root
+export UV_CACHE_DIR=/workspace/.uv-cache
+export XDG_CACHE_HOME=/workspace/work/cpu-solver/cache
+export MPLCONFIGDIR=/workspace/work/cpu-solver/matplotlib
+export PYTHONUNBUFFERED=1
+python3 experiments/2026-10-12_10-11-boxes-cpu-solver-work/run_cpu_jobs.py job1
+
+Every underlying measurement and labelling command, its log, environment data
+root, exit status and measured wall time is recorded in resumed-commands.jsonl.
+The runner and verifier are included beside the README for reproducibility.
+The local build patch is saved only in /workspace/work/cpu-solver/local-build-fix.patch.
+
+7. After Job 1, the node-bin rows printed in region-nodes-30-32.txt were parsed
+with Python re/csv into data/solver_nodes_by_region.csv. Their position counts
+were checked to sum to 479 at 30 undrawn and 489 at 32 undrawn.
+The plotting and pilot launch commands (same environment as Job 1) were:
+
+uv run experiments/2026-10-12_10-11-boxes-cpu-solver-work/plot_job1.py
+python3 experiments/2026-10-12_10-11-boxes-cpu-solver-work/run_cpu_jobs.py label --phase pilot20 --positions 400 --node-budget 20000000 --shards 4 --seed 0 --save-name 5x5-oracle-31-36-pilot
+
+The generated PNG was inspected with view_image. Worker status was monitored
+through data/pilot20-status.json, individual logs, and ps -C python with the
+same pid/etime/time/rss/comm fields. A resource snapshot is retained in
+logs/pilot-resource-snapshot.txt. The supervisor performs no solver work itself.
+
+8. Write and syntax-check the report assembler:
+
+python3 experiments/2026-10-12_10-11-boxes-cpu-solver-work/write_report.py
+python3 -m py_compile experiments/2026-10-12_10-11-boxes-cpu-solver-work/write_report.py
+
+9. Publish the completed Job 1 results while the pilot continues:
+
+set -euo pipefail
+python3 experiments/2026-10-12_10-11-boxes-cpu-solver-work/write_report.py
+REPORT_DIR=experiments/2026-10-12_10-11-boxes-cpu-solver-work
+git add -- "$REPORT_DIR/README.md" "$REPORT_DIR"/*.py "$REPORT_DIR"/data/*.csv "$REPORT_DIR/data/input-manifest.json" "$REPORT_DIR/data/resumed-machine.json" "$REPORT_DIR/data/positions-5x5-mid-30-32.txt" "$REPORT_DIR/figures/solver-nodes-by-region.png"
+git add -f -- "$REPORT_DIR"/logs/build*.txt "$REPORT_DIR"/logs/region*.txt "$REPORT_DIR/logs/solver-bench.txt" "$REPORT_DIR/logs/resume-before-fix.txt" "$REPORT_DIR/logs/resume-setup-commands.txt" "$REPORT_DIR/logs/resumed-commands.jsonl"
+git diff --cached --check -- . ':(exclude)**/logs/*.txt'
+
+A Python assertion checked every staged path belonged to this report directory,
+none ended in .npz/.tgz/.tar.gz/.patch, and scripts/build_cpp.sh was not staged.
+
+git diff --exit-code -- src/ tests/ 'experiments/2026-10-08_14-42-boxes-3x3-loop/*.py' 'experiments/2026-10-08_14-42-boxes-3x3-loop/*.sh'
+git commit -m "Report solver node costs by independent-region size on clean games"
+git push origin HEAD:refs/heads/astra/cpu-solver-work
+
+Commit f3cbcf6 was pushed successfully. Git warned that the CSVs' CRLF endings
+would normalize to LF under the repository's attributes; their values are unchanged.
+PR #4's title/body were updated through the GitHub connector to summarize the
+completed measurements and explicitly state that labelling remained in progress.
+
+10. Continue the pilot through the conditional retry and full run automatically.
+The same GAME_DATA_DIR, UV_CACHE_DIR, XDG_CACHE_HOME, MPLCONFIGDIR, and
+PYTHONUNBUFFERED exports above were used. No existing loop script was changed.
+
+python3 -m py_compile experiments/2026-10-12_10-11-boxes-cpu-solver-work/plan_full.py experiments/2026-10-12_10-11-boxes-cpu-solver-work/run_pipeline.py
+uv run experiments/2026-10-12_10-11-boxes-cpu-solver-work/run_pipeline.py > /workspace/work/cpu-solver/pipeline.log 2>&1
+
+run_pipeline.py records each underlying command in resumed-commands.jsonl.
+It preserves the 20M pilot in a separate folder if the 40M retry is necessary,
+verifies each completed phase, sizes the full run from attempted positions per
+second, archives the verified full output, checks every archive member's hash,
+and verifies that both original input tags are unchanged. Its stage is stored
+in data/pipeline-status.json. It performs no git mutations.
+
+11. Start the report-only publisher with the supported Git network permission.
+It waits for pipeline-status.json stage=complete and all verification records;
+it does not publish an unfinished run. It stops on an unexpected staged file,
+branch change, source/loop modification, or Git error.
+
+python3 -m py_compile experiments/2026-10-12_10-11-boxes-cpu-solver-work/publish_completed.py experiments/2026-10-12_10-11-boxes-cpu-solver-work/write_report.py
+python3 experiments/2026-10-12_10-11-boxes-cpu-solver-work/publish_completed.py > /workspace/work/cpu-solver/publication.log 2>&1
+
+Read-only monitoring also confirmed the CMake cache uses Release and -O3.
+An initial lookup used build/CMakeCache.txt, which does not exist; the correct
+path is src/alpha_go/cpp/build/CMakeCache.txt. This inspection did not run or
+change a build. No measurement or labelling script failed.
+
+12. Pilot completed: 388 labelled, 12 skipped out of 400 in 2270.011 seconds.
+All 46 output NPZ files passed the verifier. The 3% skip rate does not trigger
+the 40M retry. plan_full.py selected 7,612 positions, or 1,903 per shard,
+for an estimated 43,198.308 seconds at the pilot's attempted-position rate.
+run_pipeline.py launched the four seed-1 full-run commands automatically;
+the exact commands and timestamps are in resumed-commands.jsonl.
+
+A condition-watch automation, "Finish CPU solver report", was created after
+successful read-only GitHub access. It checks the work branch hourly for the
+publisher's completed, verified report, updates existing PR #4, delivers the
+final report, and then pauses itself. It does not run or modify the solver,
+access the evaluation games, or push another branch. It does not claim full
+completion from this in-progress snapshot.
+
+13. Publish the verified pilot and full-run plan:
+
+python3 experiments/2026-10-12_10-11-boxes-cpu-solver-work/write_report.py
+git add -- experiments/2026-10-12_10-11-boxes-cpu-solver-work/
+git add -f -- experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/*.txt experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/*.jsonl
+git diff --cached --check -- . ':(exclude)**/logs/*.txt'
+git commit -m "Record verified solver pilot and launch sized full label run"
+git push origin HEAD:refs/heads/astra/cpu-solver-work
+
+Every staged path was checked to belong to the report directory, have a report
+artifact extension, and exclude scripts/build_cpp.sh and the NPZ/tar datasets.

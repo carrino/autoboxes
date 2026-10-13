@@ -1,0 +1,180 @@
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Using Python executable: /workspace/work/cpu-solver/autoboxes/.venv/bin/python
+-- Python include dir: /opt/codex/runtimes/codex-primary-runtime/dependencies/python/include/python3.12
+-- Python version: 3.12
+-- Found Python3: /workspace/work/cpu-solver/autoboxes/.venv/bin/python (found version "3.12.14") found components: Interpreter Development Development.Module Development.Embed
+-- Found Python3: /workspace/work/cpu-solver/autoboxes/.venv/bin/python
+-- Python3 include: /opt/codex/runtimes/codex-primary-runtime/dependencies/python/include/python3.12
+-- Python3 version: 3.12.14
+CMake Deprecation Warning at /tmp/cmake-fetchcontent/pybind11-src/CMakeLists.txt:13 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+-- pybind11 v2.12.0 
+-- Performing Test HAS_FLTO
+-- Performing Test HAS_FLTO - Success
+-- Performing Test HAVE_FLAG__ffile_prefix_map__tmp_cmake_fetchcontent_catch2_src__
+-- Performing Test HAVE_FLAG__ffile_prefix_map__tmp_cmake_fetchcontent_catch2_src__ - Success
+-- Configuring done (3.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspace/work/cpu-solver/autoboxes/src/alpha_go/cpp/build
+[  1%] Building CXX object CMakeFiles/go_game.dir/go/go_game.cpp.o
+[  2%] Building CXX object CMakeFiles/boxes_game.dir/boxes/boxes_game.cpp.o
+[  3%] Building CXX object CMakeFiles/boxes_game.dir/boxes/boxes_solver.cpp.o
+[  2%] Building CXX object CMakeFiles/boxes_game.dir/boxes/boxes_chains.cpp.o
+[  3%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/benchmark/catch_chronometer.cpp.o
+[  4%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/benchmark/detail/catch_analyse.cpp.o
+[  5%] Building CXX object CMakeFiles/boxes_game.dir/boxes/boxes_alphabeta.cpp.o
+[  6%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/benchmark/detail/catch_benchmark_function.cpp.o
+[  7%] Building CXX object CMakeFiles/boxes_game.dir/boxes/boxes_search.cpp.o
+[  8%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/benchmark/detail/catch_run_for_at_least.cpp.o
+[  8%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/benchmark/detail/catch_stats.cpp.o
+[  9%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/generators/catch_generator_exception.cpp.o
+[ 10%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/generators/catch_generators.cpp.o
+[ 11%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/generators/catch_generators_random.cpp.o
+[ 12%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_automake.cpp.o
+[ 12%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_common_base.cpp.o
+[ 13%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_compact.cpp.o
+[ 14%] Linking CXX static library libboxes_game.a
+[ 15%] Linking CXX static library libgo_game.a
+[ 16%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_console.cpp.o
+[ 16%] Built target boxes_game
+[ 17%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_cumulative_base.cpp.o
+[ 17%] Built target go_game
+[ 18%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_event_listener.cpp.o
+[ 19%] Building CXX object CMakeFiles/mcts.dir/mcts/mcts.cpp.o
+[ 19%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_helpers.cpp.o
+[ 20%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_json.cpp.o
+[ 21%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_junit.cpp.o
+[ 22%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_multi.cpp.o
+[ 22%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_registrars.cpp.o
+[ 23%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_sonarqube.cpp.o
+[ 24%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_streaming_base.cpp.o
+[ 25%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_tap.cpp.o
+[ 26%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_teamcity.cpp.o
+[ 26%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/reporters/catch_reporter_xml.cpp.o
+[ 27%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_capture.cpp.o
+[ 28%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_config.cpp.o
+[ 29%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_exception.cpp.o
+[ 30%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_generatortracker.cpp.o
+[ 30%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_registry_hub.cpp.o
+[ 31%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_reporter_factory.cpp.o
+[ 32%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_reporter.cpp.o
+[ 33%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/interfaces/catch_interfaces_testcase.cpp.o
+[ 33%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_approx.cpp.o
+[ 34%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_assertion_result.cpp.o
+[ 35%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_config.cpp.o
+[ 36%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_get_random_seed.cpp.o
+[ 37%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_message.cpp.o
+[ 37%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_registry_hub.cpp.o
+[ 38%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_session.cpp.o
+[ 39%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_tag_alias_autoregistrar.cpp.o
+[ 40%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_test_case_info.cpp.o
+[ 41%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_test_spec.cpp.o
+[ 41%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_timer.cpp.o
+[ 42%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_tostring.cpp.o
+[ 43%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_totals.cpp.o
+[ 44%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_translate_exception.cpp.o
+[ 45%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/catch_version.cpp.o
+[ 45%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_assertion_handler.cpp.o
+[ 46%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_case_insensitive_comparisons.cpp.o
+[ 47%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_clara.cpp.o
+[ 48%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_commandline.cpp.o
+[ 48%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_console_colour.cpp.o
+[ 49%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_context.cpp.o
+[ 50%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_debug_console.cpp.o
+[ 51%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_debugger.cpp.o
+[ 52%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_decomposer.cpp.o
+[ 52%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_enforce.cpp.o
+[ 53%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_enum_values_registry.cpp.o
+[ 54%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_errno_guard.cpp.o
+[ 55%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_exception_translator_registry.cpp.o
+[ 56%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_fatal_condition_handler.cpp.o
+[ 56%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_floating_point_helpers.cpp.o
+[ 57%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_getenv.cpp.o
+[ 58%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_istream.cpp.o
+[ 59%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_jsonwriter.cpp.o
+[ 59%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_lazy_expr.cpp.o
+[ 60%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_leak_detector.cpp.o
+[ 61%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_list.cpp.o
+[ 62%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_message_info.cpp.o
+[ 63%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_output_redirect.cpp.o
+[ 63%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_parse_numbers.cpp.o
+[ 64%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_polyfills.cpp.o
+[ 65%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_random_number_generator.cpp.o
+[ 66%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_random_seed_generation.cpp.o
+[ 67%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_reporter_registry.cpp.o
+[ 67%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_reporter_spec_parser.cpp.o
+[ 68%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_result_type.cpp.o
+[ 69%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_reusable_string_stream.cpp.o
+[ 70%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_run_context.cpp.o
+[ 71%] Linking CXX static library libmcts.a
+[ 71%] Built target mcts
+[ 71%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_section.cpp.o
+[ 72%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_singletons.cpp.o
+[ 73%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_source_line_info.cpp.o
+[ 74%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_startup_exception_registry.cpp.o
+[ 75%] Building CXX object CMakeFiles/alpha_go_cpp.dir/bindings/bindings.cpp.o
+[ 76%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_stdstreams.cpp.o
+[ 76%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_string_manip.cpp.o
+[ 77%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_stringref.cpp.o
+[ 78%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_tag_alias_registry.cpp.o
+[ 79%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_test_case_info_hasher.cpp.o
+[ 80%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_test_case_registry_impl.cpp.o
+[ 80%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_test_case_tracker.cpp.o
+[ 81%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_test_failure_exception.cpp.o
+[ 82%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_test_registry.cpp.o
+[ 83%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_test_spec_parser.cpp.o
+[ 84%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_textflow.cpp.o
+[ 84%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_uncaught_exceptions.cpp.o
+[ 85%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_wildcard_pattern.cpp.o
+[ 86%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/internal/catch_xmlwriter.cpp.o
+[ 87%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers.cpp.o
+[ 87%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers_container_properties.cpp.o
+[ 88%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers_exception.cpp.o
+[ 89%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers_floating_point.cpp.o
+[ 90%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers_predicate.cpp.o
+[ 91%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers_quantifiers.cpp.o
+[ 91%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers_string.cpp.o
+[ 92%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/catch_matchers_templated.cpp.o
+[ 93%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2.dir/catch2/matchers/internal/catch_matchers_impl.cpp.o
+[ 94%] Linking CXX static library libCatch2.a
+[ 94%] Built target Catch2
+[ 95%] Building CXX object /tmp/cmake-fetchcontent/catch2-build/src/CMakeFiles/Catch2WithMain.dir/catch2/internal/catch_main.cpp.o
+[ 95%] Linking CXX static library libCatch2Main.a
+[ 95%] Built target Catch2WithMain
+[ 96%] Building CXX object CMakeFiles/go_game_test.dir/go/go_game_test.cpp.o
+[ 97%] Building CXX object CMakeFiles/mcts_test.dir/mcts/mcts_test.cpp.o
+[ 97%] Building CXX object CMakeFiles/boxes_game_test.dir/boxes/boxes_game_test.cpp.o
+[ 98%] Linking CXX executable boxes_game_test
+[ 98%] Built target boxes_game_test
+[ 98%] Linking CXX executable go_game_test
+[ 98%] Built target go_game_test
+[ 99%] Linking CXX executable mcts_test
+[ 99%] Built target mcts_test
+[100%] Linking CXX shared module alpha_go_cpp.cpython-312-x86_64-linux-gnu.so
+[100%] Built target alpha_go_cpp
+=== C++ extension built: ./alpha_go_cpp.cpython-312-x86_64-linux-gnu.so -> /workspace/work/cpu-solver/autoboxes/.venv/lib/python3.12/site-packages ===
+
+real	1m44.121s
+user	4m20.115s
+sys	0m36.612s
+........................................................................ [ 29%]
+........................................................................ [ 59%]
+........................................................................ [ 88%]
+...........................                                              [100%]
+243 passed in 63.43s (0:01:03)
+
+real	1m7.203s
+user	1m5.605s
+sys	0m3.425s
