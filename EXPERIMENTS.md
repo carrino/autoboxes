@@ -452,6 +452,43 @@ What follows: the 31..36 labels and more solver reach can repair the 32..34 erro
 plus about 6 of 54 losses). Most of the losses happen above 34. Replaying from 38 undrawn
 shows how much higher they happen.
 
+**Replay from 38 undrawn** (2,196 s on two workers, 100M-node budget, nothing skipped):
+
+| net's result | games | net winning at 38 | mean exact margin at 38 | net error boxes | classic error boxes | final margin |
+|---|---|---|---|---|---|---|
+| won | 146 | 0.58 | +0.48 | 5.85 | 9.90 | +4.53 |
+| lost | 54 | 0.30 | -2.33 | 10.96 | 5.78 | -7.52 |
+| all | 200 | 0.50 | -0.28 | 7.23 | 8.79 | +1.28 |
+
+- **The games are decided between 38 and 34 undrawn edges.** At 38 the net is winning in
+  half the games (mean exact margin -0.3); at 34 it is winning in three quarters. 62 of the
+  146 wins were lost positions at 38, and 16 of the 54 losses were won ones.
+- **Both players play that zone badly, the net less badly.** From 38 to 35 the net gives
+  away 5.5 boxes a game and classic 8.2. The net's error moves by undrawn count: 38: 74,
+  37: 65, 36: 65, 35: 33, 34: 43, 33: 23, 32: 7. About 100 of the 200 games have the net
+  to move at a given count, so at 36..38 roughly two thirds of its moves lose exact margin,
+  one third at 34..35, and almost none from 32 down, where the search reaches the solver.
+- **So the net's edge over classic is the 35..38 zone,** and its remaining losses are
+  mostly decided there too: 38 of 54 were already lost at 38, and those positions reached
+  38 through the same zone of a previous capture fight.
+
+The 31..36 labels cover the lower half of the zone. The upper half, 36..40, is where exact
+labels would matter most; the replay solved every position from 38 along a game line at
+about 2.4 CPU-seconds each with the table carried along the line, far cheaper than the
+labeller's root-plus-children solves (22 CPU-seconds per position at 31..36).
+
+### Solver PR #7 (reviewed 2026-10-13)
+
+Two changes to `boxes_solver.cpp` / `boxes_chains.cpp`: chain walking without temporary
+vectors, and transposition entries that keep both proven bounds (the entry stays 16 bytes;
+`lower`/`upper` replace the single value for cutoffs, `value` stays the MTD(f) guess).
+Cutoffs read `lower >= beta` / `upper <= alpha`, bounds only tighten, and an exact entry
+sets `lower == upper`. Every one of 6,000 benchmark values is unchanged; the new
+`test_boxes_solver_bounds.py` checks tiny tables (2 entries, so constant collisions),
+budget restarts and symmetric images against the oracle. Merged into this branch in a
+worktree: builds, 417 tests pass. Gain: 1.4x at equal nodes (15..17% fewer nodes), memory
+unchanged. Solver 32 still costs 2.5..3.7x solver 30, so `SOLVER_N` stays at 30.
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
