@@ -520,6 +520,22 @@ prior does (more distinct leaves, more solver calls), and s1600's policy cross-e
 targets are flattening themselves (Dirichlet noise plus temperature-1 visits at a few
 hundred simulations), and the fix is sharper targets and a lower `c_puct`.
 
+Measured on s1600 (entropy in nats / top-move share, by undrawn band):
+
+| iteration | 31..34 | 35..40 | 41..60 |
+|---|---|---|---|
+| 0 | 1.91 / 0.44 | 2.05 / 0.42 | 2.42 / 0.21 |
+| 5 | 1.74 / 0.49 | 2.20 / 0.38 | 2.93 / 0.14 |
+| 10 | 1.81 / 0.47 | 2.19 / 0.38 | 3.01 / 0.13 |
+| 20 | 1.78 / 0.49 | 2.19 / 0.38 | 3.12 / 0.12 |
+
+The flattening is real but confined to the opening (41+ undrawn, where most moves are
+exactly equal and the arena randomises the first four edges); the decisive 35..40 zone is
+stable, undecided (top move 0.38 of the visits among about 37 legal moves) and not drifting.
+So the policy targets are not the lever; the value head is. (Iteration 0 holds 139 games:
+self-play files carry a timestamp prefix, so a restart adds games beside those of a killed
+attempt instead of replacing them.)
+
 ### Solver PR #7 (reviewed 2026-10-13)
 
 Two changes to `boxes_solver.cpp` / `boxes_chains.cpp`: chain walking without temporary
