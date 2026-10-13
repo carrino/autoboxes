@@ -111,6 +111,8 @@ def main() -> None:
     p.add_argument("--n-blocks", type=int, default=None, help="override the residual depth")
     p.add_argument("--features", choices=["basic", "chains"], default="basic",
                    help="input planes (encode.py): chains adds the chain / loop structure")
+    p.add_argument("--no-exact", action="store_true",
+                   help="train on game outcomes even where exact margins are stored (a control)")
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
 
@@ -119,10 +121,11 @@ def main() -> None:
     rows, cols = args.rows, args.cols or args.rows
     t0 = time.time()
     dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt), min_undrawn=args.min_undrawn,
-                           features=args.features)
+                           features=args.features, use_exact=not args.no_exact)
     assert (dataset.rows, dataset.cols) == (rows, cols), (dataset.rows, dataset.cols)
     print(f"dataset: {len(dataset):,} positions with >= {args.min_undrawn} undrawn edges from "
           f"{len(dataset.games)} games ({dataset.num_with_mcts} searched), "
+          f"{dataset.num_exact():,} with exact value targets, "
           f"{dataset.footprint_bytes() / 1e6:.1f} MB in RAM, loaded in {time.time() - t0:.1f}s")
     train_set, val_set = dataset.split(args.val_fraction, seed=args.iteration)
     loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,

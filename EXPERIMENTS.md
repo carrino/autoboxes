@@ -513,6 +513,23 @@ from 0.64 to >= 0.70 or classic clearly above 0.75; then the next run is the s16
 `RELABEL_N=38` + the 7,445 labels from #4 + the #7 solver. Fail = the net cannot represent
 the value function, and the next step is architecture.
 
+**How wrong the value targets were** (`relabel_exact.py` over s1600's iteration 14, 100 games,
+902 positions within 38 undrawn, 9 over a 100M-node budget, 19 minutes on 4 workers beside
+the running loop):
+
+| undrawn | positions | mean \|outcome - exact\| | outcome sign wrong |
+|---|---|---|---|
+| 25..30 | 127 | 0.00 | 0.00 |
+| 31..34 | 400 | 0.56 | 0.01 |
+| 35..38 | 375 | 2.28 | 0.24 |
+
+At 35..38, one value target in four has the wrong sign and the mean error is 2.3 boxes; at
+31..34 the targets were already clean (the solver at 30 and STOP_WHEN_SOLVED make the tail
+of every game optimal). So the clean band read at 29..34 (value sign 0.64) measures the
+head on positions whose training targets were right, which bounds what exact targets can
+give there: the gain to expect is at 35..38, and the probe must read that band (33..36 is
+affordable to solve: 300 positions in minutes; 35..38 costs hours).
+
 A second lead to check first (`target_entropy.py`): iteration 19's candidate took 1.10 s a
 move against the champion's 0.49 at equal simulations and solver, which is what a flatter
 prior does (more distinct leaves, more solver calls), and s1600's policy cross-entropy is
