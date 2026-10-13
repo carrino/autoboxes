@@ -5,13 +5,53 @@
   "node_budget": 20000000,
   "shards": 4,
   "output": "/workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36",
-  "wall_seconds": 85.17824847099837,
-  "running_shards": [
-    0,
-    1,
-    2,
-    3
-  ],
+  "wall_seconds": 41349.250344154,
+  "running_shards": [],
   "failed": false,
-  "results": []
+  "results": [
+    {
+      "shard": 0,
+      "exit_code": 0,
+      "wall_seconds": 41349.243662687004,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/full-shard-0.txt",
+      "sampled": 1903,
+      "labelled": 1862,
+      "skipped": 41,
+      "solver_seconds_rounded": 41308,
+      "files": 16
+    },
+    {
+      "shard": 1,
+      "exit_code": 0,
+      "wall_seconds": 35919.498729735,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/full-shard-1.txt",
+      "sampled": 1903,
+      "labelled": 1860,
+      "skipped": 43,
+      "solver_seconds_rounded": 35891,
+      "files": 16
+    },
+    {
+      "shard": 2,
+      "exit_code": 0,
+      "wall_seconds": 35734.831918314994,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/full-shard-2.txt",
+      "sampled": 1903,
+      "labelled": 1863,
+      "skipped": 40,
+      "solver_seconds_rounded": 35690,
+      "files": 16
+    },
+    {
+      "shard": 3,
+      "exit_code": 0,
+      "wall_seconds": 37598.257901397,
+      "log": "/workspace/work/cpu-solver/autoboxes/experiments/2026-10-12_10-11-boxes-cpu-solver-work/logs/full-shard-3.txt",
+      "sampled": 1903,
+      "labelled": 1860,
+      "skipped": 43,
+      "solver_seconds_rounded": 37553,
+      "files": 16
+    }
+  ]
 }

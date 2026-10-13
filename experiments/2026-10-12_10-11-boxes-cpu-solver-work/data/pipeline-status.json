@@ -1,5 +1,9 @@
 {
-  "stage": "full",
-  "requested_positions": 7612,
-  "node_budget": 20000000
+  "stage": "complete",
+  "path": "/workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36.tar.gz",
+  "size_bytes": 191908,
+  "sha256": "eb7615cede01bed88e3f8b435d4f373a9f64dbedc547f16ce1de032d521fe5d5",
+  "npz_files": 64,
+  "positions": 7445,
+  "archive_verified_against_file_hashes": true
 }

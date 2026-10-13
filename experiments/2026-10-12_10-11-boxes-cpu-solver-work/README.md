@@ -5,7 +5,7 @@ nodes when the largest independent region is smaller.** For a largest region of
 20 edges versus an unsplit board, median nodes were 4,166 versus 20,481 at 30
 undrawn (4.9x fewer), and 10,205 versus 88,469 at 32 undrawn (8.7x fewer).
 
-Job 1 is complete. Labelling is in progress; only completed, verified phases are tabulated below.
+The full run produced **7,445 verified exact labels**, with 167 positions skipped on the node budget.
 
 ## Machine, checkout, and inputs
 
@@ -179,6 +179,7 @@ and at most 60,000 requested positions, sized for approximately 12 hours.
 | Phase | Node budget | Sampled | Labelled | Skipped | Skipped % | Wall seconds | NPZ files | Max policy-sum error |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | pilot20 | 20000000 | 400 | 388 | 12 | 3.00% | 2270.011 | 46 | 1.19e-07 |
+| full | 20000000 | 7612 | 7445 | 167 | 2.19% | 41349.250 | 64 | 1.19e-07 |
 
 Wall time is elapsed time for the entire concurrent shard group, including
 sampling and output. Per-shard times, requested/sample counts, log paths and exit
@@ -212,50 +213,58 @@ by the unchanged labeller; a position is skipped if its root or any child times 
 
 ### Verified positions by undrawn count
 
-| Undrawn | pilot20 |
-| --- | --- |
-| 31 | 79 |
-| 32 | 56 |
-| 33 | 72 |
-| 34 | 65 |
-| 35 | 71 |
-| 36 | 45 |
+| Undrawn | pilot20 | full |
+| --- | --- | --- |
+| 31 | 79 | 1401 |
+| 32 | 56 | 1184 |
+| 33 | 72 | 1399 |
+| 34 | 65 | 1247 |
+| 35 | 71 | 1192 |
+| 36 | 45 | 1022 |
 
 ### Exact final margins for player 1
 
-| Final margin for player 1 | pilot20 |
-| --- | --- |
-| -11 | 7 |
-| -9 | 18 |
-| -7 | 20 |
-| -5 | 66 |
-| -3 | 79 |
-| -1 | 74 |
-| 1 | 59 |
-| 3 | 27 |
-| 5 | 18 |
-| 7 | 8 |
-| 9 | 8 |
-| 11 | 3 |
-| 13 | 1 |
+| Final margin for player 1 | pilot20 | full |
+| --- | --- | --- |
+| -17 | 0 | 2 |
+| -15 | 0 | 5 |
+| -13 | 0 | 26 |
+| -11 | 7 | 66 |
+| -9 | 18 | 255 |
+| -7 | 20 | 480 |
+| -5 | 66 | 973 |
+| -3 | 79 | 1512 |
+| -1 | 74 | 1586 |
+| 1 | 59 | 1039 |
+| 3 | 27 | 663 |
+| 5 | 18 | 415 |
+| 7 | 8 | 243 |
+| 9 | 8 | 99 |
+| 11 | 3 | 48 |
+| 13 | 1 | 25 |
+| 15 | 0 | 8 |
 
 ### Exact final margins for the side to move
 
-| Final margin for side to move | pilot20 |
-| --- | --- |
-| -11 | 2 |
-| -9 | 3 |
-| -7 | 5 |
-| -5 | 24 |
-| -3 | 46 |
-| -1 | 69 |
-| 1 | 64 |
-| 3 | 60 |
-| 5 | 60 |
-| 7 | 23 |
-| 9 | 23 |
-| 11 | 8 |
-| 13 | 1 |
+| Final margin for side to move | pilot20 | full |
+| --- | --- | --- |
+| -15 | 0 | 3 |
+| -13 | 0 | 7 |
+| -11 | 2 | 16 |
+| -9 | 3 | 52 |
+| -7 | 5 | 139 |
+| -5 | 24 | 406 |
+| -3 | 46 | 1045 |
+| -1 | 69 | 1495 |
+| 1 | 64 | 1130 |
+| 3 | 60 | 1130 |
+| 5 | 60 | 982 |
+| 7 | 23 | 584 |
+| 9 | 23 | 302 |
+| 11 | 8 | 98 |
+| 13 | 1 | 44 |
+| 15 | 0 | 10 |
+| 17 | 0 | 2 |
 
 The NPZ format stores one visit per optimal edge in `mcts_visits`, rather than
 an already-normalized policy. `verify_labels.py` loads every array from every
@@ -268,7 +277,16 @@ results are in `data/<phase>-verification.json`.
 
 ### Full-run archive
 
-No full-run archive has been created yet.
+```json
+{
+  "path": "/workspace/autoboxes-data/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36.tar.gz",
+  "size_bytes": 191908,
+  "sha256": "eb7615cede01bed88e3f8b435d4f373a9f64dbedc547f16ce1de032d521fe5d5",
+  "npz_files": 64,
+  "positions": 7445,
+  "archive_verified_against_file_hashes": true
+}
+```
 
 The NPZ datasets and oracle archive remain on this machine and are excluded from
 git. Only the report, logs, measurements, figures and report helper scripts are
