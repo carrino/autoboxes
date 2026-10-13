@@ -152,11 +152,12 @@ If `relabel_exact.py` already processed the replay window, wait for it to finish
 those labels instead of paying for the same solves again:
 
 ```bash
-uv run "$EXP/exact_ab.py" --reuse-exact --workers 4 \
+uv run "$EXP/exact_ab.py" --reuse-labels --workers 4 \
     --bands 33:36 37:38 --positions 100 --arena-games 100
 ```
 
-This still snapshots both arms, strips exact arrays only from the control, and reads label
+`--reuse-labels` and `--reuse-exact` are equivalent. This still snapshots both arms,
+strips exact arrays only from the control, and reads label
 coverage without constructing a relabelling solver. Every sequential game in the manifest
 must have an `exact_margin_p1` array; a missing or malformed array fails before training.
 Existing unknown labels stay unknown and use the outcome fallback. Labels above `--reach`

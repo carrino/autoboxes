@@ -263,6 +263,7 @@ def main() -> None:
     p.add_argument("--reach", type=int, default=38)
     p.add_argument(
         "--reuse-exact",
+        "--reuse-labels",
         action="store_true",
         help="reuse stored exact labels, fail on missing arrays, and skip relabelling",
     )
