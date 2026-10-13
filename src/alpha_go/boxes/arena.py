@@ -4,8 +4,9 @@ Plays `num_games` games between two registered agents through `alpha_go.gameplay
 and reports win rate (with a 95% Wilson interval) and mean final margin from agent A's point
 of view. Games come in pairs: both games of a pair start from the same random opening of
 `opening_moves` edges, with A moving first in one and second in the other, so the side-to-move
-advantage of an opening cancels inside the pair. The pair score (share of pairs A wins on the
-summed margin) is the strength signal; the per-colour win rates show how much colour decides.
+advantage of an opening is balanced inside the pair. Promotion tests game score by swapping
+whole pairs; the legacy pair score on summed box margin remains a separate diagnostic.
+The per-colour win rates show how much colour decides.
 With --start_positions the pairs start instead from stored games cut where --start_undrawn
 edges remain (self-play's branching sampler), which isolates the middle game from the opening.
 --save_games writes every game's moves (opening included) as JSON lines, for replaying the games
@@ -86,6 +87,36 @@ class MatchResult:
         """95% interval for A's pair score."""
         return self.wilson_interval(self.pair_score, len(self.pair_margins), z)
 
+    def paired_win_pvalue(self) -> float:
+        """Two-sided exact label-swap test of game score, swapping whole opening pairs.
+
+        Each game's win/draw/loss advantage is +1/0/-1. Under the null that agent labels
+        are exchangeable within each independent opening pair, the sign of each pair's
+        summed advantage is equally likely. Dynamic programming enumerates that null
+        without treating the two games as independent. Split pairs contribute zero;
+        box-margin magnitudes never enter. This is a fixed-match test, not a sequential
+        stopping rule or a correction for testing many candidates.
+        """
+        assert self.games > 0 and self.games % 2 == 0 and len(self.margins) == self.games
+        signs = np.sign(self.margins).astype(int)
+        advantages = signs.reshape(-1, 2).sum(axis=1)
+        observed = abs(int(advantages.sum()))
+        probabilities = np.ones(1)
+        extent = 0
+        for weight in np.abs(advantages):
+            w = int(weight)
+            if w:
+                probabilities = (np.pad(probabilities, (0, 2 * w))
+                                 + np.pad(probabilities, (2 * w, 0))) * 0.5
+                extent += w
+        outcomes = np.arange(-extent, extent + 1)
+        return min(1.0, float(probabilities[np.abs(outcomes) >= observed].sum()))
+
+    def wins_promotion(self, threshold: float = 0.55, alpha: float = 0.05) -> bool:
+        """Game-score threshold and significant improvement in a pre-sized paired match."""
+        return self.a_win_rate >= threshold and self.a_win_rate > 0.5 \
+            and self.paired_win_pvalue() < alpha
+
     def summary(self) -> dict[str, float | int | str]:
         lo, hi = self.wilson()
         plo, phi = self.pair_wilson()
@@ -94,6 +125,7 @@ class MatchResult:
             "a": self.a, "b": self.b, "board": f"{self.rows}x{self.cols}", "games": self.games,
             "a_wins": self.a_wins, "b_wins": self.b_wins, "draws": self.draws,
             "a_win_rate": round(self.a_win_rate, 4),
+            "a_paired_win_pvalue": self.paired_win_pvalue(),
             "a_win_rate_ci95": f"[{lo:.3f}, {hi:.3f}]",
             "a_first_win_rate": round(first, 4), "a_second_win_rate": round(second, 4),
             "a_pair_score": round(self.pair_score, 4),
@@ -303,3 +335,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

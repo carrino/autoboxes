@@ -25,6 +25,7 @@ from torch.utils.data import Dataset
 from alpha_go.boxes.encode import encode_grid, lattice_rows_cols
 from alpha_go.boxes.relabel import EXACT_UNKNOWN
 from alpha_go.boxes.rules import BoxesGeometry, geometry
+from alpha_go.boxes.validation import validation_game
 from alpha_go.self_play import parse_score_from_result
 
 
@@ -99,6 +100,21 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             sum(int(v.nbytes) for v in g.values() if hasattr(v, "nbytes")) for g in self.games
         )
 
+    def split_stable(self, val_fraction: float, seed: int = 0
+                     ) -> tuple[BoxesDataset, BoxesDataset]:
+        """Hash opening families instead of reshuffling files when replay changes.
+
+        See ``validation.replay_group`` for lineage and warm-start limitations.
+        The realised validation fraction need not equal the requested fraction.
+        """
+        train: list[dict[str, Any]] = []
+        val: list[dict[str, Any]] = []
+        for game in self.games:
+            target = val if validation_game(game, self.geo, val_fraction, seed) else train
+            target.append(game)
+        return (BoxesDataset([], self.smooth_eps, games=train, like=self),
+                BoxesDataset([], self.smooth_eps, games=val, like=self))
+
     def __len__(self) -> int:
         return int(self.cumsum[-1])
 
@@ -140,3 +156,4 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             "root_value": torch.tensor(root_value, dtype=torch.float32),
             "has_mcts": searched,
         }
+
