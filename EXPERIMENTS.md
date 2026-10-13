@@ -392,6 +392,21 @@ trains for 2 epochs (about 400 steps, 30..70 s, from a fresh optimizer and cosin
 schedule), so the first thing to rule out is underfitting: train iteration 12 on its own
 window to convergence and band-read it.
 
+Underfitting ruled out (`5x5-fit/iter1`: iteration 12 trained for 20 epochs, 4,080 steps,
+on its own window).
+- **Policy.** The policy loss stayed at 2.55..2.65 nats the whole time, and policy accuracy
+  stayed at 0.357 (train) / 0.366 (val). The policy already matches its diffuse targets
+  (temperature-1 visits plus 0.1 label smoothing) as closely as this net can.
+- **Value.** The value fit its own games much better: value accuracy went 0.65 -> 0.76
+  (train) and 0.63 -> 0.74 (val, held-out games from the same window). On the clean band,
+  though, value sign fell 0.643 -> 0.610, margin MAE rose 3.43 -> 3.52, and the policy
+  stayed at 0.427.
+
+More training fits the outcomes and the position distribution of iteration 0's own games,
+not the true values. The game-split validation set shares that distribution (one champion,
+branched games with shared prefixes), so it overstates generalisation. The bottleneck is
+the targets, not the amount of training.
+
 ## 10. Does the board split into independent regions? (`region_stats.py`)
 
 4000 positions from the `5x5-mid` games. A region is a set of open boxes joined through
