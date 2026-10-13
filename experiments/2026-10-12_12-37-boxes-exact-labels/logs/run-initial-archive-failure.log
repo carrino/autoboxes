@@ -1,0 +1,45 @@
+{"name": "5x5-oracle-31-36-pilot", "requested": 400, "budget": 20000000, "seed": 0, "workers": 4, "wall_seconds": 2931.6734388679997, "labelled": 388, "skipped": 12, "shards": [{"shard": 0, "labelled": 99, "skipped": 1, "solve_seconds": 1029, "files": 12}, {"shard": 1, "labelled": 97, "skipped": 3, "solve_seconds": 1651, "files": 10}, {"shard": 2, "labelled": 97, "skipped": 3, "solve_seconds": 1955, "files": 12}, {"shard": 3, "labelled": 95, "skipped": 5, "solve_seconds": 2876, "files": 12}], "commands": [["/workspace/work/exact-labels/.venv/bin/python", "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py", "--positions-tag", "5x5-chains", "--min-undrawn", "31", "--max-undrawn", "36", "--num-positions", "400", "--node-budget", "20000000", "--save-name", "5x5-oracle-31-36-pilot", "--shard", "0", "--num-shards", "4", "--seed", "0"], ["/workspace/work/exact-labels/.venv/bin/python", "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py", "--positions-tag", "5x5-chains", "--min-undrawn", "31", "--max-undrawn", "36", "--num-positions", "400", "--node-budget", "20000000", "--save-name", "5x5-oracle-31-36-pilot", "--shard", "1", "--num-shards", "4", "--seed", "0"], ["/workspace/work/exact-labels/.venv/bin/python", "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py", "--positions-tag", "5x5-chains", "--min-undrawn", "31", "--max-undrawn", "36", "--num-positions", "400", "--node-budget", "20000000", "--save-name", "5x5-oracle-31-36-pilot", "--shard", "2", "--num-shards", "4", "--seed", "0"], ["/workspace/work/exact-labels/.venv/bin/python", "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py", "--positions-tag", "5x5-chains", "--min-undrawn", "31", "--max-undrawn", "36", "--num-positions", "400", "--node-budget", "20000000", "--save-name", "5x5-oracle-31-36-pilot", "--shard", "3", "--num-shards", "4", "--seed", "0"]], "output": "/workspace/work/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36-pilot", "state": "complete"}
+{"name": "5x5-oracle-31-36", "requested": 2947, "budget": 20000000, "seed": 1, "workers": 2, "wall_seconds": 28971.492193074, "labelled": 2891, "skipped": 56, "shards": [{"shard": 0, "labelled": 1448, "skipped": 26, "solve_seconds": 26970, "files": 16}, {"shard": 1, "labelled": 1443, "skipped": 30, "solve_seconds": 28938, "files": 16}], "commands": [["/workspace/work/exact-labels/.venv/bin/python", "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py", "--positions-tag", "5x5-chains", "--min-undrawn", "31", "--max-undrawn", "36", "--num-positions", "2947", "--node-budget", "20000000", "--save-name", "5x5-oracle-31-36", "--shard", "0", "--num-shards", "2", "--seed", "1"], ["/workspace/work/exact-labels/.venv/bin/python", "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py", "--positions-tag", "5x5-chains", "--min-undrawn", "31", "--max-undrawn", "36", "--num-positions", "2947", "--node-budget", "20000000", "--save-name", "5x5-oracle-31-36", "--shard", "1", "--num-shards", "2", "--seed", "1"]], "output": "/workspace/work/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36", "state": "complete"}
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '/codex/browser/projectless/0002-files-mentioned-by-the-user-uploaded-file-pointe/output'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '/codex/browser/projectless/0002-files-mentioned-by-the-user-uploaded-file-pointe'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '/codex/browser/projectless'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '/codex/browser'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/work/exact-labels/experiments/2026-10-12_12-37-boxes-exact-labels/run_labels.py", line 193, in <module>
+    main()
+  File "/workspace/work/exact-labels/experiments/2026-10-12_12-37-boxes-exact-labels/run_labels.py", line 182, in main
+    args.archive.parent.mkdir(parents=True, exist_ok=True)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1315, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1315, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1315, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  [Previous line repeated 1 more time]
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/codex'

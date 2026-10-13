@@ -1,0 +1,107 @@
+{
+  "name": "5x5-oracle-31-36",
+  "requested": 2947,
+  "budget": 20000000,
+  "seed": 1,
+  "workers": 2,
+  "wall_seconds": 28971.492193074,
+  "labelled": 2891,
+  "skipped": 56,
+  "shards": [
+    {
+      "shard": 0,
+      "labelled": 1448,
+      "skipped": 26,
+      "solve_seconds": 26970,
+      "files": 16
+    },
+    {
+      "shard": 1,
+      "labelled": 1443,
+      "skipped": 30,
+      "solve_seconds": 28938,
+      "files": 16
+    }
+  ],
+  "commands": [
+    [
+      "/workspace/work/exact-labels/.venv/bin/python",
+      "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py",
+      "--positions-tag",
+      "5x5-chains",
+      "--min-undrawn",
+      "31",
+      "--max-undrawn",
+      "36",
+      "--num-positions",
+      "2947",
+      "--node-budget",
+      "20000000",
+      "--save-name",
+      "5x5-oracle-31-36",
+      "--shard",
+      "0",
+      "--num-shards",
+      "2",
+      "--seed",
+      "1"
+    ],
+    [
+      "/workspace/work/exact-labels/.venv/bin/python",
+      "experiments/2026-10-08_14-42-boxes-3x3-loop/solver_label.py",
+      "--positions-tag",
+      "5x5-chains",
+      "--min-undrawn",
+      "31",
+      "--max-undrawn",
+      "36",
+      "--num-positions",
+      "2947",
+      "--node-budget",
+      "20000000",
+      "--save-name",
+      "5x5-oracle-31-36",
+      "--shard",
+      "1",
+      "--num-shards",
+      "2",
+      "--seed",
+      "1"
+    ]
+  ],
+  "output": "/workspace/work/game_data_root/experiments/2026-10-08_14-42-boxes-3x3-loop/5x5-oracle-31-36",
+  "state": "complete",
+  "verification": {
+    "positions": 2891,
+    "files": 32,
+    "undrawn": {
+      "31": 540,
+      "32": 440,
+      "33": 542,
+      "34": 502,
+      "35": 445,
+      "36": 422
+    },
+    "margins_p1": {
+      "-15": 2,
+      "-13": 8,
+      "-11": 28,
+      "-9": 89,
+      "-7": 176,
+      "-5": 398,
+      "-3": 576,
+      "-1": 609,
+      "1": 415,
+      "3": 239,
+      "5": 165,
+      "7": 106,
+      "9": 45,
+      "11": 20,
+      "13": 12,
+      "15": 3
+    }
+  },
+  "archive": "/workspace/work/5x5-oracle-31-36.tgz",
+  "archive_bytes": 78053,
+  "archive_sha256": "5bbde9a869aa67c122f4da752935eb1ad81ade53017baa3a3f902c1ae7ab9807"
+}
