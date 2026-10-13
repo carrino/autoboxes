@@ -1,0 +1,84 @@
+--- a/src/alpha_go/cpp/boxes/boxes_solver.h
++++ b/src/alpha_go/cpp/boxes/boxes_solver.h
+@@ -21,7 +21,8 @@
+ // and the exact value of simple loony endgames by recursion over component sizes.
+ // Move ordering (exactness unaffected): the table's remembered best move first, then safe
+ // moves by a history heuristic, loony moves last; value() drives the search with MTD(f)
+-// null windows around the table's last value.
++// null windows around the table's last value. Both bounds fit in the same 16-byte
++// entry, so alternating null windows do not discard a previously proven bound.
+ // value_within() stops after a node budget so the search can use it at every late leaf.
+ // One instance per thread: the table is not synchronised.
+ class BoxesSolver {
+@@ -51,7 +52,9 @@
+     enum Flag : int8_t { kEmpty = 0, kExact = 1, kLower = 2, kUpper = 3 };
+     struct Entry {
+         uint64_t key;
+-        int16_t value;
++        int16_t lower;
++        int16_t upper;
++        int16_t value;  // last result, the MTD(f) starting guess
+         int8_t flag;
+         int8_t move;  // best move at this node, -1 if none
+     };
+--- a/src/alpha_go/cpp/boxes/boxes_solver.cpp
++++ b/src/alpha_go/cpp/boxes/boxes_solver.cpp
+@@ -51,7 +51,7 @@
+     while ((std::size_t{1} << log2_size_) < table_entries) {
+         ++log2_size_;
+     }
+-    table_.assign(std::size_t{1} << log2_size_, Entry{0, 0, kEmpty, -1});
++    table_.assign(std::size_t{1} << log2_size_, Entry{0, -kInf, kInf, 0, kEmpty, -1});
+     history_.assign(static_cast<std::size_t>(geo.num_edges), 0);
+ }
+ 
+@@ -162,20 +162,20 @@
+     const BoxesGeometry& geo = proto_.geometry();
+     const uint64_t key = canonical(mask);
+     Entry& slot = table_[index(key)];
+-    int first = -1;  // the table's move, read now: child searches may overwrite the slot
++    int first = -1;  // child searches may overwrite this direct-mapped slot
++    int lower = -kInf, upper = kInf;
+     if (slot.flag != kEmpty && slot.key == key) {
+         first = slot.move;
+-        if (slot.flag == kExact) {
+-            return slot.value;
+-        }
+-        if (slot.flag == kLower) {
+-            alpha = std::max(alpha, static_cast<int>(slot.value));
+-        } else {
+-            beta = std::min(beta, static_cast<int>(slot.value));
+-        }
+-        if (alpha >= beta) {
+-            return slot.value;
+-        }
++        lower = slot.lower;
++        upper = slot.upper;
++        if (lower == upper || lower >= beta) {
++            return lower;
++        }
++        if (upper <= alpha) {
++            return upper;
++        }
++        alpha = std::max(alpha, lower);
++        beta = std::min(beta, upper);
+     }
+     const int alpha0 = alpha;
+     const int beta0 = beta;
+@@ -236,7 +236,16 @@
+             }
+         }
+     }
++    if (best <= alpha0) {
++        upper = std::min(upper, best);
++    } else if (best >= beta0) {
++        lower = std::max(lower, best);
++    } else {
++        lower = upper = best;
++    }
+     slot.key = key;
++    slot.lower = static_cast<int16_t>(lower);
++    slot.upper = static_cast<int16_t>(upper);
+     slot.value = static_cast<int16_t>(best);
+     slot.flag = best <= alpha0 ? kUpper : (best >= beta0 ? kLower : kExact);
+     slot.move = static_cast<int8_t>(best_move);

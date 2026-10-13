@@ -1,0 +1,42 @@
+100/3000 positions, 156.0s
+200/3000 positions, 294.2s
+300/3000 positions, 509.2s
+400/3000 positions, 604.4s
+500/3000 positions, 744.4s
+600/3000 positions, 867.9s
+700/3000 positions, 1060.8s
+800/3000 positions, 1151.2s
+900/3000 positions, 1242.9s
+1000/3000 positions, 1332.6s
+1100/3000 positions, 1500.3s
+1200/3000 positions, 1615.9s
+1300/3000 positions, 1724.6s
+1400/3000 positions, 1928.9s
+1500/3000 positions, 2065.5s
+1600/3000 positions, 2244.3s
+1700/3000 positions, 3197.7s
+1800/3000 positions, 3272.0s
+1900/3000 positions, 3389.7s
+2000/3000 positions, 3768.6s
+2100/3000 positions, 3958.2s
+2200/3000 positions, 4058.1s
+2300/3000 positions, 4484.2s
+2400/3000 positions, 4558.7s
+2500/3000 positions, 4651.7s
+2600/3000 positions, 4744.7s
+2700/3000 positions, 4949.4s
+2800/3000 positions, 5039.7s
+2900/3000 positions, 5236.7s
+3000/3000 positions, 5333.7s
+{"undrawn": 30, "positions": 558, "exact_nodes_median": 6400.0, "exact_nodes_p90": 61810.700000000004, "exact_nodes_max": 1783782.0, "exact_ms_median": 25.724206, "exact_ms_p90": 245.66813890000012, "exact_ms_max": 4443.837864, "100k_solved": 0.9354838709677419, "1m_solved": 0.996415770609319}
+{"undrawn": 31, "positions": 576, "exact_nodes_median": 12954.0, "exact_nodes_p90": 121381.0, "exact_nodes_max": 1914667.0, "exact_ms_median": 51.8038965, "exact_ms_p90": 468.814245, "exact_ms_max": 7935.28114, "100k_solved": 0.8784722222222222, "1m_solved": 0.9930555555555556}
+{"undrawn": 32, "positions": 595, "exact_nodes_median": 21554.0, "exact_nodes_p90": 228823.60000000012, "exact_nodes_max": 2827972.0, "exact_ms_median": 91.837317, "exact_ms_p90": 778.5297336000002, "exact_ms_max": 8212.548744, "100k_solved": 0.8134453781512605, "1m_solved": 0.984873949579832}
+{"undrawn": 33, "positions": 646, "exact_nodes_median": 51343.0, "exact_nodes_p90": 488312.5, "exact_nodes_max": 82397497.0, "exact_ms_median": 192.7088025, "exact_ms_p90": 1871.4280195000001, "exact_ms_max": 230442.912416, "100k_solved": 0.7167182662538699, "1m_solved": 0.955108359133127}
+{"undrawn": 34, "positions": 625, "exact_nodes_median": 111546.0, "exact_nodes_p90": 695418.8000000005, "exact_nodes_max": 235104447.0, "exact_ms_median": 477.116393, "exact_ms_p90": 2910.0116942, "exact_ms_max": 823300.598406, "100k_solved": 0.4352, "1m_solved": 0.9296}
+validated 3000 values; wall_seconds=5333.966
+{"undrawn": 30, "positions": 558, "exact_nodes_median": 6400.0, "exact_nodes_p90": 61810.700000000004, "exact_nodes_max": 1783782.0, "exact_ms_median": 25.724206, "exact_ms_p90": 245.66813890000012, "exact_ms_max": 4443.837864, "100k_solved": 0.9354838709677419, "1m_solved": 0.996415770609319}
+{"undrawn": 31, "positions": 576, "exact_nodes_median": 12954.0, "exact_nodes_p90": 121381.0, "exact_nodes_max": 1914667.0, "exact_ms_median": 51.8038965, "exact_ms_p90": 468.814245, "exact_ms_max": 7935.28114, "100k_solved": 0.8784722222222222, "1m_solved": 0.9930555555555556}
+{"undrawn": 32, "positions": 595, "exact_nodes_median": 21554.0, "exact_nodes_p90": 228823.60000000012, "exact_nodes_max": 2827972.0, "exact_ms_median": 91.837317, "exact_ms_p90": 778.5297336000002, "exact_ms_max": 8212.548744, "100k_solved": 0.8134453781512605, "1m_solved": 0.984873949579832}
+{"undrawn": 33, "positions": 646, "exact_nodes_median": 51343.0, "exact_nodes_p90": 488312.5, "exact_nodes_max": 82397497.0, "exact_ms_median": 192.7088025, "exact_ms_p90": 1871.4280195000001, "exact_ms_max": 230442.912416, "100k_solved": 0.7167182662538699, "1m_solved": 0.955108359133127}
+{"undrawn": 34, "positions": 625, "exact_nodes_median": 111546.0, "exact_nodes_p90": 695418.8000000005, "exact_nodes_max": 235104447.0, "exact_ms_median": 477.116393, "exact_ms_p90": 2910.0116942, "exact_ms_max": 823300.598406, "100k_solved": 0.4352, "1m_solved": 0.9296}
+validated 3000 values; wall_seconds=0.121

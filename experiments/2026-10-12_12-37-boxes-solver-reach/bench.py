@@ -96,6 +96,8 @@ def main() -> None:
         with args.reference.open() as handle:
             expected = {(int(r["index"]), int(r["mask"])): int(r["value"])
                         for r in csv.DictReader(handle)}
+        assert all((i, mask) in expected for i, (_, mask) in enumerate(masks)), (
+            "reference does not cover the requested positions")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     start = time.monotonic()
     rows: list[dict[str, int | float]] = []
@@ -116,8 +118,16 @@ def main() -> None:
         futures = [pool.submit(measure, (i, n, m))
                    for i, (n, m) in enumerate(masks) if i not in done]
         for future in as_completed(futures):
+            error = future.exception()
+            if error is not None:
+                print(f"FATAL: position measurement failed: {error}", flush=True)
+                pool.shutdown(wait=False, cancel_futures=True)
+                raise error
             row = future.result()
             if expected:
+                if row["value"] != expected[(int(row["index"]), int(row["mask"]))]:
+                    print(f"FATAL: baseline value mismatch: {row}", flush=True)
+                    pool.shutdown(wait=False, cancel_futures=True)
                 assert row["value"] == expected[(int(row["index"]), int(row["mask"]))], row
             if writer is None:
                 writer = csv.DictWriter(handle, fieldnames=list(row))

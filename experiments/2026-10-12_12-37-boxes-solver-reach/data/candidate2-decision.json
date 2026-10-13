@@ -1,0 +1,10 @@
+{
+  "candidate": "both-transposition-bounds",
+  "development_positions": 3000,
+  "geometric_mean_speedup_vs_candidate1": 1.1073882971662097,
+  "median_paired_speedup_vs_candidate1": 1.1201638544033683,
+  "total_nodes_candidate1": 2753168161,
+  "total_nodes_candidate2": 2332104979,
+  "keep": true,
+  "selection": "development only; >=2% geomean speedup and no more nodes"
+}

@@ -68,6 +68,21 @@ must match the baseline by input index and mask. CSV rows checkpoint independent
 `--resume` validates them against the mask file and skips completed positions.
 The initial baseline ran with three workers, then was checkpointed to leave room
 for the prescribed four-process labelling pilot.
+The remaining baseline used one worker. Candidate 1 used one development worker,
+then resumed from 1,695 validated rows with two after the arena finished; its
+held-out run used two. Candidate 2 used four workers after labeling completed.
+Per-position solve timings and answers survive these resumes unchanged. The
+timing comparisons share a machine with the other tasks; use node counts and
+budget success rates when assessing search-tree improvements.
+
+The first candidate is commit `b525d22b3a95b5573b0f3483a60847964c73b692`.
+After it passed both complete mask files, the second trial applied
+`data/candidate2.patch`, rebuilt, ran the full suite and Catch2 binaries, then
+measured both files with the same baseline references. It keeps lower and upper
+bounds in the existing 16-byte table entry. The fixed selection rule requires
+at least a 1.02 geometric-mean speedup over candidate 1 on development positions
+and no increase in their total nodes. `data/candidate2-decision.json` records
+the calculation. The held-out measurements do not select the candidate.
 
 Predeclared reach criterion: at least 80% settled within 100k nodes, with median
 time at most 110% of baseline at 30, on both position files. The full tables remain
@@ -92,11 +107,12 @@ g++ -O3 -pg -std=c++17 -I src/alpha_go/cpp "$TASK/profile.cpp" \
 Relevant checks after solver edits:
 
 ```bash
-uv run -m pytest tests/test_boxes_cpp_solver.py tests/test_boxes_solver.py tests/test_boxes_forced.py tests/test_boxes_chains.py -q
+uv run -m pytest tests/test_boxes_cpp_solver.py tests/test_boxes_solver.py tests/test_boxes_solver_bounds.py tests/test_boxes_forced.py tests/test_boxes_chains.py -q
+uv run -m pytest tests/ --ignore=tests/test_gpu_lease.py -q
 src/alpha_go/cpp/build/go_game_test
 src/alpha_go/cpp/build/boxes_game_test
 src/alpha_go/cpp/build/mcts_test
-uv run ruff check "$TASK/bench.py"
-MYPYPATH=src uv run -m mypy "$TASK/bench.py" --follow-imports=silent
+uv run ruff check "$TASK/bench.py" "$TASK/report.py" tests/test_boxes_solver_bounds.py
+MYPYPATH=src uv run -m mypy "$TASK/bench.py" "$TASK/report.py" tests/test_boxes_solver_bounds.py --follow-imports=silent
 uv run "$TASK/report.py"  # requires all six completed benchmark CSVs and the candidate decision
 ```

@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import re
 import statistics
 from pathlib import Path
 
@@ -37,6 +38,8 @@ def main() -> None:
     """Use only complete CSVs; the second candidate's decision was made on development."""
     decision = json.loads((HERE / "data/candidate2-decision.json").read_text())
     chosen = "candidate2" if decision["keep"] else "candidate1"
+    with (HERE / "data/region_stats-5x5-mid-cost.csv").open() as handle:
+        region_positions = sum(int(row["positions"]) for row in csv.DictReader(handle))
     data = {(version, tag): read_rows(version, tag)
             for version in ("baseline", "candidate1", "candidate2") for tag in ("chains", "mid")}
     for tag in ("chains", "mid"):
@@ -89,6 +92,17 @@ def main() -> None:
     lines += ["", "Candidate 1 preserves every per-position node count as well as every value. "
               "Timing measurements share the machine with other single-threaded CPU tasks; "
               "node counts and budget success rates do not depend on scheduling.", ""]
+    first, second = data["candidate1", "mid"], data["candidate2", "mid"]
+    heldout_ratios = [float(old["exact_ms"]) / float(new["exact_ms"])
+                     for old, new in zip(first, second, strict=True)]
+    heldout_geometric = math.exp(statistics.mean(math.log(r) for r in heldout_ratios))
+    heldout_aggregate = (sum(float(row["exact_ms"]) for row in first)
+                        / sum(float(row["exact_ms"]) for row in second))
+    lines += [f"The second change is not a uniform timing improvement over candidate 1: "
+              f"on held-out positions its geometric-mean paired speedup is "
+              f"{heldout_geometric:.3f}×, while its total solve-time speedup is "
+              f"{heldout_aggregate:.3f}×. The development-only selection rule was retained; "
+              "the held-out result was not used to retune or change the candidate.", ""]
     eligible: dict[str, list[int]] = {}
     for tag in ("chains", "mid"):
         lines += [f"### 5x5-{tag}", "",
@@ -141,16 +155,30 @@ def main() -> None:
                    if all(ratio > 1 for ratio in ratios) else
                    "The association is mixed at these two fixed undrawn counts."),
               "This is an observational comparison, not a claim that the regions can be solved "
-              "independently and their margins summed. The required separate 4,000-position "
-              "`region_stats --solver-nodes 30 32` run is recorded in `logs/region-cost.log`; "
+              "independently and their margins summed. The required separate "
+              f"`region_stats --solver-nodes 30 32` run requested 4,000 positions and sampled "
+              f"{region_positions:,} distinct positions from the available games. "
+              "It is recorded in `logs/region-cost.log`; "
               "its 2M-node cap censors the hardest tails.", "",
               "## Validation and next work", "",
               "See README for commands, machine, setup, and the baseline checks. Exactness uses "
               "the existing Python oracle, exhaustive tiny boards, full-window/MTD(f) comparisons, "
               "new tiny-table budget-restart tests, all Catch2 binaries, "
               "and the full 6,000-position "
-              "corpus. Candidate CSVs are retained even for a reverted change.", "",
-              "Next: attack the remaining tree size with a proved region-aware reduction. "
+              "corpus. Candidate CSVs are retained even for a reverted change.", ""]
+    final_tests = re.search(r"\d+ passed, \d+ skipped", (HERE / "data/final-tests.txt").read_text())
+    assert final_tests is not None
+    lines += [f"Final solver suite: **{final_tests.group()}**; all three Catch2 binaries pass. "
+              "Logs are in `data/final-tests.txt` and `data/final-catch2.txt`.", ""]
+    integration_log = HERE / "data/integration-validation.txt"
+    if integration_log.is_file():
+        integration_tests = re.search(r"\d+ passed, \d+ skipped", integration_log.read_text())
+        assert integration_tests is not None
+        lines += [f"Combined with the corrected classical engine: "
+                  f"**{integration_tests.group()}**, plus all three Catch2 binaries. "
+                  "This separate integration build did not merge either branch. "
+                  "See `data/integration-validation.txt`.", ""]
+    lines += ["Next: attack the remaining tree size with a proved region-aware reduction. "
               "Keep using development positions for design and reserve 5x5-mid "
               "for final reports.", ""]
     (HERE / "report.md").write_text("\n".join(lines))
