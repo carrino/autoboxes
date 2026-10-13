@@ -148,6 +148,8 @@ SOLVER_N=24 SP_PROCS=4 TAG=5x5-solver ROWS=5 bash $EXP/run_iteration_local.sh 0 
 SEARCH_ARGS="--policy_temperature 0.7 --margin_utility_lambda 0.5" TAG=5x5-tuned ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # tuned search knobs
 SEARCH_ARGS="--policy_temperature 0.7 --prove_terminals 1" TAG=5x5-proof ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # MCTS-Solver: exact leaves back up by minimax
 FEATURES=chains TRAIN_MIN_UNDRAWN=24 WINDOW=8 TRAIN_EPOCHS=2 SOLVER_N=28 TAG=5x5-chains ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # chain planes, train above the solver zone
+RELABEL_N=38 BASELINES=boxes-classic BASE_GAMES=60 SOLVER_N=30 ... TAG=5x5-exact ROWS=5 bash $EXP/run_iteration_local.sh 0 20   # exact value targets from 38 undrawn, classic as the yardstick
+uv run $EXP/relabel_exact.py --games $GAME_DATA_DIR/experiments/$EXP_NAME/5x5-s1600/selfplay-it20 --rows 5 --max-undrawn 38   # relabel stored games by hand
 uv run $EXP/analyze.py 5x5                     # report-5x5.md
 uv run $EXP/oracle_eval.py --tag 3x3           # checkpoints vs the exact oracle on late positions
 uv run $EXP/solver_bench.py --tag 5x5 --undrawn 20 24 28 32 --selfplay-only   # picks SOLVER_N

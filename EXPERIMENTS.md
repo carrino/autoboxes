@@ -477,6 +477,71 @@ labels would matter most; the replay solved every position from 38 along a game 
 about 2.4 CPU-seconds each with the table carried along the line, far cheaper than the
 labeller's root-plus-children solves (22 CPU-seconds per position at 31..36).
 
+### Why the loop is stalled, and the fix being built (2026-10-13)
+
+Thirty-odd nets trained over two days (gate 1..12, s1600 1..20) tie iteration 0 in the
+arena (pooled pair score 0.48; a promotion needs about 0.68 over 30 pairs, which equal
+nets clear 3..5% of the time, so zero promotions is what equal nets produce). The classic
+column of s1600 is flat at about 0.75 and the band reads are flat. Three measurements say
+why:
+
+1. games are decided at 35..38 undrawn, where the net loses exact margin on two of every
+   three moves (the replay from 38);
+2. there the search cannot reach the solver, so its leaves are scored by the value head,
+   which gets the sign right 64% of the time;
+3. the value head's targets are the outcomes of games both sides misplay in that zone, and
+   training harder on them fits the net's own games and worsens the clean read (the
+   fitting probe).
+
+That is a fixed point: bad play at 35..38 -> noisy outcome targets -> bad value head -> bad
+search at 35..38. More simulations did not break it (s1600). AlphaZero escapes it with
+millions of games; this loop has 100 per iteration, and the solver has only been used at
+<= 30 in play and <= 34 in labels, never in the decisive zone.
+
+**Exact value relabelling** (`alpha_go/boxes/relabel.py`, `relabel_exact.py`, loop knob
+`RELABEL_N`): after each self-play batch, every game is replayed against the solver from
+`RELABEL_N` undrawn edges down, one solver per game with the table carried along the line
+(the replay did 200 games from 38 in 37 CPU-minutes), and every position within reach gets
+its exact final margin as the value target (`exact_margin_p1` in the NPZ, which
+`BoxesDataset` prefers over the outcome). The script also prints how far the outcomes were
+from the exact values by undrawn band: the noise it removes. Tests against the brute-force
+oracle on 2x2 and 2x3, branched games included, in `tests/test_boxes_relabel.py`.
+
+Plan: relabel the s1600 window offline, train iteration 20 on it once, band-read and play
+200 games against classic (the fitting-probe pattern). Pass = value sign on the clean band
+from 0.64 to >= 0.70 or classic clearly above 0.75; then the next run is the s1600 recipe +
+`RELABEL_N=38` + the 7,445 labels from #4 + the #7 solver. Fail = the net cannot represent
+the value function, and the next step is architecture.
+
+A second lead to check first (`target_entropy.py`): iteration 19's candidate took 1.10 s a
+move against the champion's 0.49 at equal simulations and solver, which is what a flatter
+prior does (more distinct leaves, more solver calls), and s1600's policy cross-entropy is
+2.85 against the gate run's 2.6. If the visit-target entropy climbs with iteration, the
+targets are flattening themselves (Dirichlet noise plus temperature-1 visits at a few
+hundred simulations), and the fix is sharper targets and a lower `c_puct`.
+
+Measured on s1600 (entropy in nats / top-move share, by undrawn band):
+
+| iteration | 31..34 | 35..40 | 41..60 |
+|---|---|---|---|
+| 0 | 1.91 / 0.44 | 2.05 / 0.42 | 2.42 / 0.21 |
+| 5 | 1.74 / 0.49 | 2.20 / 0.38 | 2.93 / 0.14 |
+| 10 | 1.81 / 0.47 | 2.19 / 0.38 | 3.01 / 0.13 |
+| 20 | 1.78 / 0.49 | 2.19 / 0.38 | 3.12 / 0.12 |
+
+The flattening is real but confined to the opening (41+ undrawn, where most moves are
+exactly equal and the arena randomises the first four edges); the decisive 35..40 zone is
+stable, undecided (top move 0.38 of the visits among about 37 legal moves) and not drifting.
+The gate run, where one net plays every iteration, is the control: nothing moves in any
+band (2.15 / 2.53 / 2.10 at iterations 0 and 10), so target entropy is a property of the
+playing net. The chains run went the other way in the opening (2.76 -> 1.84 from iteration
+0 to 20, top-move share 0.11 -> 0.30) while it was still improving, with 35..40 at 2.6..2.8.
+In the decisive zone the 1600-simulation search is the most decided of the three runs
+(top-move share 0.38 against 0.23 and 0.14..0.17) and its nets are no stronger for it.
+So the policy targets are not the lever; the value head is. (Iteration 0 holds 139 games:
+self-play files carry a timestamp prefix, so a restart adds games beside those of a killed
+attempt instead of replacing them.)
+
 ### Solver PR #7 (reviewed 2026-10-13)
 
 Two changes to `boxes_solver.cpp` / `boxes_chains.cpp`: chain walking without temporary

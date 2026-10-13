@@ -23,6 +23,7 @@ from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 from alpha_go.boxes.encode import encode_grid, lattice_rows_cols
+from alpha_go.boxes.relabel import EXACT_UNKNOWN
 from alpha_go.boxes.rules import BoxesGeometry, geometry
 from alpha_go.self_play import parse_score_from_result
 
@@ -107,7 +108,11 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         game = self.games[game_idx]
         to_play = int(game["to_play"][local]) + 1
         planes = encode_grid(game["boards"][local], to_play, self.features)
-        score_p1 = parse_score_from_result(str(game["result"]))
+        # The exact final margin from the solver (relabel.py) where it is known; the game's
+        # outcome elsewhere.
+        exact = int(game["exact_margin_p1"][local]) if "exact_margin_p1" in game else EXACT_UNKNOWN
+        score_p1 = float(exact) if exact != EXACT_UNKNOWN else parse_score_from_result(
+            str(game["result"]))
         margin = int(score_p1) if to_play == 1 else -int(score_p1)
         # Positions the agent played without a search (forced captures, solver-played
         # endgames, or a search-free opponent) have an all-zero visit row in a searched

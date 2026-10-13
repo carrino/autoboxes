@@ -35,6 +35,9 @@ START_FRACTION=${START_FRACTION:-0.75}  # share of games that branch; the rest o
 STOP_WHEN_SOLVED=${STOP_WHEN_SOLVED:-0}  # 1: a self-play game ends with the exact outcome once the solver settles it
 GATE=${GATE:-0}  # 1: self-play with the arena champion instead of the latest checkpoint (AlphaGo Zero's gating);
                  # training still continues from the latest, so a regressed net stops generating the data
+RELABEL_N=${RELABEL_N:-0}  # > 0: after self-play, give every position with <= N undrawn edges its exact final
+                           # margin from the solver as the value target (relabel_exact.py), replacing the outcome
+RELABEL_WORKERS=${RELABEL_WORKERS:-4}
 SEARCH_ARGS=${SEARCH_ARGS:-}  # extra search flags for self-play and the arena, e.g.
                               # "--policy_temperature 0.7 --margin_utility_lambda 0.5" (see nn_agent.add_search_flags)
 SIZE_ARGS="--rows $ROWS --cols $COLS"
@@ -61,7 +64,7 @@ BASE_GAMES=${BASE_GAMES:-$D_BASE}; ARENA_SIMS=${ARENA_SIMS:-$D_ASIMS}
 echo "[$TAG] budgets: bootstrap $BOOT_GAMES/matchup, self-play $SP_GAMES games x $SP_SIMS sims ($SP_WORKERS workers), "\
      "train ${TRAIN_BUDGET}s / <= $TRAIN_EPOCHS epochs over the last $WINDOW iterations (>= $TRAIN_MIN_UNDRAWN undrawn), "\
      "arena $ARENA_GAMES vs champion + $BASE_GAMES vs each baseline at $ARENA_SIMS sims, "\
-     "solver N=$SOLVER_N (budget $SOLVER_BUDGET nodes; arena N=$ARENA_SOLVER_N), merge equivalent $MERGE_EQ, "\
+     "solver N=$SOLVER_N (budget $SOLVER_BUDGET nodes; arena N=$ARENA_SOLVER_N), merge equivalent $MERGE_EQ, relabel from $RELABEL_N, "\
      "self-play processes $SP_PROCS, "\
      "search args '$SEARCH_ARGS', "\
      "features $FEATURES, train args '$TRAIN_ARGS', extra data '$EXTRA_DATA', branch from '$START_FROM' at $START_UNDRAWN undrawn "\
@@ -113,6 +116,12 @@ for ITER in $(seq "$START" "$END"); do
     done
     wait
     tail -n 4 "$LOGS"/collect-it${ITER}-p*.log
+    if [ "$RELABEL_N" -gt 0 ]; then
+        log "Relabel iter${ITER}: exact values from $RELABEL_N undrawn edges"
+        uv run "$EXP_DIR/relabel_exact.py" --games "$GAME_DATA_DIR/${DATA}/selfplay-it${ITER}" --rows "$ROWS" \
+            --cols "$COLS" --max-undrawn "$RELABEL_N" --num-workers "$RELABEL_WORKERS" 2>&1 \
+            | tee "$LOGS/relabel-it${ITER}.log"
+    fi
     t1=$(date +%s)
     DS="$EXP_DIR/dataset-${TAG}-it${NEXT}.txt"
     { echo "# ${EXP_NAME} ${TAG} iter${NEXT} dataset (auto-generated): last $WINDOW self-play iterations"
