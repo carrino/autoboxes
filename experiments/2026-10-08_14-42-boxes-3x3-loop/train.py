@@ -94,7 +94,12 @@ def main() -> None:
     p.add_argument("--dataset-txt", required=True)
     p.add_argument("--iteration", type=int, required=True)
     p.add_argument("--resume-from", default=None)
-    p.add_argument("--time-budget", type=int, default=180)
+    p.add_argument("--time-budget", type=int, default=180,
+                   help="training seconds; 0 completes all requested epochs")
+    p.add_argument("--seed", type=int, default=None, help="training seed; default iteration")
+    p.add_argument("--split-seed", type=int, default=0,
+                   help="fixed replay-family split seed; preserve across iterations")
+    p.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     p.add_argument("--max-epochs", type=int, default=20)
     p.add_argument("--rows", type=int, default=3)
     p.add_argument("--cols", type=int, default=None)
@@ -111,37 +116,57 @@ def main() -> None:
     p.add_argument("--n-blocks", type=int, default=None, help="override the residual depth")
     p.add_argument("--features", choices=["basic", "chains"], default="basic",
                    help="input planes (encode.py): chains adds the chain / loop structure")
+    p.add_argument("--exact-weight", type=float, default=1.0,
+                   help="value loss of a position with an exact target counts this many times")
+    p.add_argument("--no-exact", action="store_true",
+                   help="train on game outcomes even where exact margins are stored (a control)")
     p.add_argument("--cpu", action="store_true")
     args = p.parse_args()
+    assert args.time_budget >= 0 and args.max_epochs > 0 and args.batch_size > 0
+    assert 0 <= args.q_mix <= 1
+    seed = args.iteration if args.seed is None else args.seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     device = pick_device("cpu" if args.cpu else None)
     assert args.cpu or device.type == "cuda", "CUDA not available; pass --cpu to run on CPU"
     rows, cols = args.rows, args.cols or args.rows
     t0 = time.time()
     dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt), min_undrawn=args.min_undrawn,
-                           features=args.features)
+                           features=args.features, use_exact=not args.no_exact)
     assert (dataset.rows, dataset.cols) == (rows, cols), (dataset.rows, dataset.cols)
     print(f"dataset: {len(dataset):,} positions with >= {args.min_undrawn} undrawn edges from "
           f"{len(dataset.games)} games ({dataset.num_with_mcts} searched), "
+          f"{dataset.num_exact():,} with exact value targets, "
           f"{dataset.footprint_bytes() / 1e6:.1f} MB in RAM, loaded in {time.time() - t0:.1f}s")
-    train_set, val_set = dataset.split(args.val_fraction, seed=args.iteration)
-    loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
-                        drop_last=len(train_set) > BATCH_SIZE)
-    val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+    train_set, val_set = dataset.split_stable(args.val_fraction, seed=args.split_seed)
+    assert len(train_set), "stable split left no training positions; use more game families"
+    loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=0,
+                        drop_last=len(train_set) > args.batch_size)
+    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=0)
     print(f"split: {len(train_set):,} training / {len(val_set):,} validation positions "
-          f"({len(val_set.games)} held-out games); q-mix {args.q_mix}")
+          f"({len(val_set.games)} games, stable opening-family split {args.split_seed}); "
+          f"q-mix {args.q_mix}; seed {seed}")
+    print("Replay validation is diagnostic: warm-start weights may have seen these games. "
+          "Use an untouched external set to measure generalisation.")
     steps_per_epoch = max(1, len(loader))
     max_steps = args.max_epochs * steps_per_epoch
 
     model_cfg = {**MODELS.get(rows, MODELS[5]),
                  **{k: v for k, v in dict(channels=args.channels, n_blocks=args.n_blocks).items()
                     if v is not None}}
-    model = BoxesNet(rows, cols, features=args.features, **model_cfg).to(device)
     if args.resume_from:
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
         assert state["config"].get("features", "basic") == args.features, state["config"]
+        assert (state["config"]["rows"], state["config"]["cols"]) == (rows, cols)
+        for key, override in (("channels", args.channels), ("n_blocks", args.n_blocks)):
+            assert override is None or override == state["config"][key], key
+        model = BoxesNet(**state["config"]).to(device)
         model.load_state_dict(state["model_state_dict"])
+        model_cfg = {k: state["config"][k] for k in ("channels", "n_blocks", "value_hidden")}
         print(f"resumed from {args.resume_from}")
+    else:
+        model = BoxesNet(rows, cols, features=args.features, **model_cfg).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"model: BoxesNet {model_cfg} {n_params:,} params on {device}")
 
@@ -149,24 +174,31 @@ def main() -> None:
     scheduler = schedule(optimizer, max_steps)
     use_amp = device.type == "cuda"
     inverse_perms = inverse_edge_perms(rows, cols, device)
-    rng = np.random.default_rng(args.iteration)
+    rng = np.random.default_rng(seed)
 
     model.train()
     step, start = 0, time.time()
-    while step < max_steps and time.time() - start < args.time_budget:
+    deadline = start + args.time_budget if args.time_budget else math.inf
+    while step < max_steps and time.time() < deadline:
         for batch in loader:
-            if step >= max_steps or time.time() - start > args.time_budget:
+            if step >= max_steps or time.time() > deadline:
                 break
             planes = batch["planes"].to(device)
             policy, margin = batch["policy"].to(device), batch["margin"].to(device)
             planes, policy = augment(planes, policy, rows, cols, inverse_perms, rng)
             target_win = None
             if args.q_mix > 0:
+                assert bool(torch.all((batch["root_value"] >= 0) & (batch["root_value"] <= 1))), (
+                    "q-mix requires win probabilities; margin-shaped search Q is not a probability"
+                )
                 target_win = ((1 - args.q_mix) * batch["win"]
                               + args.q_mix * batch["root_value"]).to(device)
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=use_amp):
+                weight = None
+                if args.exact_weight != 1.0:
+                    weight = torch.where(batch["exact"], args.exact_weight, 1.0).to(device)
                 total, policy_loss, value_loss = model.compute_loss(planes, policy, margin,
-                                                                    target_win)
+                                                                    target_win, weight)
             optimizer.zero_grad()
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -182,7 +214,8 @@ def main() -> None:
     ckpt_dir = EXP_DIR / "checkpoints" / (args.tag or f"{rows}x{cols}")
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = ckpt_dir / f"iter{args.iteration}.pt"
-    save_boxes_net(model, ckpt_path, iteration=args.iteration, step=step)
+    save_boxes_net(model, ckpt_path, iteration=args.iteration, step=step, seed=seed,
+                   split_seed=args.split_seed, val_fraction=args.val_fraction)
     print(f"saved {ckpt_path} after {step} steps in {elapsed:.0f}s; train loss "
           f"{train_eval['loss']:.4f} policy_acc {train_eval['policy_acc']:.3f} "
           f"value_acc {train_eval['value_acc']:.3f}; val loss {val_eval['loss']:.4f} "
@@ -190,6 +223,8 @@ def main() -> None:
     print("\n===RESULT===")
     print(json.dumps({
         "iteration": args.iteration, "train_loss": round(train_eval["loss"], 6),
+        "seed": seed, "split_seed": args.split_seed, "batch_size": args.batch_size,
+        "exact_weight": args.exact_weight,
         "train_policy_acc": round(train_eval["policy_acc"], 4),
         "train_value_acc": round(train_eval["value_acc"], 4),
         "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),

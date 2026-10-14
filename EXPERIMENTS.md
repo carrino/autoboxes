@@ -513,6 +513,117 @@ from 0.64 to >= 0.70 or classic clearly above 0.75; then the next run is the s16
 `RELABEL_N=38` + the 7,445 labels from #4 + the #7 solver. Fail = the net cannot represent
 the value function, and the next step is architecture.
 
+**How wrong the value targets were** (`relabel_exact.py` over s1600's iteration 14, 100 games,
+902 positions within 38 undrawn, 9 over a 100M-node budget, 19 minutes on 4 workers beside
+the running loop):
+
+| undrawn | positions | mean \|outcome - exact\| | outcome sign wrong |
+|---|---|---|---|
+| 25..30 | 127 | 0.00 | 0.00 |
+| 31..34 | 400 | 0.56 | 0.01 |
+| 35..38 | 375 | 2.28 | 0.24 |
+
+The other iterations of the window (15..19) read the same: 17..25% wrong-signed at 35..38
+with a 2.1..2.8 box error, 0..1% at 31..34, 7..20 positions per 100 games over the budget.
+At 35..38, about one value target in five has the wrong sign and the mean error is 2.3 boxes; at
+31..34 the targets were already clean (the solver at 30 and STOP_WHEN_SOLVED make the tail
+of every game optimal). So the clean band read at 29..34 (value sign 0.64) measures the
+head on positions whose training targets were right, which bounds what exact targets can
+give there: the gain to expect is at 35..38, and the probe must read that band (33..36 is
+affordable to solve: 300 positions in minutes; 35..38 costs hours).
+
+**The A/B (2026-10-13, 33..36 band on `5x5-mid`, 300 positions).** Both arms from
+`5x5-s1600/iter20` on its window (`dataset-5x5-s1600-it21.txt`: 845 games, 34k positions,
+6,155 of them with exact targets in the exact arm), same seed and stable split, 4 and 12
+epochs:
+
+| | policy optimal | search optimal | value sign | margin MAE | margin lost policy / search |
+|---|---|---|---|---|---|
+| start, iter20 | 0.300 | 0.343 | 0.700 | 2.63 | 3.78 / 3.34 |
+| exact, 4 epochs | 0.320 | 0.367 | 0.743 | 2.50 | 3.81 / 3.22 |
+| control, 4 epochs | 0.320 | 0.340 | 0.720 | 2.56 | 3.69 / 3.45 |
+| exact, 12 epochs | 0.307 | 0.323 | 0.720 | 2.49 | 4.03 / 3.60 |
+| control, 12 epochs | 0.300 | 0.340 | 0.713 | 2.56 | 3.71 / 3.37 |
+
+No dose response: the 4-epoch gap of 2.3 points on value sign (one standard error) vanished
+at 12 epochs, and the training-set value accuracy was identical in both arms (0.654). The
+relabel changes only the targets that were wrong, about 20% of the 2,600 positions at
+35..38, so some 550 flipped signs among 34,000 positions that also carry the policy loss;
+and half of the 33..36 read (33..34) had correct outcome targets to begin with. At this
+density exact values do not register, and `RELABEL_N` in the loop, with the same density
+per window, would not either.
+
+Two incidental measurements of the band: the search adds almost nothing at 33..36 (policy
+0.30 -> searched 0.34, because it cannot reach the solver) and the searched move gives
+away 3.3 boxes on average, no better than depth-4 alpha-beta (3.25).
+
+Next: make the exact signal dominant and read the band where every exact label differs
+from the outcome. `train.py --exact-weight W` counts an exact-labelled position's value
+loss W times (W = 8 makes the 6,155 exact positions outweigh the 28,000 outcome ones), and
+the read moves to 35..36 with 200 positions. If that moves value sign by several points,
+exact values work and the loop needs many more of them (line labels at 35..40, the #4
+set); if the net fits the weighted labels on the training side and the band still does not
+move, that is the capacity evidence for an architecture change.
+
+**Does the net fit exact labels at all?** (`exact_fit.py`: value sign / margin MAE on the
+6,155 *training* positions with exact targets, by undrawn band; the `--exact-weight 8` run
+is `quick-exact/iter3`, 12 epochs from the same start.)
+
+| checkpoint | 25..30 (n=997) | 31..34 (n=2680) | 35..38 (n=2476) | all |
+|---|---|---|---|---|
+| s1600 iter20, the start | 0.728 / 2.55 | 0.608 / 2.79 | 0.566 / 2.41 | 0.611 / 2.60 |
+| control, 12 epochs on outcomes | 0.763 / 2.34 | 0.646 / 2.65 | 0.588 / 2.39 | 0.642 / 2.49 |
+| exact x1, 12 epochs | 0.751 / 2.38 | 0.663 / 2.68 | 0.703 / 2.11 | 0.693 / 2.40 |
+| exact x8, 12 epochs | 0.836 / 1.80 | 0.731 / 2.30 | 0.746 / 1.88 | 0.754 / 2.05 |
+
+- The starting net barely knows the value of its own training positions at 35..38 (sign
+  0.57), and twelve more epochs on outcomes cannot teach it (0.59): a fifth of those
+  targets are wrong.
+- Exact labels teach it, and the net can learn them: 0.70 at natural weight, 0.75 at x8,
+  MAE 2.4 -> 1.9. Representation is not the first-order problem.
+- The x8 gains at 25..34, where the targets are identical in both arms, show the value
+  head has been under-trained relative to the policy all along (equal loss weights, two
+  epochs per iteration).
+
+**The 35..36 read** (`5x5-mid`, 200 positions, raw net, value sign / margin MAE):
+
+| checkpoint | value sign | MAE |
+|---|---|---|
+| s1600 iter20, the start | 0.670 | 2.44 |
+| control, 12 epochs on outcomes | 0.720 | 2.35 |
+| exact x1, 12 epochs | 0.740 | 2.25 |
+| exact x8, 12 epochs | 0.705 | 2.29 |
+
+Natural-weight exact labels help a little (+2 points, 0.1 box), within noise at 200
+positions and consistent with Astra's +1 at 33..36 and +9 at 37..38. The x8 run memorises:
+best fit on the training labels, worst generalisation. And the base rate matters: the
+alpha-beta rows (0.345 / 0.355) predict "not winning" on nearly every position here, so a
+constant "mover wins" guess scores about 0.65 on this band; iter20's 0.67 is nearly nothing
+over it and the best net's 0.74 is +9. The value head at 35..38 is barely better than the
+base rate, which matches the 0.49 at 37..38.
+
+So exact values are the right target and the net can learn them, but 2,500 positions at
+35..38 from one net's own games are too few and too alike to teach a value function that
+generalises. The lever is label quantity and diversity (line labels at 35..40 from many
+games, Astra's Task 5), with the loop relabelling at natural weight (`RELABEL_N=38`,
+`5x5-exact` run) to stop training the head on wrong targets meanwhile. (One position at 36
+undrawn took 58 of the read's 64 minutes: the labelling solve was unbounded;
+`--label-budget` now drops such positions.)
+
+**Astra's `exact_ab.py` run** (`logs/exact-ab-20261013-140131`, natural weight, 4 epochs,
+raw net, 100 positions per band on `5x5-mid`; value sign / margin MAE):
+
+| band | reference (iter20) | control | exact |
+|---|---|---|---|
+| 33..36 | 0.68 / 2.71 | 0.66 / 2.72 | 0.69 / 2.63 |
+| 37..38 | 0.49 / 2.38 | 0.50 / 2.40 | 0.59 / 2.28 |
+
+At 37..38 the current value head is a coin flip (Brier 0.245: it outputs about 0.5 for
+everything), which is the decisive zone of the replay. Exact labels are the first thing to
+move it: +9 points on the same 98 positions, about 1.8 standard errors, with MAE and Brier
+improving in step. At 33..36 the arms tie, as in the quick A/B, because few labels changed
+there.
+
 A second lead to check first (`target_entropy.py`): iteration 19's candidate took 1.10 s a
 move against the champion's 0.49 at equal simulations and solver, which is what a flatter
 prior does (more distinct leaves, more solver calls), and s1600's policy cross-entropy is

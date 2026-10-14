@@ -21,7 +21,9 @@ from alpha_go.boxes.nn_agent import (
     BoxesMCTSAgent,
     BoxesSolvedResult,
     add_search_flags,
+    child_values,
     load_boxes_net,
+    optimal_edges,
     register_boxes_mcts_agent,
     save_boxes_net,
     search_flags,
@@ -308,3 +310,23 @@ class TestDataset:
         assert len(train) + len(val) == 48 and train.games[0] is not val.games[0]
         empty_train, _ = ds.split(0.0)
         assert len(empty_train) == 48
+
+
+class TestChildValues:
+    def test_children_bound_the_value_and_name_the_optimal_edges(self) -> None:
+        oracle = Oracle(2, 3)
+        solver = alpha_go_cpp.BoxesSolver(2, 3, 1 << 12)
+        rng = random.Random(7)
+        for _ in range(40):
+            board = alpha_go_cpp.BoxesBoard(2, 3)
+            for _ in range(rng.randrange(oracle.geo.num_edges)):
+                board.play_edge(rng.choice(board.get_legal_moves_flat()))
+            if board.is_game_over():
+                continue
+            children = child_values(solver, board, oracle.geo)
+            value = oracle.value(board.edges())
+            assert set(children) == set(board.get_legal_moves_flat())
+            assert max(children.values()) == value
+            assert all(oracle.child_value(board.edges(), e) == v for e, v in children.items())
+            assert sorted(optimal_edges(solver, board, oracle.geo)) == sorted(
+                e for e, v in children.items() if v == value)

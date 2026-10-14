@@ -124,3 +124,105 @@ Both profiles use leaf batch 8 per game, T=1 for the first 8 moves then 0, and f
 for inference / bf16 for training on CUDA. `boxes-ab-d4` is pure Python and needs about
 2 s/move on 5x5 (0.3 s on 3x3), which is why the 5x5 baseline matches are few; the
 `vs champion` column is the promotion signal, the baseline columns are an absolute scale.
+
+## Exact-value A/B probe (after PR #10)
+
+From the repository root, with CUDA available and the stalled run's local checkpoints,
+manifests and games present:
+
+```bash
+export GAME_DATA_DIR="${GAME_DATA_DIR:-$HOME/autoboxes-data/game_data_root}"
+EXP=experiments/2026-10-08_14-42-boxes-3x3-loop
+uv run "$EXP/exact_ab.py" --source-tag 5x5-s1600 --source-iteration 20 \
+    --reach 38 --workers 4 --epochs 4 --arena-games 100
+```
+
+Pause concurrent self-play, training and labelling before running this command. Timed
+classic opponents lose strength under CPU contention. Keep the WSL terminal running
+(or run in an existing tmux session). This is a screening experiment; runtime depends
+mostly on CPU solving and the three arena matches, and is not capped at two hours.
+
+The script reads `checkpoints/5x5-s1600/iter20.pt` and the actual
+`dataset-5x5-s1600-it20.txt` manifest, including any extra datasets that were in that
+training window. Use `--manifest /absolute/path/to/manifest.txt` if it was archived elsewhere;
+it deliberately fails rather than inventing a different window. Evaluation games must
+exist under `$GAME_DATA_DIR/experiments/<this-folder>/5x5-mid/`.
+
+If `relabel_exact.py` already processed some or all of the replay window, wait for any
+active labelling to finish, then reuse those labels:
+
+```bash
+uv run "$EXP/exact_ab.py" --reuse-labels --workers 4 \
+    --bands 33:36 37:38 --positions 100 --arena-games 100
+```
+
+`--reuse-labels` and `--reuse-exact` are equivalent. This still snapshots both arms and
+strips exact arrays only from the control. It reuses existing arrays and solves only games
+without an `exact_margin_p1` array, in the copied exact arm. Before solving, it prints
+the reuse/solve counts for the full manifest and lists every directory needing work.
+Progress includes completed reuse/solve counts and a 30-second heartbeat. An entirely
+labelled window needs no relabelling solver; malformed arrays still fail before training.
+Existing unknown labels stay unknown and use the outcome fallback. Labels above `--reach`
+are ignored. Stored arrays do not record the attempted solver reach or budget, so inspect
+coverage: `--reach 38` does not extend a previously shallower relabelling run. Clean
+evaluation positions still require solving. This smaller read uses 100 roots in each band;
+the three arena matches remain 100 games each. `--arena-games 0` skips them for a value-only
+probe. This option starts a fresh A/B run; it does not resume an interrupted run.
+
+New labels are saved in the run's exact copy; original replay files stay untouched.
+To reuse that work in another run, including labels saved before an interruption, pass
+`--manifest "$EXP/logs/<previous-tag>/exact-manifest.txt" --reuse-labels`. Both copy
+manifests are written before solving begins. Use a fresh tag and the same reach; existing
+unknown entries are not retried or extended to a larger reach.
+
+It performs these steps sequentially:
+
+1. Copy the checkpoint and every NPZ in the manifest into a fresh timestamped run. Record
+   source hashes and settings; leave the original run and league untouched. Allow disk
+   space for two copies of the replay data. Existing tags are never overwritten.
+2. Keep original outcome targets in the control copy; relabel the exact copy from 38
+   undrawn edges down with a 100M-node per-position budget. Print progress and report
+   known/unknown labels at every undrawn count. Existing solver-labelled collections
+   stay identical in both arms and are never mistaken for sequential games.
+3. Train both arms from the same checkpoint for four complete epochs, using the same
+   seed, sample ordering, augmentations, split and batch size. Time limits are disabled
+   so both complete the same number of optimizer steps. `q-mix` stays zero. The checkpoint's
+   complete architecture is preserved on resume.
+4. Compare the original, control and exact checkpoints on identical clean positions in
+   31..34 and 35..38. Solve roots only, avoiding the cost of enumerating optimal policies.
+   Report value sign, margin MAE, Brier score and label coverage; all models see the same
+   solved subset. These are value diagnostics, not searched-move optimality measurements.
+5. Play all three checkpoints against `boxes-classic` from the same colour-swapped random
+   openings, at 400 simulations, solver 30 / 50k nodes, proof propagation and shaped
+   terminals with lambda 0.5. This evaluation budget is fixed even when the source was
+   trained with 1600 simulations. Each model gets 100 games with the command above
+   (the script's default is 200). One arena worker is the default.
+
+The script prints its run tag and log directory. Read `logs/<tag>/summary.json` first;
+`completed: true` indicates every requested stage finished. `settings.json` records source
+hashes and the code revision. `train-*.log`, `value-*.csv`, `arena-*.log` and `arena-*.jsonl`
+contain the detailed evidence. Candidate checkpoints are `checkpoints/<tag>-control/iter1.pt`
+and `checkpoints/<tag>-exact/iter1.pt`. It never promotes either candidate automatically.
+With insufficient VRAM, choose a fresh tag and `--batch-size 128` for both arms.
+
+Interpret the result by comparing exact against both control and the unchanged reference.
+A value gain should lower clean-band error and improve calibration in 35..38; a replay
+validation gain alone is insufficient. A 100-game match is a screen, not proof of a small
+strength improvement. Confirm a promising recipe using a fresh pre-sized opening suite
+and another training seed before launching a long run. Root-label budget failures must
+remain visible because skipping the hard cases can flatter results.
+
+Training now uses stable, symmetry-canonical opening-family hashes rather than reshuffling
+validation games each iteration. Keep `--split-seed` and `--val-fraction` fixed. Branches
+after the first eight moves share their parent's assignment; an explicit NPZ `split_group`
+can describe other lineage. Hash splits need not yield exactly the requested fraction.
+This does **not** remove historical leakage from warm-start weights, all transpositions,
+or overlapping solver-labelled collections: replay validation remains diagnostic, and
+`5x5-mid` must stay out of all training manifests. A fresh final test set is still needed.
+
+Promotion now uses game score >= 0.55 and a two-sided paired label-swap p-value < 0.05,
+swapping complete opening pairs. Box-margin pair scores and legacy Wilson columns remain
+for diagnosis and comparison; the latter are not used to promote. League entries record
+`promotion_metric=game_score_paired_swap`. The p-value is for a fixed match, not repeated
+peeking, and does not correct for selecting among many candidates. The existing 60-game
+loop arena is still a small screen; use a larger, fresh confirmation match for modest gains.

@@ -25,6 +25,7 @@ from torch.utils.data import Dataset
 from alpha_go.boxes.encode import encode_grid, lattice_rows_cols
 from alpha_go.boxes.relabel import EXACT_UNKNOWN
 from alpha_go.boxes.rules import BoxesGeometry, geometry
+from alpha_go.boxes.validation import validation_game
 from alpha_go.self_play import parse_score_from_result
 
 
@@ -61,10 +62,11 @@ class BoxesDataset(Dataset[dict[str, Any]]):
     def __init__(self, data_dirs: list[str | Path], smooth_eps: float = 0.1,
                  games: list[dict[str, Any]] | None = None,
                  like: BoxesDataset | None = None, min_undrawn: int = 0,
-                 features: str = "basic") -> None:
+                 features: str = "basic", use_exact: bool = True) -> None:
         self.smooth_eps = smooth_eps
         self.min_undrawn: int = like.min_undrawn if like is not None else min_undrawn
         self.features: str = like.features if like is not None else features
+        self.use_exact: bool = like.use_exact if like is not None else use_exact
         paths = [p for d in data_dirs for p in sorted(Path(d).rglob("*.npz"))]
         self.games = [dict(np.load(p)) for p in paths] if games is None else games
         assert self.games or like is not None, f"no .npz games under {data_dirs}"
@@ -94,10 +96,30 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         return (BoxesDataset([], self.smooth_eps, games=train, like=self),
                 BoxesDataset([], self.smooth_eps, games=val, like=self))
 
+    def num_exact(self) -> int:
+        """Kept positions whose value target is an exact margin."""
+        return sum(int((g["exact_margin_p1"][:self.kept(g)] != EXACT_UNKNOWN).sum())
+                   for g in self.games if self.use_exact and "exact_margin_p1" in g)
+
     def footprint_bytes(self) -> int:
         return sum(
             sum(int(v.nbytes) for v in g.values() if hasattr(v, "nbytes")) for g in self.games
         )
+
+    def split_stable(self, val_fraction: float, seed: int = 0
+                     ) -> tuple[BoxesDataset, BoxesDataset]:
+        """Hash opening families instead of reshuffling files when replay changes.
+
+        See ``validation.replay_group`` for lineage and warm-start limitations.
+        The realised validation fraction need not equal the requested fraction.
+        """
+        train: list[dict[str, Any]] = []
+        val: list[dict[str, Any]] = []
+        for game in self.games:
+            target = val if validation_game(game, self.geo, val_fraction, seed) else train
+            target.append(game)
+        return (BoxesDataset([], self.smooth_eps, games=train, like=self),
+                BoxesDataset([], self.smooth_eps, games=val, like=self))
 
     def __len__(self) -> int:
         return int(self.cumsum[-1])
@@ -110,7 +132,8 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         planes = encode_grid(game["boards"][local], to_play, self.features)
         # The exact final margin from the solver (relabel.py) where it is known; the game's
         # outcome elsewhere.
-        exact = int(game["exact_margin_p1"][local]) if "exact_margin_p1" in game else EXACT_UNKNOWN
+        exact = (int(game["exact_margin_p1"][local])
+                 if self.use_exact and "exact_margin_p1" in game else EXACT_UNKNOWN)
         score_p1 = float(exact) if exact != EXACT_UNKNOWN else parse_score_from_result(
             str(game["result"]))
         margin = int(score_p1) if to_play == 1 else -int(score_p1)
@@ -139,4 +162,6 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             "win": torch.tensor(float(margin > 0) + 0.5 * float(margin == 0)),
             "root_value": torch.tensor(root_value, dtype=torch.float32),
             "has_mcts": searched,
+            "exact": exact != EXACT_UNKNOWN,
         }
+

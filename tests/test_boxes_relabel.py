@@ -82,3 +82,7 @@ class TestDatasetUsesExact:
             assert margin == (outcome[i] if exact[i] == EXACT_UNKNOWN else sign * int(exact[i]))
         assert exact[0] == EXACT_UNKNOWN and exact[-1] != EXACT_UNKNOWN
         assert margins[-1] == outcome[-1] and margins != outcome
+        assert after.num_exact() == int((exact != EXACT_UNKNOWN).sum())
+        control = BoxesDataset([tmp_path], use_exact=False)
+        assert [int(control[i]["margin"]) for i in range(len(control))] == outcome
+        assert control.num_exact() == 0

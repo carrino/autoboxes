@@ -177,14 +177,13 @@ class BoxesEngineEvaluator:
         pass
 
 
-def optimal_edges(solver: Any, board: Any, geo: BoxesGeometry) -> list[int]:
-    """Every legal edge whose exact child value equals the position's value (C++ solver).
+def child_values(solver: Any, board: Any, geo: BoxesGeometry) -> dict[int, int]:
+    """Exact value, for the side to move, of playing each legal edge (C++ solver).
 
     A capturing edge keeps the move: child value = boxes gained + value after; otherwise the
-    opponent moves: child value = -value after.
+    opponent moves: child value = -value after. The position's value is the maximum.
     """
     mask = int(board.edges())
-    value = int(solver.value(mask))
 
     def child(e: int) -> int:
         after = mask | 1 << e
@@ -192,7 +191,14 @@ def optimal_edges(solver: Any, board: Any, geo: BoxesGeometry) -> list[int]:
         rest = int(solver.value(after))
         return gained + rest if gained else -rest
 
-    return [e for e in board.get_legal_moves_flat() if child(e) == value]
+    return {int(e): child(int(e)) for e in board.get_legal_moves_flat()}
+
+
+def optimal_edges(solver: Any, board: Any, geo: BoxesGeometry) -> list[int]:
+    """Every legal edge whose exact child value equals the position's value."""
+    children = child_values(solver, board, geo)
+    value = int(solver.value(int(board.edges())))
+    return [e for e, v in children.items() if v == value]
 
 
 @dataclass

@@ -13,6 +13,9 @@ Per checkpoint this reports, on the same sampled positions:
                   column measures the agent's midgame strength rather than the net's alone
   value_sign      the net's P(win) > 0.5 agrees with the sign of the oracle's final margin
   margin_mae      |E[margin] - oracle final margin|
+  policy_lost, search_lost
+                  exact margin given away by the net's argmax / the agent's move (0 when the
+                  move is optimal): a one-box slip and a six-box blunder count differently
 
 and the move rates of the baseline agents on the same positions as a scale. Positions come
 from every NPZ game under $GAME_DATA_DIR/experiments/<this folder>/<tag>/ (bootstrap and all
@@ -51,8 +54,8 @@ from alpha_go.boxes.nn_agent import (
     BoxesLeafEvaluator,
     BoxesMCTSAgent,
     add_search_flags,
+    child_values,
     load_boxes_net,
-    optimal_edges,
     pick_device,
     search_flags,
 )
@@ -142,6 +145,12 @@ def main() -> None:
                    help="also score the C++ alpha-beta's own value at these depths (value "
                         "sign and margin error): how visible the band's value is to a "
                         "shallow hand-written evaluation")
+    p.add_argument("--label-budget", type=int, default=0,
+                   help="nodes per position for the labelling solve; a position over it is "
+                        "dropped from the read (0 = unbounded)")
+    p.add_argument("--values-only", action="store_true",
+                   help="solve root values only (no child values): value sign and margin "
+                        "error per checkpoint, no move columns; far cheaper above 34 undrawn")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--cpu", action="store_true")
     add_search_flags(p)
@@ -168,27 +177,48 @@ def main() -> None:
     sampled = time.time() - t0
     solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
     geo = geometry(rows, cols)
-    # Exact labels (remaining margin for the side to move, optimal edges) are cached per edge
-    # mask under data/, so a repeat read on the same positions skips the solve.
+    # Exact labels (remaining margin for the side to move, every legal edge's exact child
+    # value) are cached per edge mask under data/, so a repeat read on the same positions
+    # skips the solve. Entries from before the child values were stored are solved again.
     cache_path = EXP_DIR / "data" / f"oracle_labels-{positions_tag}.json"
     cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
-    missing = [b for b in boards if str(b.edges()) not in cache]
-    cache.update({str(b.edges()): [solver.value(b.edges()), optimal_edges(solver, b, geo)]
-                  for b in missing})
+    def complete(entry: list[Any]) -> bool:  # a values-only entry serves a values-only read
+        return len(entry) == 3 and (args.values_only or bool(entry[2]))
+
+    missing = [b for b in boards if not complete(cache.get(str(b.edges()), []))]
+    for i, b in enumerate(missing, 1):
+        value = (solver.value_within(b.edges(), args.label_budget) if args.label_budget
+                 else solver.value(b.edges()))
+        if value is not None:
+            cache[str(b.edges())] = [value, [],
+                                     {} if args.values_only else child_values(solver, b, geo)]
+        if i % 25 == 0 or i == len(missing):
+            print(f"  solved {i}/{len(missing)} positions ({time.time() - t0 - sampled:.0f}s)",
+                  flush=True)
+    dropped = sum(str(b.edges()) not in cache for b in boards)
+    cached = len(boards) - len(missing)
+    boards = [b for b in boards if str(b.edges()) in cache]
     cache_path.write_text(json.dumps(cache))
     labels = [cache[str(b.edges())] for b in boards]
-    values = [v for v, _ in labels]
-    best = [set(e) for _, e in labels]
+    values = [v for v, _, _ in labels]
+    children = [{int(e): int(v) for e, v in c.items()} for _, _, c in labels]
+    best = [{e for e, v in c.items() if v == value} for c, value in zip(children, values)]
     final = np.array([b.margin() + v for b, v in zip(boards, values)])
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
+          f"({dropped} over the label budget dropped) "
           f"(mean undrawn {np.mean([b.num_edges() - b.move_count() for b in boards]):.1f}), "
-          f"sampled in {sampled:.1f}s, {len(missing)} solved and "
-          f"{len(boards) - len(missing)} cached in {time.time() - t0 - sampled:.1f}s; "
+          f"sampled in {sampled:.1f}s, {len(missing) - dropped} solved and "
+          f"{cached} cached in {time.time() - t0 - sampled:.1f}s; "
           f"optimal-move share of a random legal move: "
-          f"{np.mean([len(s) / len(b.get_legal_moves_flat()) for s, b in zip(best, boards)]):.3f}")
+          f"{np.mean([len(s) / len(b.get_legal_moves_flat()) for s, b in zip(best, boards)]):.3f}; "
+          f"the mover wins {np.mean(final[final != 0] > 0):.3f} of the decided positions "
+          f"(the value sign of a constant guess)")
 
     def optimal_rate(moves: list[int]) -> float:
         return float(np.mean([m in s for m, s in zip(moves, best)]))
+
+    def margin_lost(moves: list[int]) -> float:
+        return float(np.mean([v - c[m] for m, c, v in zip(moves, children, values)]))
 
     rows_out: list[dict[str, object]] = []
     decided = final != 0
@@ -203,36 +233,52 @@ def main() -> None:
         rows_out.append(row)
         print(f"{row['agent']:>14}: value sign {row['value_sign']:.3f}  margin MAE "
               f"{row['margin_mae']:.2f} ({time.time() - t1:.0f}s)")
-    for name in [n for n in args.baselines.split(",") if n]:
+    for name in [n for n in args.baselines.split(",") if n and not args.values_only]:
         t1 = time.time()
-        rate = optimal_rate(agent_moves(get_agent(name), boards, args.seed))
-        rows_out.append({"agent": name, "iteration": "", "search_optimal": round(rate, 4)})
-        print(f"{name:>14}: move optimal {rate:.3f} ({time.time() - t1:.0f}s)")
+        moves = agent_moves(get_agent(name), boards, args.seed)
+        rate, lost = optimal_rate(moves), margin_lost(moves)
+        rows_out.append({"agent": name, "iteration": "", "search_optimal": round(rate, 4),
+                         "search_lost": round(lost, 3)})
+        print(f"{name:>14}: move optimal {rate:.3f}  margin lost {lost:.2f} "
+              f"({time.time() - t1:.0f}s)")
     for it in iterations:
         t1 = time.time()
         model = load_boxes_net(ckpt_dir / f"iter{it}.pt", device)
         argmax, win, expected = raw_net(model, device, boards)
+        if args.values_only:
+            row = {"agent": f"iter{it}", "iteration": it,
+                   "value_sign": round(float(np.mean((win[decided] > 0.5)
+                                                     == (final[decided] > 0))), 4),
+                   "margin_mae": round(float(np.mean(np.abs(expected - final))), 3)}
+            rows_out.append(row)
+            print(f"{row['agent']:>14}: value sign {row['value_sign']:.3f}  margin MAE "
+                  f"{row['margin_mae']:.2f} ({time.time() - t1:.0f}s)")
+            continue
         agent = BoxesMCTSAgent(BoxesLeafEvaluator(model, device, **evaluator_flags),
                                temperature=0.0, num_simulations=args.num_simulations,
                                solver_max_undrawn=args.solver_max_undrawn,
                                solver_node_budget=args.solver_node_budget, **mcts_flags)
+        searched = agent_moves(agent, boards, args.seed)
         row = {
             "agent": f"iter{it}", "iteration": it,
             "policy_optimal": round(optimal_rate(argmax), 4),
-            "search_optimal": round(optimal_rate(agent_moves(agent, boards, args.seed)), 4),
+            "search_optimal": round(optimal_rate(searched), 4),
             "value_sign": round(float(np.mean((win[decided] > 0.5) == (final[decided] > 0))), 4),
             "margin_mae": round(float(np.mean(np.abs(expected - final))), 3),
+            "policy_lost": round(margin_lost(argmax), 3),
+            "search_lost": round(margin_lost(searched), 3),
         }
         rows_out.append(row)
         print(f"{row['agent']:>14}: policy optimal {row['policy_optimal']:.3f}  search optimal "
               f"{row['search_optimal']:.3f}  value sign {row['value_sign']:.3f}  margin MAE "
-              f"{row['margin_mae']:.2f} ({time.time() - t1:.0f}s)")
+              f"{row['margin_mae']:.2f}  margin lost {row['policy_lost']:.2f} / "
+              f"{row['search_lost']:.2f} ({time.time() - t1:.0f}s)")
 
     out = EXP_DIR / "data" / f"oracle_eval-{tag}.csv"
     out.parent.mkdir(exist_ok=True)
     fields = ["agent", "iteration", "policy_optimal", "search_optimal", "value_sign", "margin_mae",
-              "num_positions", "min_undrawn", "max_undrawn", "num_simulations", "search_flags",
-              "positions_tag", "solver_max_undrawn"]
+              "policy_lost", "search_lost", "num_positions", "min_undrawn", "max_undrawn",
+              "num_simulations", "search_flags", "positions_tag", "solver_max_undrawn"]
     with out.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
