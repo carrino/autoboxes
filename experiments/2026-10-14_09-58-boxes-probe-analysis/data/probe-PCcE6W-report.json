@@ -1,0 +1,934 @@
+{
+  "schema": 1,
+  "input": "/workspace/work/probe-PCcE6W-results/mix",
+  "input_sha256": {
+    "summary.json": "e3cd804727ab34c0ab36b53d4ea1d51b92ef2145c06054890f374f192f3241c6",
+    "positions.jsonl": "5e649431adc8014a21adf5467dbb898d0e9dd8a657f4e3a36216e3881c205a27",
+    "positions.csv": "0a28c74c846f9473a6aeccf6ea50a5c3a61d122cde4e21ab2153e66f40c48495"
+  },
+  "reference_case": "reference:s400:lambda0.5",
+  "case_order": [
+    "reference:s400:lambda0.5",
+    "candidate:s400:lambda0.5",
+    "old-policy-new-value:s400:lambda0.5",
+    "new-policy-old-value:s400:lambda0.5"
+  ],
+  "checkpoint_sha256": {
+    "reference": "46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0",
+    "candidate": "a6eaaeab78d5ad87e87b81b6fc3c7e3a34ae77440c5e9e1ebfb6d1f88afaa2ef"
+  },
+  "common_rule": "Root, policy child and search child exact in every case; unknowns excluded",
+  "regret_units": "final score-margin points, not boxes captured",
+  "delta_direction": "negative regret delta and positive win-preservation delta are better",
+  "scope": "Exploratory development comparison; no promotion or multiple-test correction. Coverage can favor easier solves; source positions may have been used in training.",
+  "bootstrap": {
+    "method": "paired source-family cluster percentile",
+    "seed": 20261014,
+    "resamples": 10000,
+    "confidence": 0.95,
+    "weighting": "Resample families, retain all their positions; position-weighted means. Identical draws for every case and metric within a band."
+  },
+  "bands": {
+    "all": {
+      "sampled": 100,
+      "sampled_families": 68,
+      "common_known": 98,
+      "common_families": 68,
+      "excluded": 2,
+      "common_position_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99
+      ],
+      "cases": {
+        "reference:s400:lambda0.5": {
+          "known": {
+            "root_final": 98,
+            "policy_final": 100,
+            "search_final": 100
+          },
+          "total_search_seconds": 81.48476471891627,
+          "search_margin_regret": {
+            "mean": 2.63265306122449,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.5070422535211268,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 4.510204081632653,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.28169014084507044,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "candidate:s400:lambda0.5": {
+          "known": {
+            "root_final": 98,
+            "policy_final": 100,
+            "search_final": 100
+          },
+          "total_search_seconds": 111.80832680524327,
+          "search_margin_regret": {
+            "mean": 3.7142857142857144,
+            "delta_vs_reference": 1.0816326530612246,
+            "delta_ci95": [
+              0.14285714285714285,
+              2.0612402693035974
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.4507042253521127,
+            "delta_vs_reference": -0.056338028169014065,
+            "delta_ci95": [
+              -0.21875,
+              0.10528309409888327
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 4.408163265306122,
+            "delta_vs_reference": -0.10204081632653139,
+            "delta_ci95": [
+              -0.8317244224422442,
+              0.5681877990430622
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.3380281690140845,
+            "delta_vs_reference": 0.056338028169014065,
+            "delta_ci95": [
+              -0.058823529411764705,
+              0.18055555555555555
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "old-policy-new-value:s400:lambda0.5": {
+          "known": {
+            "root_final": 98,
+            "policy_final": 100,
+            "search_final": 100
+          },
+          "total_search_seconds": 317.568758452544,
+          "search_margin_regret": {
+            "mean": 3.061224489795918,
+            "delta_vs_reference": 0.4285714285714284,
+            "delta_ci95": [
+              -0.11881777463460631,
+              1.0816326530612246
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.4507042253521127,
+            "delta_vs_reference": -0.056338028169014065,
+            "delta_ci95": [
+              -0.17647058823529413,
+              0.057971014492753624
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 4.510204081632653,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.28169014084507044,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "new-policy-old-value:s400:lambda0.5": {
+          "known": {
+            "root_final": 98,
+            "policy_final": 100,
+            "search_final": 100
+          },
+          "total_search_seconds": 280.4466286532115,
+          "search_margin_regret": {
+            "mean": 3.3877551020408165,
+            "delta_vs_reference": 0.7551020408163267,
+            "delta_ci95": [
+              0.021505376344086023,
+              1.52
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.4507042253521127,
+            "delta_vs_reference": -0.056338028169014065,
+            "delta_ci95": [
+              -0.20548952457695405,
+              0.09722222222222222
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 4.408163265306122,
+            "delta_vs_reference": -0.10204081632653139,
+            "delta_ci95": [
+              -0.8317244224422442,
+              0.5681877990430622
+            ],
+            "positions": 98,
+            "families": 68,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.3380281690140845,
+            "delta_vs_reference": 0.056338028169014065,
+            "delta_ci95": [
+              -0.058823529411764705,
+              0.18055555555555555
+            ],
+            "positions": 71,
+            "families": 56,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        }
+      }
+    },
+    "35..36": {
+      "sampled": 54,
+      "sampled_families": 49,
+      "common_known": 54,
+      "common_families": 49,
+      "excluded": 0,
+      "common_position_indices": [
+        1,
+        3,
+        5,
+        9,
+        11,
+        12,
+        13,
+        17,
+        19,
+        20,
+        21,
+        22,
+        23,
+        27,
+        28,
+        30,
+        32,
+        34,
+        37,
+        38,
+        40,
+        42,
+        43,
+        45,
+        46,
+        47,
+        51,
+        52,
+        53,
+        55,
+        56,
+        59,
+        61,
+        63,
+        64,
+        65,
+        67,
+        68,
+        72,
+        73,
+        74,
+        75,
+        77,
+        83,
+        86,
+        87,
+        89,
+        90,
+        91,
+        93,
+        94,
+        95,
+        96,
+        97
+      ],
+      "cases": {
+        "reference:s400:lambda0.5": {
+          "known": {
+            "root_final": 54,
+            "policy_final": 54,
+            "search_final": 54
+          },
+          "total_search_seconds": 47.82566709816456,
+          "search_margin_regret": {
+            "mean": 2.1481481481481484,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.6052631578947368,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 5.0,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.21052631578947367,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "candidate:s400:lambda0.5": {
+          "known": {
+            "root_final": 54,
+            "policy_final": 54,
+            "search_final": 54
+          },
+          "total_search_seconds": 66.88429957674816,
+          "search_margin_regret": {
+            "mean": 4.296296296296297,
+            "delta_vs_reference": 2.1481481481481484,
+            "delta_ci95": [
+              0.8626050420168069,
+              3.5636363636363635
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.42105263157894735,
+            "delta_vs_reference": -0.1842105263157895,
+            "delta_ci95": [
+              -0.38240950226244336,
+              0.023255813953488372
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 5.148148148148148,
+            "delta_vs_reference": 0.14814814814814792,
+            "delta_ci95": [
+              -0.7777777777777778,
+              1.0175438596491229
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.3684210526315789,
+            "delta_vs_reference": 0.15789473684210525,
+            "delta_ci95": [
+              0.0,
+              0.32432432432432434
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "old-policy-new-value:s400:lambda0.5": {
+          "known": {
+            "root_final": 54,
+            "policy_final": 54,
+            "search_final": 54
+          },
+          "total_search_seconds": 181.737169977976,
+          "search_margin_regret": {
+            "mean": 2.7037037037037037,
+            "delta_vs_reference": 0.5555555555555554,
+            "delta_ci95": [
+              -0.19230769230769232,
+              1.4545454545454546
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.5789473684210527,
+            "delta_vs_reference": -0.02631578947368418,
+            "delta_ci95": [
+              -0.18604651162790697,
+              0.1282051282051282
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 5.0,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.21052631578947367,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "new-policy-old-value:s400:lambda0.5": {
+          "known": {
+            "root_final": 54,
+            "policy_final": 54,
+            "search_final": 54
+          },
+          "total_search_seconds": 161.88040963327512,
+          "search_margin_regret": {
+            "mean": 3.2962962962962963,
+            "delta_vs_reference": 1.148148148148148,
+            "delta_ci95": [
+              0.2962962962962963,
+              2.178652597402596
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.5263157894736842,
+            "delta_vs_reference": -0.07894736842105265,
+            "delta_ci95": [
+              -0.2727272727272727,
+              0.10256410256410256
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 5.148148148148148,
+            "delta_vs_reference": 0.14814814814814792,
+            "delta_ci95": [
+              -0.7777777777777778,
+              1.0175438596491229
+            ],
+            "positions": 54,
+            "families": 49,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.3684210526315789,
+            "delta_vs_reference": 0.15789473684210525,
+            "delta_ci95": [
+              0.0,
+              0.32432432432432434
+            ],
+            "positions": 38,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        }
+      }
+    },
+    "37..38": {
+      "sampled": 46,
+      "sampled_families": 37,
+      "common_known": 44,
+      "common_families": 36,
+      "excluded": 2,
+      "common_position_indices": [
+        0,
+        2,
+        4,
+        7,
+        8,
+        10,
+        14,
+        15,
+        16,
+        18,
+        24,
+        25,
+        26,
+        29,
+        31,
+        33,
+        35,
+        36,
+        39,
+        41,
+        44,
+        48,
+        49,
+        50,
+        54,
+        58,
+        60,
+        62,
+        66,
+        69,
+        70,
+        71,
+        76,
+        78,
+        79,
+        80,
+        81,
+        82,
+        84,
+        85,
+        88,
+        92,
+        98,
+        99
+      ],
+      "cases": {
+        "reference:s400:lambda0.5": {
+          "known": {
+            "root_final": 44,
+            "policy_final": 46,
+            "search_final": 46
+          },
+          "total_search_seconds": 33.65909762075171,
+          "search_margin_regret": {
+            "mean": 3.227272727272727,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.3939393939393939,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 3.909090909090909,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.36363636363636365,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "candidate:s400:lambda0.5": {
+          "known": {
+            "root_final": 44,
+            "policy_final": 46,
+            "search_final": 46
+          },
+          "total_search_seconds": 44.924027228495106,
+          "search_margin_regret": {
+            "mean": 3.0,
+            "delta_vs_reference": -0.22727272727272707,
+            "delta_ci95": [
+              -1.4547671840354766,
+              0.8837209302325582
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.48484848484848486,
+            "delta_vs_reference": 0.09090909090909094,
+            "delta_ci95": [
+              -0.1388888888888889,
+              0.3225806451612903
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 3.5,
+            "delta_vs_reference": -0.40909090909090917,
+            "delta_ci95": [
+              -1.5,
+              0.5533151904997509
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.30303030303030304,
+            "delta_vs_reference": -0.06060606060606061,
+            "delta_ci95": [
+              -0.24242424242424243,
+              0.125
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "old-policy-new-value:s400:lambda0.5": {
+          "known": {
+            "root_final": 44,
+            "policy_final": 46,
+            "search_final": 46
+          },
+          "total_search_seconds": 135.83158847456798,
+          "search_margin_regret": {
+            "mean": 3.5,
+            "delta_vs_reference": 0.27272727272727293,
+            "delta_ci95": [
+              -0.2926829268292683,
+              0.8780487804878049
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.30303030303030304,
+            "delta_vs_reference": -0.09090909090909088,
+            "delta_ci95": [
+              -0.25,
+              0.0625
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 3.909090909090909,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.36363636363636365,
+            "delta_vs_reference": 0.0,
+            "delta_ci95": [
+              0.0,
+              0.0
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        },
+        "new-policy-old-value:s400:lambda0.5": {
+          "known": {
+            "root_final": 44,
+            "policy_final": 46,
+            "search_final": 46
+          },
+          "total_search_seconds": 118.5662190199364,
+          "search_margin_regret": {
+            "mean": 3.5,
+            "delta_vs_reference": 0.27272727272727293,
+            "delta_ci95": [
+              -0.782608695652174,
+              1.2608695652173914
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "search_win_preservation": {
+            "mean": 0.36363636363636365,
+            "delta_vs_reference": -0.030303030303030276,
+            "delta_ci95": [
+              -0.24242424242424243,
+              0.18181818181818182
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_margin_regret": {
+            "mean": 3.5,
+            "delta_vs_reference": -0.40909090909090917,
+            "delta_ci95": [
+              -1.5,
+              0.5533151904997509
+            ],
+            "positions": 44,
+            "families": 36,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          },
+          "policy_win_preservation": {
+            "mean": 0.30303030303030304,
+            "delta_vs_reference": -0.06060606060606061,
+            "delta_ci95": [
+              -0.24242424242424243,
+              0.125
+            ],
+            "positions": 33,
+            "families": 30,
+            "bootstrap_replicates": 10000,
+            "ci_unavailable": null
+          }
+        }
+      }
+    }
+  }
+}

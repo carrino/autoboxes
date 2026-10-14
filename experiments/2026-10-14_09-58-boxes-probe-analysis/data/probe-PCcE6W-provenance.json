@@ -1,0 +1,20 @@
+{
+  "source_archive": "results.tgz",
+  "source_archive_sha256": "6a2ec189db5dc5cbdd0488a588755ca178040a5fa9c34a8c9a80c2d9d9384de5",
+  "source_code_commit": "236a4f295e88591686c1edb640fb812819dc7ba6",
+  "checkpoint_sha256": {
+    "reference": "46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0",
+    "candidate": "a6eaaeab78d5ad87e87b81b6fc3c7e3a34ae77440c5e9e1ebfb6d1f88afaa2ef"
+  },
+  "input_sha256": {
+    "code-commit.txt": "6144fa65459c64a465b08b760a27b409f65c4f2a9c9cf60bcdb72ff904ca3100",
+    "mix/labels.json": "7b42b7eabc70148c4af24c1d53234bab35a99fb36ed10635112be282b3c7a17a",
+    "mix/positions.csv": "0a28c74c846f9473a6aeccf6ea50a5c3a61d122cde4e21ab2153e66f40c48495",
+    "mix/positions.jsonl": "5e649431adc8014a21adf5467dbb898d0e9dd8a657f4e3a36216e3881c205a27",
+    "mix/summary.json": "e3cd804727ab34c0ab36b53d4ea1d51b92ef2145c06054890f374f192f3241c6",
+    "run.log": "fb4c552694a715167776fc528503f3c1809ef8d59d7caad38998b4e4798f5110"
+  },
+  "analysis_command": "uv run python src/alpha_go/boxes/probe_report.py --input EXTRACTED/mix --output EXTRACTED/analysis",
+  "analysis_seed": 20261014,
+  "resamples": 10000
+}

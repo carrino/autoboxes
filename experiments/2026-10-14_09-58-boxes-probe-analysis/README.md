@@ -1,6 +1,6 @@
 # Analysis while the 3070 runs
 
-The current job compares `5x5-exact/iter0.pt` and `iter22.pt` on 100 frozen development
+The completed job compares `5x5-exact/iter0.pt` and `iter22.pt` on 100 frozen development
 positions from `selfplay-it21`, including both crossed policy/value combinations. Its
 startup reported 68 source families. This measures changes over that loop; it does not
 isolate the original change from outcome targets to exact targets, since iter0 already
@@ -8,6 +8,33 @@ had exact-value training.
 
 This analysis was prepared in a Linux CPU workspace limited to four CPU equivalents
 and 16 GiB RAM. No GPU job or new exact-label production run was launched here.
+
+The completed result and paired intervals are in `report.md` and
+`data/probe-PCcE6W-{report.json,comparisons.csv,provenance.json}`. The candidate regresses
+at 35..36; the 37..38 result is inconclusive. Keep iter0 as the reference.
+
+## Next 3070 job: policy influence on search
+
+From the repository root on the user's GPU machine:
+
+```bash
+bash experiments/2026-10-14_09-58-boxes-probe-analysis/policy_temperature_probe.sh
+```
+
+This runs reference/candidate at temperatures 1 and 2, with the same frozen positions,
+400 simulations and lambda 0.5. Temperature 2 flattens the prior distribution while
+preserving the greedy policy ranking. Temperature 1 repeats the current setting as a
+control. Each run has a one-hour wall-time cap and bounded label solves. Existing exact
+labels are reused; new chosen children may still need solving. Inputs remain in the
+previous log folder; output goes to a fresh folder and its `results.tgz` also preserves
+partial artifacts/logs if a run fails. The probe itself already exists on main at 236a4f2;
+the shell command can be pasted directly without adopting any training or solver changes.
+
+Compare both runs on their shared exact-known positions. Temperature is recorded in
+`summary.arguments`, not case names. Compare each model's T2-T1 change, then the change
+in their gap. This is a development diagnostic; verify any candidate on fresh positions
+or full games before changing training defaults. Fable's value-ranking task below remains
+independent and useful.
 
 ## Analyze the completed probe without using the GPU
 
