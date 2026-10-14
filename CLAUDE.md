@@ -157,6 +157,7 @@ uv run $EXP/solver_label.py --positions-tag 5x5-solver --min-undrawn 26 --max-un
 uv run python -u -m alpha_go.boxes.search_probe --reference REF.pt --candidate CAND.pt --games $GAME_DATA_DIR/$EXP/5x5-exact/selfplay-it21 --rows 5 --min-undrawn 35 --max-undrawn 38 --positions 100 --output $EXP/logs/<tag>/mix   # four-way policy/value cross by exact regret (Astra #14; README in experiments/2026-10-13_21-42-boxes-learning-angles)
 uv run python -u -m alpha_go.boxes.policy_labels --games $GAME_DATA_DIR/$EXP/5x5-exact/selfplay-it21 --output $GAME_DATA_DIR/$EXP/<name> --rows 5 --min-undrawn 35 --max-undrawn 38 --workers 6   # exact policies at consequential mistakes -> EXTRA_DATA
 uv run python -m alpha_go.boxes.boxeszero_install --destination work/boxeszero --device cuda --simulations 800 && uv run -m alpha_go.boxes.arena --rows 5 --a ckpt:REF.pt --b boxeszero:$PWD/work/boxeszero/arena-cuda-s800.json --num_games 20 --num_workers 1   # the published BoxesZero as a fixed-simulation yardstick (Astra #13)
+uv run python -m alpha_go.boxes.policy_value_audit --tables experiments/2026-10-14_09-58-boxes-probe-analysis/data --checkpoint iter0=$CK/iter0.pt --checkpoint iter22=$CK/iter22.pt --output DIR   # policy mass on exact-optimal moves and value ranking of the children, CPU inference only (experiments/2026-10-14_14-24-boxes-policy-value-audit)
 ```
 
 `scripts/build_cpp.sh` reads the venv Python's libpython from `sysconfig`, so any
