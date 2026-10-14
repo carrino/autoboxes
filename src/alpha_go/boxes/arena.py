@@ -160,11 +160,19 @@ def _play_one(
     agent_a, agent_b = _agents(a, b)
     a_first = index % 2 == 0
     first, second = (agent_a, agent_b) if a_first else (agent_b, agent_a)
-    record = play_game(
-        first, second, board_size=rows, board_cols=cols, seed=seed + index,
-        max_moves=get_game("boxes").default_max_moves(rows, cols), collect_boards=False,
-        game=get_game("boxes"), render_debug_on_error=False, start_moves=start_moves,
-    )
+    try:
+        record = play_game(
+            first, second, board_size=rows, board_cols=cols, seed=seed + index,
+            max_moves=get_game("boxes").default_max_moves(rows, cols), collect_boards=False,
+            game=get_game("boxes"), render_debug_on_error=False, start_moves=start_moves,
+        )
+    finally:
+        # Shared gameplay enters its cleanup scope after both start_game calls. Also
+        # reap an external worker if the other agent fails during startup.
+        if a.startswith("boxeszero:"):
+            agent_a.end_game()
+        if b.startswith("boxeszero:"):
+            agent_b.end_game()
     first_margin = int(round(float(record.result[2:]))) if record.result != "Draw" else 0
     if record.result.startswith("W+"):
         first_margin = -first_margin
@@ -246,8 +254,9 @@ def register_checkpoint(name: str, args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Boxes arena: agent A vs agent B")
     parser.add_argument("--a", required=True,
-                        help="Registered agent name, or ckpt:<path>[@<sims>] for an MCTS agent")
-    parser.add_argument("--b", required=True, help="Registered agent name or ckpt:<path>[@<sims>]")
+                        help="Registered name, ckpt:<path>[@<sims>], or boxeszero:<config.json>")
+    parser.add_argument("--b", required=True,
+                        help="Registered name, ckpt:<path>[@<sims>], or boxeszero:<config.json>")
     parser.add_argument("--rows", type=int, default=5)
     parser.add_argument("--cols", type=int, default=None)
     parser.add_argument("--num_games", type=int, default=20)
@@ -274,6 +283,11 @@ def main() -> None:
     for name in (args.a, args.b):
         if name.startswith("ckpt:"):
             register_checkpoint(name, args)
+        elif name.startswith("boxeszero:"):
+            from alpha_go.boxes.boxeszero import register_boxeszero
+            if args.rows != 5 or (args.cols or args.rows) != 5:
+                parser.error("The BoxesZero checkpoint supports 5x5 boxes only")
+            register_boxeszero(name)
     cols = args.cols or args.rows
     openings = (stored_openings(args.start_positions, args.rows, cols, args.start_undrawn,
                                 args.num_games // 2, args.seed) if args.start_positions else None)
