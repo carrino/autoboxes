@@ -1,0 +1,4 @@
+arm,known_moves,unknown_moves,total_margin_regret,top1_regret_share,top2_regret_share,positive_regret_moves
+control,184,0,626.0,0.8178913738019169,1.0,112
+exact,186,0,634.0,0.7949526813880127,1.0,117
+reference,171,0,538.0,0.8141263940520446,1.0,116
