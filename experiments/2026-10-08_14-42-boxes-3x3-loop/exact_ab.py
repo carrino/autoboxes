@@ -18,7 +18,8 @@ import shutil
 import subprocess
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -66,12 +67,14 @@ def manifest_directories(manifest: Path, data_root: Path) -> list[Path]:
 
 
 def snapshot(
-    directories: list[Path], destination: Path
+    directories: list[Path], destination: Path, reuse_reach: int | None = None
 ) -> tuple[dict[str, Path], list[Path], list[dict[str, Any]]]:
     """Copy matching A/B data; strip prior relabels only from original-outcome game copies.
 
     Solver-labelled collections already have exact ``result`` targets and are preserved
     in both arms. They are not sequential games and must never be replayed by the relabeller.
+    With reuse_reach, preserve existing exact arrays within that reach in the exact arm.
+    Games without arrays are scheduled for solving; existing budget failures stay unknown.
     """
     destination.mkdir(parents=True, exist_ok=False)
     arms = {arm: destination / arm for arm in ("control", "exact")}
@@ -85,21 +88,44 @@ def snapshot(
                 game = dict(loaded)
             assert len(game["moves"]) > 0 and game["boards"].ndim == 3, path
             labelled = str(game.get("termination", "")) == "solver"
+            exact = None
+            if not labelled and reuse_reach is not None and "exact_margin_p1" in game:
+                exact = np.asarray(game["exact_margin_p1"])
+                assert exact.shape == (len(game["moves"]),), f"invalid exact label shape: {path}"
+                assert np.issubdtype(exact.dtype, np.integer), f"non-integer exact labels: {path}"
+                _, height, width = game["boards"].shape
+                rows, cols = (height - 1) // 2, (width - 1) // 2
+                assert np.all(
+                    (exact == EXACT_UNKNOWN) | (np.abs(exact.astype(np.int64)) <= rows * cols)
+                ), path
+                undrawn = undrawn_edges(game["boards"], rows * (cols + 1) + cols * (rows + 1))
+                exact = np.where(undrawn <= reuse_reach, exact, EXACT_UNKNOWN).astype(np.int16)
             if not labelled:
                 game.pop("exact_margin_p1", None)
             relative = Path(str(index)) / path.relative_to(source)
-            for directory in arms.values():
+            for arm, directory in arms.items():
                 target = directory / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
-                np.savez_compressed(target, **game)
+                payload = (
+                    {**game, "exact_margin_p1": exact}
+                    if arm == "exact" and exact is not None
+                    else game
+                )
+                np.savez_compressed(target, **payload)
             if not labelled:
                 relabel_paths.append(arms["exact"] / relative)
             inputs.append(
                 {
                     "source": str(path),
+                    "source_directory": str(source),
                     "copy": str(relative),
                     "sha256": hashlib.sha256(raw).hexdigest(),
                     "labelled": labelled,
+                    "label_action": "static"
+                    if labelled
+                    else "reuse"
+                    if exact is not None
+                    else "solve",
                 }
             )
     assert relabel_paths, "the manifest contains no sequential games to relabel"
@@ -107,28 +133,70 @@ def snapshot(
 
 
 def relabel_games(
-    paths: list[Path], rows: int, cols: int, reach: int, workers: int, budget: int
+    paths: list[Path],
+    rows: int,
+    cols: int,
+    reach: int,
+    workers: int,
+    budget: int,
+    reuse: bool = False,
 ) -> dict[str, dict[str, int]]:
-    """Relabel only copied games and report exact coverage separately at every edge count."""
+    """Reuse stored arrays when requested and solve only files without them.
+
+    Existing unknown entries are not retried. Completion-order progress and a 30-second
+    heartbeat remain visible even when the first game is unusually expensive.
+    """
     local = threading.local()
 
-    def one(path: Path) -> tuple[NDArray[np.int16], NDArray[np.int64]]:
-        if not hasattr(local, "solver"):
-            local.solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
-        exact = relabel_file(path, rows, cols, reach, budget, local.solver)
+    def one(path: Path) -> tuple[NDArray[np.int16], NDArray[np.int64], bool]:
         with np.load(path) as game:
+            exact = (
+                game["exact_margin_p1"].astype(np.int16)
+                if reuse and "exact_margin_p1" in game
+                else None
+            )
             undrawn = undrawn_edges(game["boards"], rows * (cols + 1) + cols * (rows + 1))
-        return exact, undrawn
+        reused = exact is not None
+        if exact is None:
+            if not hasattr(local, "solver"):
+                local.solver = alpha_go_cpp.BoxesSolver(rows, cols, 1 << 22)
+            exact = relabel_file(path, rows, cols, reach, budget, local.solver)
+        return exact, undrawn, reused
 
     counts: dict[int, dict[str, int]] = {}
+    reused_count = solved_count = reported = 0
+    start = time.monotonic()
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for i, (exact, undrawn) in enumerate(pool.map(one, paths), 1):
-            for value, u in zip(exact, undrawn):
-                if u <= reach:
-                    band = counts.setdefault(int(u), {"known": 0, "unknown": 0})
-                    band["unknown" if value == EXACT_UNKNOWN else "known"] += 1
-            if i % 10 == 0 or i == len(paths):
-                print(f"relabelled {i}/{len(paths)} games", flush=True)
+        pending = {pool.submit(one, path) for path in paths}
+        next_report = start + 30
+        try:
+            while pending:
+                done, pending = wait(
+                    pending,
+                    timeout=max(0, next_report - time.monotonic()),
+                    return_when=FIRST_COMPLETED,
+                )
+                for future in done:
+                    exact, undrawn, reused = future.result()
+                    reused_count += int(reused)
+                    solved_count += int(not reused)
+                    for value, u in zip(exact, undrawn):
+                        if u <= reach:
+                            band = counts.setdefault(int(u), {"known": 0, "unknown": 0})
+                            band["unknown" if value == EXACT_UNKNOWN else "known"] += 1
+                now = time.monotonic()
+                completed = reused_count + solved_count
+                if now >= next_report or completed - reported >= 10 or not pending:
+                    print(
+                        f"labels ready for {completed}/{len(paths)} games: "
+                        f"{reused_count} reused, {solved_count} relabelled; "
+                        f"{now - start:.0f}s elapsed",
+                        flush=True,
+                    )
+                    next_report, reported = now + 30, completed
+        finally:
+            for future in pending:
+                future.cancel()
     return {str(k): v for k, v in sorted(counts.items())}
 
 
@@ -230,6 +298,12 @@ def main() -> None:
     p.add_argument("--manifest", type=Path)
     p.add_argument("--tag", default=None)
     p.add_argument("--reach", type=int, default=38)
+    p.add_argument(
+        "--reuse-exact",
+        "--reuse-labels",
+        action="store_true",
+        help="reuse stored exact arrays and solve only games without them",
+    )
     p.add_argument("--workers", type=int, default=min(4, max(1, (os.cpu_count() or 2) - 1)))
     p.add_argument("--node-budget", type=int, default=100_000_000)
     p.add_argument("--epochs", type=int, default=4)
@@ -289,7 +363,15 @@ def main() -> None:
     shutil.copy2(original, reference)
     config = torch.load(reference, map_location="cpu", weights_only=False)["config"]
     rows, cols = int(config["rows"]), int(config["cols"])
-    arms, to_relabel, inputs = snapshot(directories, data)
+    arms, to_relabel, inputs = snapshot(directories, data, args.reach if args.reuse_exact else None)
+    manifests: dict[str, Path] = {}
+    for arm, directory in arms.items():
+        manifests[arm] = logs / f"{arm}-manifest.txt"
+        manifests[arm].write_text(str(directory.resolve()) + "\n")
+    label_plan = {
+        action: sum(item["label_action"] == action for item in inputs)
+        for action in ("reuse", "solve", "static")
+    }
     settings = {
         **vars(args),
         "tag": tag,
@@ -308,26 +390,43 @@ def main() -> None:
         f"Run {tag}: {len(inputs)} copied files; source data stays untouched. Logs: {logs}",
         flush=True,
     )
+    print(
+        f"Label plan: {label_plan['reuse']} games reuse saved arrays; "
+        f"{label_plan['solve']} games need solving; "
+        f"{label_plan['static']} static collections stay unchanged",
+        flush=True,
+    )
+    for directory in directories:
+        missing = sum(
+            item["source_directory"] == str(directory) and item["label_action"] == "solve"
+            for item in inputs
+        )
+        if missing:
+            print(f"  to solve: {directory} ({missing} games)", flush=True)
     report: dict[str, Any] = {
         "tag": tag,
         "logs": str(logs),
         "training": {},
         "arena": {},
+        "reused_exact_labels": args.reuse_exact,
+        "label_plan": label_plan,
         "validation_scope": "replay diagnostic; warm-start may have seen these games",
     }
 
     def save_report() -> None:
         (logs / "summary.json").write_text(json.dumps(report, indent=2))
 
+    save_report()
     report["relabel_coverage"] = relabel_games(
-        to_relabel, rows, cols, args.reach, args.workers, args.node_budget
+        to_relabel, rows, cols, args.reach, args.workers, args.node_budget, reuse=args.reuse_exact
     )
     save_report()
+    assert sum(band["known"] for band in report["relabel_coverage"].values()), (
+        "no known exact labels within reach; the value-target comparison would be empty"
+    )
     environment = {**os.environ, "GAME_DATA_DIR": str(DATA_ROOT.resolve())}
     checkpoints = {"reference": reference}
-    for arm, directory in arms.items():
-        arm_manifest = logs / f"{arm}-manifest.txt"
-        arm_manifest.write_text(str(directory.resolve()) + "\n")
+    for arm, arm_manifest in manifests.items():
         command = [
             sys.executable,
             str(EXP_DIR / "train.py"),
