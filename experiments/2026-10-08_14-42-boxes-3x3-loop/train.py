@@ -116,6 +116,10 @@ def main() -> None:
     p.add_argument("--n-blocks", type=int, default=None, help="override the residual depth")
     p.add_argument("--features", choices=["basic", "chains"], default="basic",
                    help="input planes (encode.py): chains adds the chain / loop structure")
+    p.add_argument("--value-target", choices=["final", "remaining"], default=None,
+                   help="value readout target; default inherits the checkpoint, or final")
+    p.add_argument("--reset-value-head", action="store_true",
+                   help="zero the resumed value readout; required to change its target")
     p.add_argument("--exact-weight", type=float, default=1.0,
                    help="value loss of a position with an exact target counts this many times")
     p.add_argument("--no-exact", action="store_true",
@@ -124,6 +128,7 @@ def main() -> None:
     args = p.parse_args()
     assert args.time_budget >= 0 and args.max_epochs > 0 and args.batch_size > 0
     assert 0 <= args.q_mix <= 1
+    assert not args.reset_value_head or args.resume_from, "reset requires --resume-from"
     seed = args.iteration if args.seed is None else args.seed
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -134,6 +139,11 @@ def main() -> None:
     t0 = time.time()
     dataset = BoxesDataset(manifest_dirs(EXP_DIR / args.dataset_txt), min_undrawn=args.min_undrawn,
                            features=args.features, use_exact=not args.no_exact)
+    if args.q_mix > 0:
+        assert all(str(game.get("root_value_semantics", "")) != "shaped_utility"
+                   for game in dataset.games), (
+            "q-mix requires win probabilities; replay contains margin-shaped search Q"
+        )
     assert (dataset.rows, dataset.cols) == (rows, cols), (dataset.rows, dataset.cols)
     print(f"dataset: {len(dataset):,} positions with >= {args.min_undrawn} undrawn edges from "
           f"{len(dataset.games)} games ({dataset.num_with_mcts} searched), "
@@ -163,12 +173,23 @@ def main() -> None:
             assert override is None or override == state["config"][key], key
         model = BoxesNet(**state["config"]).to(device)
         model.load_state_dict(state["model_state_dict"])
+        value_target = args.value_target or model.value_target
+        assert value_target == model.value_target or args.reset_value_head, (
+            "changing --value-target requires --reset-value-head; old readout weights "
+            "cannot be interpreted as a different target"
+        )
+        if args.reset_value_head:
+            print(f"reset value readout: {model.value_target} -> {value_target}; "
+                  "trunk and policy retained")
+            model.reset_value_head(value_target)
         model_cfg = {k: state["config"][k] for k in ("channels", "n_blocks", "value_hidden")}
         print(f"resumed from {args.resume_from}")
     else:
-        model = BoxesNet(rows, cols, features=args.features, **model_cfg).to(device)
+        model = BoxesNet(rows, cols, features=args.features,
+                         value_target=args.value_target or "final", **model_cfg).to(device)
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"model: BoxesNet {model_cfg} {n_params:,} params on {device}")
+    print(f"model: BoxesNet {model_cfg} {n_params:,} params on {device}; "
+          f"value target {model.value_target}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=WEIGHT_DECAY)
     scheduler = schedule(optimizer, max_steps)
@@ -215,7 +236,8 @@ def main() -> None:
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = ckpt_dir / f"iter{args.iteration}.pt"
     save_boxes_net(model, ckpt_path, iteration=args.iteration, step=step, seed=seed,
-                   split_seed=args.split_seed, val_fraction=args.val_fraction)
+                   split_seed=args.split_seed, val_fraction=args.val_fraction,
+                   reset_value_head=args.reset_value_head)
     print(f"saved {ckpt_path} after {step} steps in {elapsed:.0f}s; train loss "
           f"{train_eval['loss']:.4f} policy_acc {train_eval['policy_acc']:.3f} "
           f"value_acc {train_eval['value_acc']:.3f}; val loss {val_eval['loss']:.4f} "
@@ -230,6 +252,7 @@ def main() -> None:
         "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),
         "val_value_acc": round(val_eval["value_acc"], 4), "val_positions": len(val_set),
         "q_mix": args.q_mix, "min_undrawn": args.min_undrawn, "features": args.features,
+        "value_target": model.value_target, "reset_value_head": args.reset_value_head,
         "model": model_cfg,
         "steps_completed": step,
         "positions": len(train_set), "elapsed_seconds": round(elapsed), "n_params": n_params,

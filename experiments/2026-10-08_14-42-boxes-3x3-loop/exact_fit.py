@@ -36,9 +36,10 @@ def exact_positions(dataset: BoxesDataset) -> tuple[np.ndarray, np.ndarray, np.n
     for game in dataset.games:
         if "exact_margin_p1" not in game:
             continue
-        exact = game["exact_margin_p1"][:dataset.kept(game)]
+        exact = game["exact_margin_p1"]
+        indices = dataset.kept_indices(game)
         counts = undrawn_edges(game["boards"], dataset.geo.num_edges)
-        for k in np.flatnonzero(exact != EXACT_UNKNOWN):
+        for k in indices[exact[indices] != EXACT_UNKNOWN]:
             to_play = int(game["to_play"][k]) + 1
             planes.append(encode_grid(game["boards"][k], to_play, dataset.features))
             margins.append(int(exact[k]) if to_play == 1 else -int(exact[k]))
