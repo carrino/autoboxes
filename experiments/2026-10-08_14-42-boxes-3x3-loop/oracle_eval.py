@@ -145,6 +145,9 @@ def main() -> None:
                    help="also score the C++ alpha-beta's own value at these depths (value "
                         "sign and margin error): how visible the band's value is to a "
                         "shallow hand-written evaluation")
+    p.add_argument("--label-budget", type=int, default=0,
+                   help="nodes per position for the labelling solve; a position over it is "
+                        "dropped from the read (0 = unbounded)")
     p.add_argument("--values-only", action="store_true",
                    help="solve root values only (no child values): value sign and margin "
                         "error per checkpoint, no move columns; far cheaper above 34 undrawn")
@@ -184,11 +187,17 @@ def main() -> None:
 
     missing = [b for b in boards if not complete(cache.get(str(b.edges()), []))]
     for i, b in enumerate(missing, 1):
-        cache[str(b.edges())] = [solver.value(b.edges()), [],
-                                 {} if args.values_only else child_values(solver, b, geo)]
+        value = (solver.value_within(b.edges(), args.label_budget) if args.label_budget
+                 else solver.value(b.edges()))
+        if value is not None:
+            cache[str(b.edges())] = [value, [],
+                                     {} if args.values_only else child_values(solver, b, geo)]
         if i % 25 == 0 or i == len(missing):
             print(f"  solved {i}/{len(missing)} positions ({time.time() - t0 - sampled:.0f}s)",
                   flush=True)
+    dropped = sum(str(b.edges()) not in cache for b in boards)
+    cached = len(boards) - len(missing)
+    boards = [b for b in boards if str(b.edges()) in cache]
     cache_path.write_text(json.dumps(cache))
     labels = [cache[str(b.edges())] for b in boards]
     values = [v for v, _, _ in labels]
@@ -196,11 +205,14 @@ def main() -> None:
     best = [{e for e, v in c.items() if v == value} for c, value in zip(children, values)]
     final = np.array([b.margin() + v for b, v in zip(boards, values)])
     print(f"{len(boards)} positions with {args.min_undrawn}..{args.max_undrawn} undrawn edges "
+          f"({dropped} over the label budget dropped) "
           f"(mean undrawn {np.mean([b.num_edges() - b.move_count() for b in boards]):.1f}), "
-          f"sampled in {sampled:.1f}s, {len(missing)} solved and "
-          f"{len(boards) - len(missing)} cached in {time.time() - t0 - sampled:.1f}s; "
+          f"sampled in {sampled:.1f}s, {len(missing) - dropped} solved and "
+          f"{cached} cached in {time.time() - t0 - sampled:.1f}s; "
           f"optimal-move share of a random legal move: "
-          f"{np.mean([len(s) / len(b.get_legal_moves_flat()) for s, b in zip(best, boards)]):.3f}")
+          f"{np.mean([len(s) / len(b.get_legal_moves_flat()) for s, b in zip(best, boards)]):.3f}; "
+          f"the mover wins {np.mean(final[final != 0] > 0):.3f} of the decided positions "
+          f"(the value sign of a constant guess)")
 
     def optimal_rate(moves: list[int]) -> float:
         return float(np.mean([m in s for m, s in zip(moves, best)]))

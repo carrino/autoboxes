@@ -585,7 +585,30 @@ is `quick-exact/iter3`, 12 epochs from the same start.)
   head has been under-trained relative to the policy all along (equal loss weights, two
   epochs per iteration).
 
-Whether the x8 fit generalises is the 35..36 read on `5x5-mid` (200 positions), pending.
+**The 35..36 read** (`5x5-mid`, 200 positions, raw net, value sign / margin MAE):
+
+| checkpoint | value sign | MAE |
+|---|---|---|
+| s1600 iter20, the start | 0.670 | 2.44 |
+| control, 12 epochs on outcomes | 0.720 | 2.35 |
+| exact x1, 12 epochs | 0.740 | 2.25 |
+| exact x8, 12 epochs | 0.705 | 2.29 |
+
+Natural-weight exact labels help a little (+2 points, 0.1 box), within noise at 200
+positions and consistent with Astra's +1 at 33..36 and +9 at 37..38. The x8 run memorises:
+best fit on the training labels, worst generalisation. And the base rate matters: the
+alpha-beta rows (0.345 / 0.355) predict "not winning" on nearly every position here, so a
+constant "mover wins" guess scores about 0.65 on this band; iter20's 0.67 is nearly nothing
+over it and the best net's 0.74 is +9. The value head at 35..38 is barely better than the
+base rate, which matches the 0.49 at 37..38.
+
+So exact values are the right target and the net can learn them, but 2,500 positions at
+35..38 from one net's own games are too few and too alike to teach a value function that
+generalises. The lever is label quantity and diversity (line labels at 35..40 from many
+games, Astra's Task 5), with the loop relabelling at natural weight (`RELABEL_N=38`,
+`5x5-exact` run) to stop training the head on wrong targets meanwhile. (One position at 36
+undrawn took 58 of the read's 64 minutes: the labelling solve was unbounded;
+`--label-budget` now drops such positions.)
 
 **Astra's `exact_ab.py` run** (`logs/exact-ab-20261013-140131`, natural weight, 4 epochs,
 raw net, 100 positions per band on `5x5-mid`; value sign / margin MAE):
