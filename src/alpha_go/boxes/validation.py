@@ -20,6 +20,15 @@ from alpha_go.boxes.symmetry import apply, edge_permutation, transforms
 
 def replay_group(game: dict[str, Any], geo: BoxesGeometry) -> bytes:
     """Return a label-independent, symmetry-canonical replay group identifier."""
+    if "source_replay_group" in game:
+        inherited = np.asarray(game["source_replay_group"])
+        if inherited.ndim != 0 or inherited.dtype.kind not in "US":
+            raise ValueError("source_replay_group must be a scalar hexadecimal string")
+        scalar = inherited.item()
+        encoded = scalar.decode("ascii") if isinstance(scalar, bytes) else str(scalar)
+        if not encoded or len(encoded) % 2 or any(c not in "0123456789abcdef" for c in encoded):
+            raise ValueError("source_replay_group must be nonempty lowercase hexadecimal")
+        return bytes.fromhex(encoded)
     if "split_group" in game:
         return b"declared:" + str(game["split_group"]).encode()
     if str(game.get("termination", "")) == "solver":

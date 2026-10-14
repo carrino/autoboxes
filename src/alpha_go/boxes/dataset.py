@@ -76,16 +76,27 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             assert like is not None
             self.rows, self.cols = like.rows, like.cols
         self.geo = geometry(self.rows, self.cols)
-        # The kept positions of every game are a prefix: a game's undrawn edges fall by one per
-        # move, and solver-labelled files are stored by undrawn edges descending.
-        self.cumsum = np.cumsum([0] + [self.kept(g) for g in self.games])
+        # Mixed-opponent games keep complete trajectories for exact replay, but only
+        # learner positions with search targets are selected by their optional mask.
+        self.position_indices = [self.kept_indices(g) for g in self.games]
+        self.cumsum = np.cumsum([0] + [len(indices) for indices in self.position_indices])
         self.num_with_mcts = sum("mcts_visits" in g for g in self.games)
 
     def kept(self, game: dict[str, Any]) -> int:
-        """Positions of a game with at least `min_undrawn` undrawn edges (its prefix)."""
+        """Number of eligible training positions in a complete stored game."""
+        return len(self.kept_indices(game))
+
+    def kept_indices(self, game: dict[str, Any]) -> NDArray[np.int64]:
+        """Source row indices after the edge threshold and optional learner mask."""
         undrawn = undrawn_edges(game["boards"], self.geo.num_edges)
         assert np.all(np.diff(undrawn) <= 0), "positions must be ordered by undrawn edges"
-        return int((undrawn >= self.min_undrawn).sum())
+        selected = undrawn >= self.min_undrawn
+        if "train_mask" in game:
+            mask = np.asarray(game["train_mask"])
+            if mask.dtype != np.bool_ or mask.shape != selected.shape:
+                raise ValueError("train_mask must have one boolean per stored position")
+            selected &= mask
+        return np.asarray(np.flatnonzero(selected), dtype=np.int64)
 
     def split(self, val_fraction: float, seed: int = 0) -> tuple[BoxesDataset, BoxesDataset]:
         """Held-out split by game (positions of one game never straddle the two sets)."""
@@ -98,8 +109,9 @@ class BoxesDataset(Dataset[dict[str, Any]]):
 
     def num_exact(self) -> int:
         """Kept positions whose value target is an exact margin."""
-        return sum(int((g["exact_margin_p1"][:self.kept(g)] != EXACT_UNKNOWN).sum())
-                   for g in self.games if self.use_exact and "exact_margin_p1" in g)
+        return sum(int((g["exact_margin_p1"][indices] != EXACT_UNKNOWN).sum())
+                   for g, indices in zip(self.games, self.position_indices)
+                   if self.use_exact and "exact_margin_p1" in g)
 
     def footprint_bytes(self) -> int:
         return sum(
@@ -126,7 +138,7 @@ class BoxesDataset(Dataset[dict[str, Any]]):
 
     def __getitem__(self, idx: int) -> dict[str, Any]:
         game_idx = int(np.searchsorted(self.cumsum[1:], idx, side="right"))
-        local = idx - int(self.cumsum[game_idx])
+        local = int(self.position_indices[game_idx][idx - int(self.cumsum[game_idx])])
         game = self.games[game_idx]
         to_play = int(game["to_play"][local]) + 1
         planes = encode_grid(game["boards"][local], to_play, self.features)

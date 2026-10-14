@@ -6,6 +6,8 @@ lattice cell; the logits at the E edge cells are gathered into `policy_BE`. Valu
 average pool plus the margin scalar -> FC -> logits over the 2RC+1 final margins
 `-RC..+RC` for the side to move; `win_prob()` derives P(margin > 0) + 0.5 P(margin = 0),
 which is what the search consumes (upstream's scalar [0, 1] value convention).
+With `value_target="remaining"` the head instead predicts the unclaimed boxes' margin;
+forward masks impossible outcomes and adds the known score exactly, preserving that API.
 
 Dimension key: B batch, K input planes, H/W lattice, E edges, M margin classes.
 """
@@ -31,12 +33,15 @@ class BoxesNet(nn.Module):
         norm_type: str = "bn",
         use_se: bool = False,
         features: str = "basic",
+        value_target: str = "final",
     ) -> None:
         super().__init__()
+        assert value_target in ("final", "remaining"), value_target
         cols = cols or rows
         self.rows, self.cols = rows, cols
         self.channels, self.n_blocks, self.value_hidden = channels, n_blocks, value_hidden
         self.norm_type, self.use_se, self.features = norm_type, use_se, features
+        self.value_target = value_target
         self.num_boxes = rows * cols
         self.num_margins = 2 * self.num_boxes + 1
         norm_cls: type[nn.Module] = MaskedGroupNorm2d if norm_type == "gn" else MaskedBatchNorm2d
@@ -71,6 +76,37 @@ class BoxesNet(nn.Module):
     def num_edges(self) -> int:
         return int(self.edge_index_E.numel())
 
+    def reset_value_head(self, value_target: str) -> None:
+        """Explicitly change the value target, resetting only its final readout.
+
+        Reinterpreting a trained final-margin head as remaining margins is invalid. The
+        trunk, policy and first value layer are retained; policy evaluation is unchanged.
+        """
+        assert value_target in ("final", "remaining"), value_target
+        self.value_target = value_target
+        nn.init.zeros_(self.value_fc2.weight)
+        assert self.value_fc2.bias is not None
+        nn.init.zeros_(self.value_fc2.bias)
+
+    def remaining_to_final_logits(
+        self, remaining_BM: torch.Tensor, planes_BKHW: torch.Tensor,
+    ) -> torch.Tensor:
+        """Shift remaining-margin logits by the exact current score without losing mass.
+
+        With U unclaimed boxes, remaining margins are -U, -U+2, ..., U. Masking that
+        support before shifting means every feasible class stays within -RC..RC. Count
+        ownership planes instead of undoing the normalised score plane under autocast.
+        """
+        owned_B2 = planes_BKHW[:, 1:3].sum(dim=(2, 3), dtype=torch.float32).long()
+        score_B1 = (owned_B2[:, 0] - owned_B2[:, 1]).unsqueeze(1)
+        unclaimed_B1 = self.num_boxes - owned_B2.sum(dim=1, keepdim=True)
+        source_BM = self.margins_M.long().unsqueeze(0) - score_B1
+        feasible_BM = ((source_BM.abs() <= unclaimed_B1)
+                       & ((source_BM - unclaimed_B1).remainder(2) == 0))
+        index_BM = (source_BM + self.num_boxes).clamp(0, self.num_margins - 1)
+        final_BM = remaining_BM.gather(1, index_BM)
+        return final_BM.masked_fill(~feasible_BM, float("-inf"))
+
     def forward(self, planes_BKHW: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Returns (policy_BE logits over edges, margin_BM logits over final margins)."""
         B, _, H, W = planes_BKHW.shape
@@ -84,16 +120,20 @@ class BoxesNet(nn.Module):
         margin_B1 = planes_BKHW[:, 10].mean(dim=(1, 2)).unsqueeze(1)
         hidden = F.relu(self.value_fc1(torch.cat([pooled_BC, margin_B1], dim=1)))
         margin_BM = self.value_fc2(hidden)
+        if self.value_target == "remaining":
+            margin_BM = self.remaining_to_final_logits(margin_BM, planes_BKHW)
         return policy_BE, margin_BM
 
     def win_prob(self, margin_BM: torch.Tensor) -> torch.Tensor:
         """P(margin > 0) + 0.5 P(margin = 0) for the side to move, shape (B,)."""
         probs_BM = F.softmax(margin_BM.float(), dim=-1)
         weight_M = (self.margins_M > 0).float() + 0.5 * (self.margins_M == 0).float()
-        return probs_BM @ weight_M
+        # An autocast matmul would downcast this probability: 1 - 1e-6 then rounds to
+        # one under bf16, making the optional binary loss produce 0 * log(0) = NaN.
+        return (probs_BM * weight_M).sum(dim=-1)
 
     def expected_margin(self, margin_BM: torch.Tensor) -> torch.Tensor:
-        return F.softmax(margin_BM.float(), dim=-1) @ self.margins_M
+        return (F.softmax(margin_BM.float(), dim=-1) * self.margins_M).sum(dim=-1)
 
     def compute_loss(
         self,
@@ -108,6 +148,8 @@ class BoxesNet(nn.Module):
         With `target_win_B` (e.g. BoxesZero's 0.75 outcome + 0.25 root-Q mix) a binary
         cross-entropy on the derived P(win) is added to the value loss. `weight_B` scales each
         position's value loss (a position with weight w counts w times; ones = unweighted).
+        Remaining-head logits are shifted by the known score in forward: final-margin CE
+        then equals CE against (target final margin - current score) on the remaining head.
         """
         policy_BE, margin_BM = self.forward(planes_BKHW)
         policy_loss = -(target_policy_BE * F.log_softmax(policy_BE, dim=-1)).sum(dim=-1).mean()

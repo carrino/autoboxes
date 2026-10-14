@@ -38,7 +38,7 @@ def save_boxes_net(model: BoxesNet, path: str | Path, **extra: Any) -> None:
     config = dict(
         rows=model.rows, cols=model.cols, channels=model.channels, n_blocks=model.n_blocks,
         value_hidden=model.value_hidden, norm_type=model.norm_type, use_se=model.use_se,
-        features=model.features,
+        features=model.features, value_target=model.value_target,
     )
     torch.save({"model_state_dict": model.state_dict(), "config": config, **extra}, path)
 
