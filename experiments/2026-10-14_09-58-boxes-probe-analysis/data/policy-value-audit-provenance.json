@@ -1,0 +1,67 @@
+{
+  "scope": "CPU float32 inference only on 100 training-derived diagnostic roots; no solving/training",
+  "audit_source_commit": "bbbfb67cf49586ae57b53f9b290ab0a547b3dab0",
+  "audit_module_sha256": "a9478aa251618ff495f1da7802ee20537b87df24b89f81cfef813e33bb0fb9ba",
+  "base_worktree_commit": "852cc0823128c8357f8a8faa2bec43e387f4d1a5",
+  "base_remote_source_commit": "e0dd56c6218339830c28a03847b8739d0d203929",
+  "code_commit_note": "Generated summary records the base worktree, not the separately loaded Fable audit source. Uncommitted base changes were analysis documentation and data only.",
+  "imported_source_sha256": {
+    "src/alpha_go/boxes/encode.py": "fc4393fa297ce5e90d8297eb46625ef0978dfb80766d90aad0223d4fe1d09bf1",
+    "src/alpha_go/boxes/model.py": "ebe93e76d9b2f172d622ddac8f2cf1f737313e3ac5a3969a83ddf18317e0aad9",
+    "src/alpha_go/boxes/nn_agent.py": "afce64a82ee691019d90c6f7961d569faded258ed9335e24a68e9c1e3dd41d51",
+    "src/alpha_go/boxes/utility.py": "cbf87db89db651a12335952bd3f7d8994b7968de35070933dfd4467d6ede7542",
+    "src/alpha_go/model.py": "4d68d52ca44fb09c34cb0987bf1cd2df4d88eddd83594bf9180ca1b0106db1e6"
+  },
+  "cpp_extension_sha256": "0209fb3d90ab7d21cf40981e2ad8f35b685273e45aba8b269bb3e57242bb7a7a",
+  "inference_device": "cpu",
+  "inference_dtype": "float32",
+  "torch_threads": 4,
+  "checkpoint_upload": {
+    "archive_sha256": "b627f8db95c317707b6b856ac1d04bea99fcdf2af5f83db519c8ee2e6326b514",
+    "checkpoints": {
+      "reference.pt": "46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0",
+      "candidate.pt": "a6eaaeab78d5ad87e87b81b6fc3c7e3a34ae77440c5e9e1ebfb6d1f88afaa2ef"
+    }
+  },
+  "table_sha256": {
+    "child-diagnostic-positions.jsonl": "6da273d48a4223824c39a4c507afd0d78c5dc18a24b95881dcef4d8e332f26e4",
+    "child-diagnostic-roots.csv": "ca7e9c6b6c1fe1cec203deb8c07c25f441985b6cf774dc578b7d7b34294b46ae",
+    "child-diagnostic-children.csv": "fd515981b8563fe89adbeb48aae6af1d8376edba0275b1a1b39fc8079b508825"
+  },
+  "output_sha256": {
+    "children.csv": "4968222cb24ee09c4e5baf04d42420a9ab5d7e05e4d3555cbf0b1e966789fda1",
+    "policy.csv": "5bc835b82ab00b8a5c056231d5e7399a8536269c12cd198308028b3872ed23e4",
+    "ranking.csv": "c5e10a201bc205e629c97f9d83355c29b533542306aa8a594e40aa9917a3113c",
+    "roots.csv": "4ea011a7b982e8992ffe130ac084e1d09317d3087ead9ce9d53e15a20c862c7e",
+    "summary.json": "1b7d7a44f2400675c67eabc7c6eef59637aa8f3ae0887c7b9b098b7eab9da9b6",
+    "summary.md": "867526905c180579708b28109f991077f6540a7d0e3cc83c16ad2f3c3f5bea78"
+  },
+  "output_rows": {
+    "children.csv": 7280,
+    "policy.csv": 400,
+    "ranking.csv": 1200,
+    "roots.csv": 200
+  },
+  "focused_tests": {
+    "passed": 7,
+    "failed": 0
+  },
+  "gpu_policy_crosscheck": {
+    "reference_disagreements": [],
+    "candidate_disagreements": [
+      {
+        "position": 99,
+        "cpu_edge": 45,
+        "cpu_regret": 2,
+        "gpu_edge": 11,
+        "gpu_regret": 4
+      }
+    ]
+  },
+  "archive": {
+    "path": "experiments/2026-10-14_09-58-boxes-probe-analysis/data/policy-value-audit-tables.tgz",
+    "sha256": "449c3a3947600a68bd4696d31e962fe757996da38311b3a02363cf2ef093a0f3",
+    "bytes": 365098,
+    "contains_checkpoint_weights": false
+  }
+}
