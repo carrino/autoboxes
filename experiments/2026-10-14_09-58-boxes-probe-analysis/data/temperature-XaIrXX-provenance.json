@@ -1,0 +1,52 @@
+{
+  "archive_sha256": "0c7af4b937979f96a1343d177bdb5024c91735fa9f2d3679353b5afbdbfe40fb",
+  "run": "astra-policy-temp-XaIrXX",
+  "code_commit": "236a4f295e88591686c1edb640fb812819dc7ba6",
+  "checkpoint_sha256": {
+    "reference": "46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0",
+    "candidate": "a6eaaeab78d5ad87e87b81b6fc3c7e3a34ae77440c5e9e1ebfb6d1f88afaa2ef"
+  },
+  "input_sha256": {
+    "baseline": {
+      "summary.json": "d19354a2382259b845cdc5ac9cdf660756df7ff1e07d39f9eb924d3066d1bdfd",
+      "positions.jsonl": "5e649431adc8014a21adf5467dbb898d0e9dd8a657f4e3a36216e3881c205a27",
+      "positions.csv": "0483a5321e0fe87500df83e368bec17bcf3927a395b115ce39e25be49722cfbf"
+    },
+    "candidate": {
+      "summary.json": "d77f1b7a3790d7d78415dfc2fc98476e08fdbc9e66a152ed16581d062bf58508",
+      "positions.jsonl": "5e649431adc8014a21adf5467dbb898d0e9dd8a657f4e3a36216e3881c205a27",
+      "positions.csv": "a5669e457d5646b57150761d6768c79d6b57f07bb9fe4b80f151b6d2ef9f7d70"
+    }
+  },
+  "repeat_check": {
+    "against": "astra-probe-PCcE6W",
+    "positions_per_model": 100,
+    "models": [
+      "reference",
+      "candidate"
+    ],
+    "changed_policy_moves": 0,
+    "changed_search_moves": 0,
+    "changed_saved_exact_values": 0
+  },
+  "complete_child_check": {
+    "selected_child_disagreements": 0,
+    "supplementary_scope": "All 100 roots; two formerly unknown roots proven from complete exact child sets",
+    "mean_margin_regret": {
+      "reference": {
+        "t1": 2.68,
+        "t2": 3.56
+      },
+      "candidate": {
+        "t1": 3.7,
+        "t2": 3.88
+      }
+    }
+  },
+  "audit_preparation": {
+    "source_commit": "bbbfb67cf49586ae57b53f9b290ab0a547b3dab0",
+    "roots": 100,
+    "exact_children": 3640,
+    "inference_status": "awaiting frozen checkpoint weights"
+  }
+}

@@ -54,6 +54,44 @@ key. Compare each checkpoint's T2-T1 difference and whether the candidate/refere
 narrows. Similar gains in both models indicate a general search-setting effect. Any
 winner still needs fresh-position/full-game validation before a training-default change.
 
+## Completed temperature comparison: astra-policy-temp-XaIrXX
+
+Both runs are complete, use the same frozen positions and checkpoint hashes, and match
+code, build, device and search settings apart from policy temperature. The primary
+comparison retains the 98 common-known positions from 68 source families. Intervals
+resample source families together 10,000 times, seed 20261014, and remain exploratory.
+
+| Checkpoint | T1 margin regret | T2 margin regret | T2 minus T1, paired 95% interval | Winning roots preserved, T1 to T2 |
+|---|---:|---:|---:|---:|
+| iter0 reference | 2.633 | 3.551 | +0.918 [0.267, 1.667] | 36/71 to 33/71 |
+| iter22 candidate | 3.714 | 3.918 | +0.204 [-0.460, 0.871] | 32/71 to 30/71 |
+
+Temperature 2 does not rescue iter22. The candidate/reference gap shrinks because the
+reference worsens more; the difference between their temperature changes is -0.714
+[-1.920, 0.323], not a reliable interaction. At 35..36, reference regret rises by 1.593
+[0.448, 2.949], while candidate change is -0.037 [-0.945, 0.926]. At 37..38 neither
+checkpoint has a clear change. Raw greedy policy selections remain unchanged, as expected
+when positive temperature rescales logits without changing their ranking.
+
+The temperature-1 repeat exactly reproduces all 100 selected policy/search moves and
+their saved exact values for each checkpoint from the original component probe. This
+checks reproducibility for this run and configuration, not determinism in general.
+All selected child values also agree with the complete CPU child tables. Supplementing
+the two unknown roots with the proven maxima over their complete child sets gives
+all-100 regret of 2.68 to 3.56 for the reference, and 3.70 to 3.88 for the candidate,
+which preserves the conclusion. These supplementary figures do not replace the primary
+98-position denominator. Search used equal simulations, not equal wall time.
+
+Decision: retain iter0 with temperature 1. Do not restart the unchanged training loop
+or launch a broader temperature sweep from this result. It rules out the tested T2
+intervention, not policy degradation. Fable's inference-only policy-mass/value-ranking
+audit in PR17 is the next diagnostic; its code and complete tables load in the cloud,
+but checkpoint inference awaits the two frozen weights. Training and clean full-game
+evaluation remain separate from these development positions.
+
+The input archive, checkpoint hashes and crosscheck provenance accompany
+`data/temperature-XaIrXX-report.json` and `data/temperature-XaIrXX-comparisons.csv`.
+
 ## Concentration of earlier arena mistakes
 
 The prior exact A/B arena contains 100 games per arm. In its already-solved replay, all

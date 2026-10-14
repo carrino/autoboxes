@@ -13,7 +13,20 @@ The completed result and paired intervals are in `report.md` and
 `data/probe-PCcE6W-{report.json,comparisons.csv,provenance.json}`. The candidate regresses
 at 35..36; the 37..38 result is inconclusive. Keep iter0 as the reference.
 
-## Next 3070 job: policy influence on search
+## Completed 3070 job: policy influence on search
+
+The uploaded `astra-policy-temp-XaIrXX` result rejects temperature 2 as a fix on this
+development sample. Reference regret rises from 2.633 to 3.551; candidate regret rises
+from 3.714 to 3.918. Keep iter0 at temperature 1. The temperature-1 repeat matches every
+selected move and exact value from the earlier component probe. Paired results are in
+`report.md` and `data/temperature-XaIrXX-{report.json,comparisons.csv,provenance.json}`.
+
+The next task is Fable's CPU-only policy/value audit in PR17, awaiting checkpoint files.
+Use the frozen `logs/astra-probe-PCcE6W/reference.pt` (iter0) and `candidate.pt` (iter22)
+from the original loop experiment; their hashes are recorded with these results. The
+audit and all 100 roots / 3,640 child labels load successfully in the cloud workspace.
+Checkpoint inference has not run there yet. The command below documents the completed
+temperature probe; another identical GPU run is unnecessary.
 
 From the repository root on the user's GPU machine:
 
