@@ -599,7 +599,9 @@ positions and consistent with Astra's +1 at 33..36 and +9 at 37..38. The x8 run 
 best fit on the training labels, worst generalisation. And the base rate matters: the
 alpha-beta rows (0.345 / 0.355) predict "not winning" on nearly every position here, so a
 constant "mover wins" guess scores about 0.65 on this band; iter20's 0.67 is nearly nothing
-over it and the best net's 0.74 is +9. The value head at 35..38 is barely better than the
+over it and the best net's 0.74 is +9. (Corrected 2026-10-14: `oracle_eval` now prints the
+base rate from the labels, 0.735 on these 200 positions, so 0.74 is the constant guess and
+iter20's 0.67 is below it; see the exact-value loop section.) The value head at 35..38 is barely better than the
 base rate, which matches the 0.49 at 37..38.
 
 So exact values are the right target and the net can learn them, but 2,500 positions at
@@ -652,6 +654,102 @@ In the decisive zone the 1600-simulation search is the most decided of the three
 So the policy targets are not the lever; the value head is. (Iteration 0 holds 139 games:
 self-play files carry a timestamp prefix, so a restart adds games beside those of a killed
 attempt instead of replacing them.)
+
+### The exact-value loop (`TAG=5x5-exact`, 2026-10-14): a regression
+
+The first loop with exact value targets: the s1600 recipe plus `RELABEL_N=38` at natural
+weight, `TRAIN_EPOCHS=4`, `WINDOW=8`, `GATE=0`, `EXTRA_DATA` = the 26..34 and 31..36 label
+sets, from `quick-exact/iter2` (s1600's iteration 20 plus four epochs on exact labels) as
+iteration 0. One iteration took 40..55 minutes: self-play of 100 games at 1600
+simulations 20..33 minutes, relabelling 9..14 minutes on six workers (about 920 positions
+within 38 undrawn per iteration, 3..5 of them over the 100M-node budget, one game holding
+the last four minutes), training 50..90 s, the two arenas 6..7 minutes. Stopped after 22
+iterations (`report-5x5-exact.md`).
+
+| | iterations 1..8 | iterations 15..22 |
+|---|---|---|
+| vs iteration 0, pair score (60 games each) | 0.55 | 0.48 |
+| vs classic, win rate / margin (60 games each) | 0.55 / -1.8 | 0.45 / -2.8 |
+| relabel of the games just played, 35..38: mean \|outcome - exact\| / sign wrong | 2.51 / 0.24 (iteration 0's games) | 2.83 / 0.29 (iteration 21's) |
+
+- **Against classic the run started at 0.55 and slid to 0.45**, with the worst iterations
+  at 0.32..0.38 (9, 14, 19, 21). Iteration 1 ties iteration 0, so iteration 0 itself
+  (the exact-trained `quick-exact/iter2`) was at about 0.55. Astra's `exact_ab` arena,
+  the one same-session comparison, read the same thing after a single training step:
+  the s1600 iteration-20 reference 57/100 against classic, the outcome-trained control
+  54, the exact-trained candidate 44. One step of exact value training costs about 13
+  points of classic win rate while improving the clean value read.
+- **The yardstick is not comparable across sessions.** s1600's 0.75 against classic came
+  from another session: classic is wall-clock limited (one second a move), so a faster
+  solver (#7, 1.4x), a rebuilt extension, different search arguments or CPU load move it
+  by tens of points. The same reference net scored 0.57 in Astra's arena. Only pairs
+  measured in one session count, which is an argument for the fixed-simulation BoxesZero
+  opponent (#13) as a second yardstick.
+- **The window is memorised.** Once the window filled (iteration 8, 34k positions), the
+  train loss fell every iteration, 4.35 -> 4.07, while the held-out loss rose, 5.12 ->
+  5.53, and held-out policy accuracy fell, 0.21 -> 0.18 (`analyze.py`'s second table,
+  the signature its docstring names). Four epochs over an eight-iteration window gives
+  every game 32 passes, twice the s1600 recipe.
+- **The value head at 35..36 has no sign skill, on either position set, and did not
+  change.** On the clean `5x5-mid` positions (200, the mover winning 0.735 of them, so a
+  constant "mover wins" guess scores 0.735) iterations 0, 3, 7, 21 and 22 read 0.740 /
+  2.25, 0.745 / 2.20, 0.740 / 2.19, 0.730 / 2.25 and 0.730 / 2.23. On 200 held-out
+  positions from the run's own games (mover winning 0.645) iteration 0 reads 0.620 /
+  2.64 and iteration 21 0.645 / 2.55, depth-4 alpha-beta 0.400. The MAE moved by a tenth
+  of a box; the sign sits on the constant guess throughout. This corrects the 35..36
+  read above: the base rate there was estimated from the alpha-beta rows as 0.65, and
+  `oracle_eval` now prints it from the labels, 0.735, so the exact-trained net's 0.740
+  is the base rate, not nine points over it. What one step of exact training did to the
+  value head was move it from below the base rate (s1600 iteration 20 at 0.670, which
+  under wrong-signed targets predicted "not winning" too often) up to it: it learned the
+  prior of the zone, not the positions. The net fits its exact training labels
+  (`exact_fit`, 0.70 at 35..38) and does not generalise them.
+
+So exact value targets at this density do not lift play, and the exact-trained value
+head makes play worse at once, before any memorisation, while its clean read sits on
+the base rate in both arms. The hypothesis to test first: a head that has learned the
+zone's prior answers "mover wins about 0.74, margin near zero" for every leaf at 35..38,
+whatever the position, so the search's Q differences between siblings vanish and the
+move choice falls back on the policy prior. The outcome-trained head, noisier and below
+the base rate in sign, may still have ranked siblings, since its errors came from the
+targets' noise rather than from a constant output. Astra's four-way probe (reference policy
+with candidate value, candidate policy with reference value, exact regret on frozen
+positions) measures exactly that, and its lambda / simulation sweep says whether the
+margin term or more search recovers it. The training-side fixes are independent of the
+answer: two epochs, not four, and a gate on the classic column, since `GATE=0` let the
+slide compound for twenty iterations with nothing in the script to stop it. The entropy
+diagnostic above stands in its measurement (the visit targets are not flattening) but
+not in its last clause: the policy targets are still the net's own moves, which the
+replay from 38 found wrong two times in three.
+
+**Merged from Astra (PRs #13 and #14, 2026-10-14)**, no loop default changed:
+
+- `alpha_go.boxes.search_probe`: the four-way policy/value cross of two checkpoints on
+  frozen positions, plus sweeps of margin utility and simulations, scored by exact
+  regret on the common solved subset (roots and chosen children only, bounded solves).
+- `alpha_go.boxes.policy_labels`: exact policy targets at consequential mistakes in
+  training games (winning-to-losing first, then regret), saved only when every legal
+  child is solved; the output is an `EXTRA_DATA` collection that inherits its source
+  game's validation family.
+- `alpha_go.boxes.mixed_collect`: colour-paired games against self, older checkpoints
+  and classic with a `train_mask` that keeps only the learner's searched turns;
+  `BoxesDataset` honours the mask.
+- `BoxesNet(value_target="remaining")` with `train.py --value-target remaining
+  --reset-value-head`: the head predicts the unclaimed boxes' margin, forward adds the
+  known score and masks infeasible outcomes; legacy checkpoints stay final-margin.
+- `boxeszero:<config.json>` arena opponent (`alpha_go.boxes.boxeszero_install` fetches
+  the pinned author snapshot and checkpoint): the published neural engine as a yardstick
+  at a fixed simulation count, scored by game wins (it stops at 13 boxes and the adapter
+  completes the game).
+
+Next, in this order, one GPU job at a time: the four-way probe on the `exact_ab` pair
+(reference and exact candidate, one training step apart, 57 and 44 against classic) at
+35..38, then its lambda / simulation sweep on the same positions; the BoxesZero smoke
+and 20-game pilots with the reference; `policy_labels` over the 5x5-exact window, timed
+on its first games, and one A/B from the reference (its window with and without the
+labels, two epochs, same seed and split) read on the clean bands and in 100 games
+against classic in one session. Only a gain in that A/B puts policy labels into the
+loop, and the loop gets a classic-column gate and two epochs before it runs again.
 
 ### Solver PR #7 (reviewed 2026-10-13)
 

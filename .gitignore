@@ -47,3 +47,6 @@ experiments/**/timing/
 results.tsv
 experiments/**/dataset-*-it*.txt
 experiments/**/data/oracle_labels-*.json
+
+# external engine snapshots (alpha_go.boxes.boxeszero_install)
+work/

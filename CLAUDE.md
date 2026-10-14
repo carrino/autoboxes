@@ -134,7 +134,7 @@ uv sync                                   # Python env (first time: downloads to
 bash scripts/build_cpp.sh                 # C++ extension -> .venv site-packages (alpha_go_cpp)
 uv run -m pytest tests/ --ignore=tests/test_gpu_lease.py   # test_gpu_lease is broken upstream
 uv run -m pytest tests/test_boxes_*.py    # Boxes only
-uv run -m mypy src/alpha_go/boxes src/alpha_go/game.py     # keep NEW code strict-clean (upstream has ~157 errors)
+uv run -m mypy src/alpha_go/boxes                      # keep NEW code strict-clean (upstream has ~157 errors)
 uv run ruff check src/alpha_go/boxes tests/test_boxes_*.py
 ./src/alpha_go/cpp/build/go_game_test && ./src/alpha_go/cpp/build/boxes_game_test && ./src/alpha_go/cpp/build/mcts_test   # Catch2
 
@@ -154,6 +154,9 @@ uv run $EXP/analyze.py 5x5                     # report-5x5.md
 uv run $EXP/oracle_eval.py --tag 3x3           # checkpoints vs the exact oracle on late positions
 uv run $EXP/solver_bench.py --tag 5x5 --undrawn 20 24 28 32 --selfplay-only   # picks SOLVER_N
 uv run $EXP/solver_label.py --positions-tag 5x5-solver --min-undrawn 26 --max-undrawn 34 --num-positions 20000 --save-name 5x5-oracle-26-34   # exact midgame labels for EXTRA_DATA
+uv run python -u -m alpha_go.boxes.search_probe --reference REF.pt --candidate CAND.pt --games $GAME_DATA_DIR/$EXP/5x5-exact/selfplay-it21 --rows 5 --min-undrawn 35 --max-undrawn 38 --positions 100 --output $EXP/logs/<tag>/mix   # four-way policy/value cross by exact regret (Astra #14; README in experiments/2026-10-13_21-42-boxes-learning-angles)
+uv run python -u -m alpha_go.boxes.policy_labels --games $GAME_DATA_DIR/$EXP/5x5-exact/selfplay-it21 --output $GAME_DATA_DIR/$EXP/<name> --rows 5 --min-undrawn 35 --max-undrawn 38 --workers 6   # exact policies at consequential mistakes -> EXTRA_DATA
+uv run python -m alpha_go.boxes.boxeszero_install --destination work/boxeszero --device cuda --simulations 800 && uv run -m alpha_go.boxes.arena --rows 5 --a ckpt:REF.pt --b boxeszero:$PWD/work/boxeszero/arena-cuda-s800.json --num_games 20 --num_workers 1   # the published BoxesZero as a fixed-simulation yardstick (Astra #13)
 ```
 
 `scripts/build_cpp.sh` reads the venv Python's libpython from `sysconfig`, so any
