@@ -142,6 +142,8 @@ class TestMetrics:
         one_hot = {e: float(e == best) for e in legal}
         m = pva.policy_metrics(one_hot, root)
         assert m["optimal_mass"] == 1.0 and m["top_regret"] == 0 and m["top_optimal"] == 1.0
+        assert m["optimal_best_rank"] == 1
+        assert pva.ranks_desc({3: 0.2, 5: 0.5, 7: 0.2}) == {5: 1, 3: 2, 7: 3}
         logits = np.random.default_rng(0).normal(size=max(legal) + 1).astype(np.float32)
         from alpha_go.boxes.nn_agent import policy_dict
         t1 = pva.policy_metrics(policy_dict(logits, legal, 1.0), root)
@@ -157,6 +159,7 @@ class TestMetrics:
         m = pva.ranking_metrics(exact, root)
         assert m["pairwise_accuracy"] == 1.0 and m["spearman"] == pytest.approx(1.0)
         assert m["argmax_regret"] == 0 and m["argmax_optimal"] == 1.0
+        assert m["optimal_best_rank"] == 1
         m = pva.ranking_metrics({e: -v for e, v in exact.items()}, root)
         assert m["pairwise_accuracy"] == 0.0 and m["spearman"] == pytest.approx(-1.0)
         m = pva.ranking_metrics({e: 0.5 for e in exact}, root)

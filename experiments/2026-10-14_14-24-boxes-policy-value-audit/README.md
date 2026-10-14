@@ -40,6 +40,14 @@ root has no box to complete), so `mover_same` is false throughout and the collap
 through the opponent's captures: 1,834 of the 3,640 children collapse, 904 of them to a
 take-all / keep-control choice, 17 reach the solver zone, none ends the game.
 
+## Results
+
+`report.md`, from `data/summary.md`. In short: the prior is nearly flat (1.4 times the
+uniform mass on the exact-optimal moves, unchanged from iter0 to iter22), the value head
+orders siblings at 0.66 pairwise accuracy with no sign skill at any level, iter22's ordering
+is slightly worse at 35..36 and unchanged at 37..38, and T=2 gives back a third of the
+prior's excess mass on optimal moves while preserving its ordering.
+
 ## Run
 
 ```bash

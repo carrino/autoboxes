@@ -751,6 +751,45 @@ labels, two epochs, same seed and split) read on the clean bands and in 100 game
 against classic in one session. Only a gain in that A/B puts policy labels into the
 loop, and the loop gets a classic-column gate and two epochs before it runs again.
 
+### Policy mass and value ranking on the exact child tables (2026-10-14)
+
+Astra's probe analysis (#16) solved every legal child of 100 frozen roots from
+`5x5-exact/selfplay-it21` at 35..38 undrawn, and `alpha_go.boxes.policy_value_audit`
+(`experiments/2026-10-14_14-24-boxes-policy-value-audit/`, CPU inference only) reads
+iter0 and iter22 against them: the prior's entropy, top move and mass on the exact-optimal
+and win-preserving sets at temperatures 1 and 2, and the value head's ordering of the
+children as the search sees them (after the opponent's forced captures, flipped to the
+root mover only when the mover changed). Regret in score-margin points.
+
+| | iter0 | iter22 | uniform |
+|---|---|---|---|
+| prior mass on exact-optimal moves (T=1 / T=2) | 0.197 / 0.179 | 0.197 / 0.180 | 0.137 |
+| prior top-move regret, optimal in | 4.52, 23% | 4.36, 22% | 4.83, 14% |
+| best optimal move within the prior's top five | 65% | 61% | 43% |
+| value ordering (search mode, margin head): pairwise accuracy / Spearman | 0.662 / 0.33 | 0.646 / 0.30 | 0.5 / 0 |
+| value head's favourite child: regret, optimal in | 4.34, 17% | 4.44, 19% | 4.83, 14% |
+| child sign accuracy (constant "move loses": 0.83) | 0.81 | 0.80 | |
+| root sign accuracy (mover wins 0.73) | 0.75 | 0.71 | |
+
+- The prior is nearly flat (entropy 3.16 of 3.59 nats, 0.088 on the top move), carries
+  1.4 times the uniform mass on the optimal moves, and did not move over the loop: iter22
+  is the same prior slightly sharper (entropy -0.033 [-0.057, -0.011], optimal mass
+  +0.000 [-0.007, +0.009]). T=2 preserves the ordering and gives back a third of the
+  excess mass on optimal moves, so the T=2 GPU run should read neutral or worse.
+- The value head is not constant (P(win) spans 0.48 within a root) and orders siblings
+  above chance, but its sign carries nothing over a constant guess at the root or for the
+  children; the ordering is what the search consumes, and it did not improve. At 35..36
+  iter22's ordering is slightly worse (pairwise -0.028 [-0.051, -0.006], Spearman -0.056
+  [-0.108, -0.008]); at 37..38 unchanged. That is the shape of Astra's search probe
+  (candidate regret +2.1 at 35..36, inconclusive at 37..38).
+- Scoring a child after the collapse beats scoring it before (0.662 against 0.617):
+  positions with captures pending are the ones the net reads worst.
+- So the search's 2.6 regret at 400 simulations (iter0, the probe) is two points
+  recovered over either head alone; the lever on this zone is the prior's mass on the
+  optimal moves, which exact policy targets address and exact value targets do not. The
+  roots are in iter22's training window and iter0 never saw them, so the comparison is
+  tilted toward iter22. Report: `report.md` in the experiment folder.
+
 ### Solver PR #7 (reviewed 2026-10-13)
 
 Two changes to `boxes_solver.cpp` / `boxes_chains.cpp`: chain walking without temporary

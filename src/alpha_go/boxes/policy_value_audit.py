@@ -187,12 +187,20 @@ def evaluate_children(model: BoxesNet, root: Root, board: Any) -> list[ChildEval
     return out
 
 
+def ranks_desc(scores: dict[int, float]) -> dict[int, int]:
+    """1 = the highest score; ties broken by edge index, as argmax breaks them."""
+    order = sorted(scores, key=lambda e: (-scores[e], e))
+    return {e: i + 1 for i, e in enumerate(order)}
+
+
 def policy_metrics(policy: dict[int, float], root: Root) -> dict[str, Any]:
-    """Entropy, top move and the mass on the exact-optimal and win-preserving sets."""
+    """Entropy, top move, the mass on the exact-optimal and win-preserving sets, and how
+    deep in the prior's ordering the best-ranked optimal / win-preserving move sits."""
     edges = sorted(policy)
     probs = np.array([policy[e] for e in edges])
     top = edges[int(np.argmax(probs))]
     optimal, preserving, legal = root.optimal, root.win_preserving, len(edges)
+    rank = ranks_desc(policy)
     return dict(
         legal=legal, optimal_count=len(optimal), win_preserving_count=len(preserving),
         entropy=float(-(probs * np.log(np.maximum(probs, 1e-300))).sum()),
@@ -202,6 +210,8 @@ def policy_metrics(policy: dict[int, float], root: Root) -> dict[str, Any]:
         optimal_mass=float(sum(policy[e] for e in optimal)), uniform_optimal=len(optimal) / legal,
         win_preserving_mass=(float(sum(policy[e] for e in preserving)) if root.winning else NAN),
         uniform_win_preserving=len(preserving) / legal if root.winning else NAN,
+        optimal_best_rank=min(rank[e] for e in optimal),
+        win_preserving_best_rank=(min(rank[e] for e in preserving) if root.winning else NAN),
     )
 
 
@@ -238,6 +248,7 @@ def ranking_metrics(scores: dict[int, float], root: Root) -> dict[str, Any]:
         pairwise_accuracy=float(agree.mean()) if agree.size else NAN,
         distinct_pairs=int(distinct.sum()), spearman=spearman,
         spread_std=float(s.std()), spread_range=float(s.max() - s.min()),
+        optimal_best_rank=min(ranks_desc(scores)[e] for e in root.optimal),
     )
 
 
@@ -284,8 +295,11 @@ def audit(model: BoxesNet, name: str, roots: list[Root], temperatures: list[floa
         key = dict(position=root.position, undrawn=root.undrawn, band=band_label(root.undrawn),
                    family=root.family, checkpoint=name)
         evals = evaluate_children(model, root, board)
+        prior = policy_dict(logits[0], board.get_legal_moves_flat(), 1.0)
+        prior_rank = ranks_desc(prior)
         children_rows += [dict(key, **asdict(c), optimal=float(c.exact == root.root_final),
-                               win_preserving=float(c.exact > 0) if root.winning else NAN)
+                               win_preserving=float(c.exact > 0) if root.winning else NAN,
+                               prior=prior[c.edge], prior_rank=prior_rank[c.edge])
                           for c in evals]
         for temperature in temperatures:
             policy = policy_dict(logits[0], board.get_legal_moves_flat(), temperature)
@@ -363,7 +377,7 @@ def paired_differences(rows: list[dict[str, Any]], keys: tuple[str, ...],
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -386,13 +400,14 @@ def summary_markdown(policy: list[dict[str, Any]], ranking: list[dict[str, Any]]
              markdown_table(policy, ["checkpoint", "temperature", "band", "positions", "entropy",
                                      "max_entropy", "top_prob", "optimal_mass",
                                      "uniform_optimal", "win_preserving_mass",
-                                     "uniform_win_preserving", "top_regret", "top_optimal"]),
+                                     "uniform_win_preserving", "top_regret", "top_optimal",
+                                     "optimal_best_rank"]),
              "", "## Value ranking of the legal children (search = collapsed, raw = before "
              "the collapse)", "",
              markdown_table(ranking, ["checkpoint", "mode", "predictor", "band", "positions",
                                       "argmax_regret", "argmax_optimal", "argmax_win_preserving",
                                       "pairwise_accuracy", "spearman", "spread_std",
-                                      "spread_range"]),
+                                      "spread_range", "optimal_best_rank"]),
              "", "## Root calibration and the collapse", "",
              markdown_table(roots, ["checkpoint", "band", "positions", "root_sign_correct",
                                     "root_margin_error", "child_sign_accuracy",
@@ -447,9 +462,11 @@ def main() -> None:
     names = list(checkpoints)
     policy_metric_names = ("entropy", "max_entropy", "top_prob", "optimal_mass", "uniform_optimal",
                            "win_preserving_mass", "uniform_win_preserving", "top_regret",
-                           "top_optimal", "top_win_preserving")
+                           "top_optimal", "top_win_preserving", "optimal_best_rank",
+                           "win_preserving_best_rank")
     ranking_metric_names = ("argmax_regret", "argmax_optimal", "argmax_win_preserving",
-                            "pairwise_accuracy", "spearman", "spread_std", "spread_range")
+                            "pairwise_accuracy", "spearman", "spread_std", "spread_range",
+                            "optimal_best_rank")
     root_metric_names = ("root_sign_correct", "root_margin_error", "child_sign_accuracy",
                          "child_margin_mae", "raw_child_sign_accuracy", "raw_child_margin_mae",
                          "collapsed", "mover_changes", "terminal", "decision", "solver_zone")
