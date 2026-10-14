@@ -36,6 +36,56 @@ in their gap. This is a development diagnostic; verify any candidate on fresh po
 or full games before changing training defaults. Fable's value-ranking task below remains
 independent and useful.
 
+The paired comparison for the two temperature outputs is:
+
+```bash
+uv run python experiments/2026-10-14_09-58-boxes-probe-analysis/compare_temperatures.py \
+  --baseline "$RUN/t1" --candidate "$RUN/t2" --output "$RUN/comparison"
+```
+
+It verifies matching frozen positions, checkpoints, code/build/device and all other search
+settings. It intersects exact coverage across both runs, then reports each model's T2-T1
+effect and the difference between those effects with paired source-family intervals.
+
+## CPU work: exact child diagnostics
+
+The uploaded frozen prefixes allow exact child solves without a checkpoint or GPU.
+`child_label_pilot.py` reuses the tested perspective handling and label cache from
+`search_probe.py`. It uses one bounded solver per root and preserves partial progress;
+only roots with every legal child solved support optimal-move claims. The resulting
+positions remain development diagnostics, not a held-out set or a training collection.
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 timeout --signal=TERM --kill-after=10s 10m \
+  uv run python experiments/2026-10-14_09-58-boxes-probe-analysis/child_label_pilot.py \
+  --input EXTRACTED/mix --output work/child-pilot \
+  --per-band 6 --workers 3 --seconds 360
+```
+
+Use `--all-positions --seconds 480` for the whole frozen sample, still under the outer
+10-minute cap. `--label-cache PATH` can supply a merged exact-only cache from completed
+pilot files; assert overlapping remaining-margin entries agree before merging them.
+The deadline is checked between finite-budget solves, so an in-flight solve can finish
+after it. Bulk per-root cache files stay outside git.
+
+The completed cloud pass is available in `data/child-diagnostic-positions.jsonl` (replay
+prefixes plus original `position` indices), `child-diagnostic-children.csv` (every legal
+edge and exact final margin for the root mover), `child-diagnostic-roots.csv` (root values,
+coverage and uniform-move baselines), and `child-diagnostic-summary.json` (provenance and
+timing). All 3,640 children are exact. Two root values are inferred as the maximum over
+their complete exact child sets; `root_source` identifies them. These tables are for the
+component diagnostic only, not training. Fable can use them without repeating any solve.
+
+For Fable, extend the value-ranking task below with a policy-distribution read: report
+entropy, top-move probability, and probability assigned to the entire exact-optimal move
+set, for each checkpoint at temperatures 1 and 2. Positive temperature preserves ranking;
+changes in optimal-set mass can reveal how search allocation differs. Report exact-optimal
+share of legal moves as a uniform-prior baseline. Also report probability assigned to all
+win-preserving moves on exactly winning roots, because winning and maximizing margin are
+different objectives. Only compute optimal-set metrics on fully solved roots. Use
+inference only in Fable's CPU workspace, leave the running 3070
+job alone, and do not change training defaults based on this development diagnostic.
+
 ## Analyze the completed probe without using the GPU
 
 ```bash
@@ -81,6 +131,8 @@ does not prove constant outputs or absence of useful rankings.
 - Evaluate legal children with each frozen model. Convert probabilities and margins to
   the root mover's perspective, negating/complementing only when the mover changes.
   Include tiny-board tests for a normal turn, retained capture turn, and a double capture.
+  For conclusions about search, match its forced-capture collapse and identify children
+  settled by the solver; do not attribute unused raw-child predictions to the search.
 - Use bounded exact root/child solves, cache completed values, and report coverage. Compare
   checkpoints on identical known children. Only claim best-of-all-legal regret/ranking
   metrics when the needed child set is completely solved. Report ties/undefined ranks.

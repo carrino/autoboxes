@@ -99,10 +99,54 @@ but cannot alone establish a stronger full-game player.
 
 ## Validation
 
-The final CPU regression run passed: 566 passed, 29 skipped in 100.58 seconds, excluding
+Before the later temperature-comparison addition, the CPU regression run passed:
+566 passed, 29 skipped in 100.58 seconds, excluding
 the known-broken upstream `test_gpu_lease.py`. All 26 focused report tests passed; they
 cover paired alignment, shared family resampling, unknown labels, unavailable intervals,
 input validation, and read-only output handling. Ruff and strict mypy passed on all three
 new Python files. The CLI also read an existing completed two-position, four-case search
 probe and wrote a report without loading a model or rerunning a solve. That smoke run
 checks artifact compatibility only, not playing strength.
+
+## CPU preparation while the temperature probe runs
+
+The comparison now handles both temperature directories together, preserving a shared
+exact-known denominator across every model/run. It reports each checkpoint's T2-T1
+change and the difference between those changes, with shared source-family bootstrap
+draws. The comparison/report tests pass together (48 tests), and the existing exact-child
+perspective tests against a tiny exhaustive oracle pass (2 tests). Ruff and strict mypy
+pass on the new comparison, label-pilot script and comparison tests. A clearly synthetic
+duplicate of the prior artifact gives zero temperature effects and zero difference of
+changes; this is validation, not evidence from the active GPU run.
+
+A three-worker CPU pilot selected six positions per band without consulting model errors.
+All 435 legal children at all 12 roots were exactly solved in 56.36 seconds, reusing the
+previous probe's cache. Aggregate time inside solver calls was 98.68 seconds. This small,
+cached sample is not a production throughput benchmark. The frozen development prefixes
+and exact child tables allow Fable to inspect policy probability mass and value rankings
+without repeating the search or fitting on the clean evaluation set.
+
+The full extension solved **all 3,640 legal children at all 100 roots** in 415.03 seconds
+on three workers (1,167.11 aggregate solver seconds), under the eight-minute scheduling
+limit. Direct root/cache solves knew 98 roots. At positions 6 and 57, every legal child
+was exact despite the root solve exceeding its budget; taking the maximum child value,
+already expressed in the root mover's perspective, proves the other two root values.
+`root_source` records that distinction. The maximum also agrees with all 98 independently
+known root labels, and all 800 previously recorded selected-policy/search child values
+agree with these tables. Original probe summaries retain their original 98-root scope.
+
+The small diagnostic tables are committed as `data/child-diagnostic-*`; bulk worker
+transposition-cache artifacts stay outside git. The tables include every replayable prefix,
+source family, legal edge, final margin in the root mover's perspective, coverage and
+source/code/build hashes. They contain no checkpoint predictions or new strength result.
+
+| Band | Roots | Exact children | Mean optimal share of legal moves | Uniform-move margin regret |
+|---|---:|---:|---:|---:|
+| 35..36 | 54 | 1,917 | 0.1414 | 5.3881 |
+| 37..38 | 46 | 1,723 | 0.1320 | 4.1850 |
+
+The uniform numbers describe drawing one legal move uniformly at each root; they do not
+measure MCTS using uniform priors. Fable can now read policy probability mass on exact
+optimal/win-preserving moves and value rankings against a complete child table. Inference
+must match mover perspective and, for search claims, forced-capture collapse. No fitting
+or training should use this diagnostic collection.
