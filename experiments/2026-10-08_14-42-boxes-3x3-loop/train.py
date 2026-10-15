@@ -1,7 +1,7 @@
 """Train BoxesNet for one iteration on a manifest of game directories.
 
-Policy loss: cross-entropy against the MCTS visit distribution (every position, both
-players); value loss: cross-entropy over the final margin for the side to move, plus with
+Policy loss: cross-entropy against the MCTS visit distribution on policy-labelled rows;
+value loss: cross-entropy over the final margin for every row's side to move, plus with
 --q-mix q > 0 a binary cross-entropy on P(win) against (1 - q) * outcome + q * root Q
 (BoxesZero uses q = 0.25). A held-out split by game (--val-fraction) reports validation
 loss and accuracies next to the training ones so overfitting is visible. Every batch
@@ -71,22 +71,29 @@ def schedule(optimizer: torch.optim.Optimizer, total_steps: int
 def evaluate(model: BoxesNet, loader: DataLoader, device: torch.device,
              max_batches: int = 40) -> dict:
     model.eval()
-    policy_hits = value_hits = n = 0
-    loss_sum = 0.0
+    policy_hits = value_hits = policy_n = n = 0
+    policy_loss_sum = value_loss_sum = 0.0
     for i, batch in enumerate(loader):
         if i >= max_batches or len(loader) == 0:
             break
         planes = batch["planes"].to(device)
         policy, margin = batch["policy"].to(device), batch["margin"].to(device)
-        total, _, _ = model.compute_loss(planes, policy, margin)
+        policy_weight = batch["policy_weight"].to(device)
+        _, policy_loss, value_loss = model.compute_loss(
+            planes, policy, margin, policy_weight_B=policy_weight)
         logits_BE, margin_BM = model(planes)
-        policy_hits += int((logits_BE.argmax(-1) == policy.argmax(-1)).sum())
+        policy_mask = policy_weight > 0
+        batch_policy_n = int(policy_mask.sum())
+        policy_hits += int(((logits_BE.argmax(-1) == policy.argmax(-1)) & policy_mask).sum())
         value_hits += int(((model.win_prob(margin_BM) > 0.5) == (margin > 0)).sum())
-        loss_sum += float(total) * planes.shape[0]
+        policy_loss_sum += float(policy_loss) * batch_policy_n
+        value_loss_sum += float(value_loss) * planes.shape[0]
+        policy_n += batch_policy_n
         n += planes.shape[0]
     model.train()
-    return {"loss": loss_sum / max(1, n), "policy_acc": policy_hits / max(1, n),
-            "value_acc": value_hits / max(1, n)}
+    return {"loss": policy_loss_sum / max(1, policy_n) + value_loss_sum / max(1, n),
+            "policy_acc": policy_hits / max(1, policy_n), "value_acc": value_hits / max(1, n),
+            "policy_positions": policy_n}
 
 
 def main() -> None:
@@ -206,6 +213,7 @@ def main() -> None:
                 break
             planes = batch["planes"].to(device)
             policy, margin = batch["policy"].to(device), batch["margin"].to(device)
+            policy_weight = batch["policy_weight"].to(device)
             planes, policy = augment(planes, policy, rows, cols, inverse_perms, rng)
             target_win = None
             if args.q_mix > 0:
@@ -219,7 +227,7 @@ def main() -> None:
                 if args.exact_weight != 1.0:
                     weight = torch.where(batch["exact"], args.exact_weight, 1.0).to(device)
                 total, policy_loss, value_loss = model.compute_loss(planes, policy, margin,
-                                                                    target_win, weight)
+                    target_win, weight, policy_weight_B=policy_weight)
             optimizer.zero_grad()
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -248,9 +256,11 @@ def main() -> None:
         "seed": seed, "split_seed": args.split_seed, "batch_size": args.batch_size,
         "exact_weight": args.exact_weight,
         "train_policy_acc": round(train_eval["policy_acc"], 4),
+        "train_policy_positions": train_eval["policy_positions"],
         "train_value_acc": round(train_eval["value_acc"], 4),
         "val_loss": round(val_eval["loss"], 6), "val_policy_acc": round(val_eval["policy_acc"], 4),
         "val_value_acc": round(val_eval["value_acc"], 4), "val_positions": len(val_set),
+        "val_policy_positions": val_eval["policy_positions"],
         "q_mix": args.q_mix, "min_undrawn": args.min_undrawn, "features": args.features,
         "value_target": model.value_target, "reset_value_head": args.reset_value_head,
         "model": model_cfg,

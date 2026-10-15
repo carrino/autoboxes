@@ -1,0 +1,122 @@
+# Matched exact-policy training pilot
+
+The iter0/iter22 audit found weak move priors and no useful improvement in child
+ordering after exact-value training. This experiment asks whether exact move targets
+can improve the prior on fresh games. It does not restart the league or promote a model.
+There are no 5x5 training or strength results yet.
+
+## The contrast
+
+Both arms start from the frozen iter0 checkpoint and see identical positions, exact
+values, family splits, update counts, augmentation, optimizer and schedule. Both keep
+the ordinary replay window, the fresh full-game rows, and exact value-only child rows.
+Only selected root policy targets differ:
+
+| Arm | Move targets at selected roots |
+|---|---|
+| control | Original MCTS visits |
+| exact | Uniform over all exact-optimal legal moves |
+
+Preparation scans fresh games at 35–38 undrawn edges and selects at most two consequential
+learner mistakes per game. A mistake must have positive original search visits and lose
+at least two final score-margin points. It solves every legal child with a node budget.
+If any child is unknown, the entire root policy/child training group is omitted. The
+coverage tables retain those failures so hard positions are not silently counted as solved.
+
+Known child values are stored after forced captures have collapsed, matching the states
+search evaluates. Their final P1 margin is unchanged by that collapse; the dataset converts
+it to the current mover's perspective. Children have no searched policy, so `policy_mask=False`
+gives them value loss only. No played-move fallback or fake uniform policy is introduced.
+This shared child augmentation is controlled between arms; the experiment does not isolate
+its benefit against the previous loop.
+
+Natural value weights, q-mix zero, two epochs, batch size 256, AdamW at 0.001 and the
+loop's capped warmup/cosine schedule are fixed. The GPU budget is updates, not elapsed time.
+The driver checks the batch/augmentation/LR trace matches across arms. CUDA bitwise
+determinism is not promised.
+
+## Run after the 20-game collection pilot finishes
+
+Fetch this branch through the normal Windows-to-WSL mirror workflow. These changes are
+Python-only; an already working C++ extension does not need rebuilding. From the repository
+root, set `PILOT` to the **actual directory printed by the collection command**:
+
+```bash
+PILOT="$GAME_DATA_DIR/experiments/2026-10-08_14-42-boxes-3x3-loop/move-target-pilot-XXXXXX"
+bash experiments/2026-10-14_17-34-boxes-policy-target-ab/run_pilot.sh "$PILOT/games"
+```
+
+Replace `XXXXXX`; do not use a wildcard that could combine multiple runs. If GAME_DATA_DIR
+is not already exported, first run:
+
+```bash
+export GAME_DATA_DIR="${GAME_DATA_DIR:-$HOME/autoboxes-data/game_data_root}"
+```
+
+The script uses the existing `dataset-5x5-exact-it22.txt` replay manifest. An optional second
+argument selects a different explicit manifest. It uses the surviving frozen
+`logs/astra-probe-PCcE6W/reference.pt`, not the missing original iter0 path. It excludes
+families from that probe's `mix/positions.jsonl` from both fresh and replay data. It rejects
+known `5x5-mid` paths. Family exclusion includes canonical opening prefixes and exact root
+states, and propagates across declared game pairs; it cannot identify every transposition.
+
+The labelling stage uses four CPU workers with 20-million-node budgets per root/child
+solve and a two-hour overall cap. Training then runs sequentially on the 3070 with a
+30-minute cap. These are limits, not runtime predictions: the pilot measures actual cost
+and complete-root coverage. The script packages logs and tables even if a stage fails.
+It prints the `results.tgz` to send back; datasets and checkpoints stay local.
+
+For a collection that has not finished, wait for `collection.json` to report `complete`.
+Do not point preparation at a directory another process is still writing.
+
+## Reuse prepared labels
+
+The output contains `prepared/` (portable manifests, frozen NPZs, child/root CSVs and
+hashes) and `train/` (`reference.pt`, `control.pt`, `exact.pt`, per-arm JSON and `summary.json`).
+The input files remain unchanged. A training retry reuses preparation directly:
+
+```bash
+uv run python -u -m alpha_go.boxes.policy_target_ab \
+  --reference "$RUN/reference.pt" --prepared "$RUN/prepared" \
+  --output "$RUN/train-retry" --epochs 2 --batch-size 256 \
+  --min-undrawn 24 --seed 20261015 --split-seed 0
+```
+
+Set RUN to the printed results directory. Each output must be new. Interrupted preparation
+keeps completed batches for diagnosis but is not automatically resumable; review its
+coverage and timeout before repeating solver work. A completed preparation is reusable.
+
+## What determines the next step
+
+First read complete roots and distinct families, then exact-optimal prior mass and top-move
+hit rate on training and validation roots. Both models are scored against the same exact
+targets. Overall value/CE metrics also include outcome-labelled replay rows and are
+diagnostic; the optimal-set metrics include only completely labelled roots. Children inherit
+their parent's split. Warm-start weights may have seen replay games, so validation is not
+an untouched generalisation test.
+
+- Too few complete roots or held-out families: increase diverse collection or reduce solve
+  reach based on measured cost. Twenty games are an integration pilot, not a strength test.
+- Training optimal mass fails to improve: check fitting/gradient behaviour on this fixed
+  data before spending more on collection or architecture.
+- Training improves but held-out roots do not: increase source diversity and keep the same
+  targets. Do not compensate by heavily weighting a handful of roots.
+- Held-out move quality improves: test equal-budget search regret on fresh diagnostic
+  positions, then paired full-game matches against iter0, classic and BoxesZero. Report
+  equal-time performance too; do not promote from replay metrics alone.
+
+The original plan still has policy-target training, diverse data, controlled child ranking
+experiments and external-engine validation available. This pilot addresses the first two.
+
+## Verification
+
+Tests cover exhaustive tiny-board child values across normal turns, retained captures,
+double captures and terminal collapses; incomplete-group suppression; lineage/exclusion;
+source immutability and portable hashes; policy-mask gradients and legacy compatibility;
+and end-to-end tiny training with equal update traces and a common validation target.
+Use `--cpu` only for such small smoke runs. Full 5x5 training belongs on the 3070.
+
+Local verification: 577 passed, 29 skipped (`test_gpu_lease.py` excluded as in CI).
+Repository CI-scope Ruff passes. Strict mypy with `--follow-imports=silent` passes for
+the four changed core modules. The broader CI mypy command reports 112 errors in 12
+unchanged imported files in this environment, also reproduced on base commit `236a4f2`.
