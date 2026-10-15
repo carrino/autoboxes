@@ -5,6 +5,50 @@ ordering after exact-value training. This experiment asks whether exact move tar
 can improve the prior on fresh games. It does not restart the league or promote a model.
 There are no 5x5 training or strength results yet.
 
+## Overnight run with a fixed iter0 comparison
+
+After the external Windows comparison has finished, update the Windows Git mirror
+and pull `astra/policy-target-ab` in WSL. From the repository root:
+
+```bash
+ITERATIONS=3 FINAL_GAMES=200 \
+  bash experiments/2026-10-14_17-34-boxes-policy-target-ab/run_loop.sh
+```
+
+The training recipe is the integrated loop below: frozen iter0 initialization,
+three batches of 100 fresh full games at 1600 simulations, exact move supervision
+at selected mistakes with 35–36 undrawn edges, successor value targets, natural
+loss weights and four training epochs per iteration. Ordinary trajectory examples
+remain in each replay window. The first window contains only the first new batch;
+older replay archives are not automatically imported. This is a bounded first test
+of the new targets, not an established improvement over iter0.
+
+After the three iterations, the script runs **200 actual games of iteration 3
+against frozen iter0**: 100 random four-edge openings, each played with sides
+swapped, seed 20261016. Both models use 400 simulations, solver reach 30 and the
+same search settings. The final checkpoint is fixed before reading these results;
+the loop's champion selection does not change this opponent or candidate. Match
+output includes game wins, a paired label-swap p-value, and the legacy pair score
+based on summed margins. Use the paired game-score test when assessing a win-rate
+gain. These tests do not establish empty-board strength or external-bot performance.
+
+The regular per-iteration arena remains a small progress check (60 games against
+the current champion, 20 against classic). The final 200-game comparison is the
+main overnight read against iter0. It does not promote or replace any existing
+run's champion, and all intermediate checkpoints remain available.
+
+Allow several hours. The actual cost of this new 5x5 labelling stage is unmeasured:
+each iteration has a two-hour labelling cap, and the final match has a 90-minute
+cap. These are stop limits, not predicted durations. A timeout stops the run and
+packages diagnostics. Use the printed `resume.sh` to continue: completed training
+iterations are reused, and an unfinished final match restarts without retraining.
+A finished final match is reused only after checking checkpoint, settings and
+result hashes. Its moves, log and checksums are included in the same `results.tgz`.
+
+`FINAL_GAMES` defaults to zero for the original training-only workflow. Optional
+`FINAL_SEED`, `FINAL_WORKERS` (default 8) and `FINAL_TIMEOUT` (default 90m) are saved
+with the run. Use a new run tag when changing the experiment settings.
+
 ## Integrated self-play loop
 
 The same teacher can now run automatically after every fresh self-play batch:
@@ -183,11 +227,14 @@ source immutability and portable hashes; policy-mask gradients and legacy compat
 and end-to-end tiny training with equal update traces and a common validation target.
 Use `--cpu` only for such small smoke runs. Full 5x5 training belongs on the 3070.
 
-Local verification: 619 passed, 29 skipped (`test_gpu_lease.py` excluded as in CI).
+Local verification: 620 passed, 29 skipped (`test_gpu_lease.py` excluded as in CI).
 The integrated loop is exercised on CPU for two iterations, with a labelling-stage
 interruption, source-game reuse, rolling exact/child replay, training metrics, and arena
 commit recovery. Separate tests terminate active collectors and exercise the generated
 fresh-run/resume wrapper.
+The overnight wrapper test also injects a failed final match, verifies resumption
+without repeating training, checks fixed candidate/baseline/search arguments,
+reuses completed results, and rejects changed result bytes.
 Repository CI-scope Ruff passes. Strict mypy with `--follow-imports=silent` passes for
 the four changed core modules. The broader CI mypy command reports 112 errors in 12
 unchanged imported files in this environment, also reproduced on base commit `236a4f2`.

@@ -9,6 +9,10 @@ for INPUT in "$SOURCE/reference.pt" "$SOURCE/mix/positions.jsonl"; do
 done
 ITERATIONS=${ITERATIONS:-3}
 [ "$ITERATIONS" -gt 0 ]
+FINAL_GAMES=${FINAL_GAMES:-0}; FINAL_SEED=${FINAL_SEED:-20261016}
+FINAL_WORKERS=${FINAL_WORKERS:-8}; FINAL_TIMEOUT=${FINAL_TIMEOUT:-90m}
+[ "$FINAL_GAMES" -ge 0 ] && [ "$((FINAL_GAMES % 2))" -eq 0 ] && [ "$FINAL_WORKERS" -gt 0 ] || {
+    echo "FINAL_GAMES must be nonnegative and even; FINAL_WORKERS must be positive" >&2; exit 1; }
 mkdir -p "$EXP/checkpoints"
 CKPT=$(mktemp -d "$EXP/checkpoints/5x5-policy-loop-XXXXXX")
 TAG=${CKPT##*/}
@@ -41,7 +45,8 @@ SEARCH_ARGS="--policy_temperature 1.0 --prove_terminals 1 --margin_utility_lambd
         POLICY_CHILD_BUDGET POLICY_TIMEOUT POLICY_EXCLUDE_POSITIONS RELABEL_N SP_GAMES SP_SIMS \
         SP_PROCS SP_WORKERS TRAIN_BUDGET TRAIN_EPOCHS TRAIN_MIN_UNDRAWN TRAIN_ARGS WINDOW EXTRA_DATA \
         START_FROM START_FRACTION STOP_WHEN_SOLVED SOLVER_N ARENA_SOLVER_N SOLVER_BUDGET MERGE_EQ \
-        ARENA_GAMES BASE_GAMES ARENA_SIMS BASELINES SEARCH_ARGS; do
+        ARENA_GAMES BASE_GAMES ARENA_SIMS BASELINES SEARCH_ARGS FINAL_GAMES FINAL_SEED \
+        FINAL_WORKERS FINAL_TIMEOUT; do
         printf 'export %s=%q\n' "$VARIABLE" "${!VARIABLE}"
     done
     cat <<'SH'
@@ -49,8 +54,10 @@ finish() {
     STATUS=$?
     trap - EXIT
     echo "$STATUS" > "$LOGS/exit-status.txt"
+    ARCHIVE=$(mktemp "${LOGS}.results-XXXXXX.tgz")
     tar --exclude='*.pt' --exclude='*.npz' --exclude='results.tgz' \
-        -czf "$LOGS/results.tgz" -C "$LOGS" .
+        -czf "$ARCHIVE" -C "$LOGS" .
+    mv "$ARCHIVE" "$LOGS/results.tgz"
     echo "Exit status: $STATUS; send this file: $LOGS/results.tgz"
     exit "$STATUS"
 }
@@ -68,8 +75,34 @@ if [ "$START" -lt "$ITERATIONS" ]; then
 else
     echo "All $ITERATIONS iterations already completed."
 fi
+if [ "$FINAL_GAMES" -gt 0 ]; then
+    FINAL="$LOGS/final-vs-iter0"
+    if [ -f "$FINAL-complete.sha256" ]; then
+        sha256sum --check "$FINAL-complete.sha256"
+        echo "Reusing completed final comparison with frozen iter0."
+    else
+        echo "Final strength check: iter$ITERATIONS vs frozen iter0, $FINAL_GAMES games in side-swapped pairs"
+        FINAL_A="$EXP/checkpoints/$TAG/iter$ITERATIONS.pt"
+        FINAL_B="$EXP/checkpoints/$TAG/iter0.pt"
+        sha256sum "$FINAL_A" "$FINAL_B" "$LOGS/resume.sh" > "$FINAL-inputs.sha256"
+        timeout --signal=TERM --kill-after=30s "$FINAL_TIMEOUT" \
+          uv run python -u -m alpha_go.boxes.arena \
+            --rows "$ROWS" --cols "$COLS" --a "ckpt:$FINAL_A" --b "ckpt:$FINAL_B" \
+            --num_games "$FINAL_GAMES" --num_workers "$FINAL_WORKERS" --seed "$FINAL_SEED" \
+            --opening_moves 4 --sims "$ARENA_SIMS" --solver "$ARENA_SOLVER_N" \
+            --solver_budget "$SOLVER_BUDGET" --merge_eq "$MERGE_EQ" $SEARCH_ARGS \
+            --save_games "$FINAL.jsonl" 2>&1 | tee "$FINAL.log"
+        sha256sum --check "$FINAL-inputs.sha256"
+        cat "$FINAL-inputs.sha256" > "$FINAL-complete.tmp"
+        sha256sum "$FINAL.jsonl" "$FINAL.log" >> "$FINAL-complete.tmp"
+        mv "$FINAL-complete.tmp" "$FINAL-complete.sha256"
+    fi
+fi
 SH
 } > "$LOGS/resume.sh"
 echo "Run tag: $TAG"
 echo "Resume the same run after interruption: bash $LOGS/resume.sh"
+if [ "$FINAL_GAMES" -gt 0 ]; then
+    echo "After training: $FINAL_GAMES full games of the final checkpoint vs frozen iter0."
+fi
 bash "$LOGS/resume.sh"

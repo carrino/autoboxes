@@ -10,6 +10,7 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
 import torch
 
 from alpha_go.boxes.model import BoxesNet
@@ -152,7 +153,10 @@ else:
         assert all(not Path(f"/proc/{pid}").exists() for pid in workers), output
 
 
-def test_fresh_wrapper_saves_settings_and_resumes_completed_run(tmp_path: Path) -> None:
+@pytest.mark.parametrize("final_games", [0, 200])
+def test_fresh_wrapper_saves_settings_and_resumes_completed_run(
+    tmp_path: Path, final_games: int,
+) -> None:
     repo = Path(__file__).resolve().parents[1]
     name = "experiments/2026-10-08_14-42-boxes-3x3-loop"
     experiment = tmp_path / name
@@ -182,14 +186,45 @@ for iteration in range(int(sys.argv[1]) + 1, int(sys.argv[2]) + 2):
         f'#!/usr/bin/env bash\nexec "{sys.executable}" "{fake}" "$@"\n')
     git_dir = subprocess.check_output(["git", "rev-parse", "--absolute-git-dir"],
                                      cwd=repo, text=True).strip()
-    env = dict(os.environ, GIT_DIR=git_dir, ITERATIONS="2", SP_GAMES="12")
+    binary = tmp_path / "bin"
+    binary.mkdir()
+    uv = binary / "uv"
+    uv.write_text(f"#!{sys.executable}\n" + '''import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+assert args[:5] == ["run", "python", "-u", "-m", "alpha_go.boxes.arena"]
+def value(flag): return args[args.index(flag) + 1]
+assert value("--a").endswith("/iter2.pt")
+assert value("--b").endswith("/iter0.pt")
+assert value("--num_games") == "200" and value("--opening_moves") == "4"
+assert value("--seed") == "20261016" and value("--sims") == "400"
+assert value("--solver") == "30" and value("--solver_budget") == "50000"
+out = Path(value("--save_games"))
+counter = out.parent / "final-invocations"
+counter.write_text(str(int(counter.read_text()) + 1) if counter.exists() else "1")
+fail = Path(os.environ["FAIL_FINAL_ONCE"])
+if fail.exists():
+    fail.unlink()
+    raise SystemExit(9)
+out.write_text("".join(json.dumps(dict(index=i)) + "\\n" for i in range(200)))
+print("===RESULT===")
+print(json.dumps(dict(num_games=200)))
+''')
+    uv.chmod(0o755)
+    fail = tmp_path / "fail-final-once"
+    fail.touch()
+    env = dict(os.environ, GIT_DIR=git_dir, ITERATIONS="2", SP_GAMES="12",
+               FINAL_GAMES=str(final_games), FAIL_FINAL_ONCE=str(fail),
+               PATH=f"{binary}:{os.environ['PATH']}")
     wrapper = repo / "experiments/2026-10-14_17-34-boxes-policy-target-ab/run_loop.sh"
     first = subprocess.run(["bash", str(wrapper)], cwd=tmp_path, env=env, text=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
-    assert first.returncode == 0, first.stdout
+    assert first.returncode == (9 if final_games else 0), first.stdout
     logs = next((experiment / "logs").glob("5x5-policy-loop-*"))
     script = (logs / "resume.sh").read_text()
     assert "export SP_GAMES=12" in script and "export POLICY_LABELS=1" in script
+    assert f"export FINAL_GAMES={final_games}" in script
+    assert not (logs / "final-vs-iter0-complete.sha256").exists()
     invoked = (logs / "invoked").stat().st_mtime_ns
     second = subprocess.run(["bash", str(logs / "resume.sh")], cwd=tmp_path, env=env,
                             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
@@ -198,3 +233,19 @@ for iteration in range(int(sys.argv[1]) + 1, int(sys.argv[2]) + 2):
     assert (logs / "invoked").stat().st_mtime_ns == invoked
     assert (logs / "results.tgz").is_file()
     assert (source / "reference.pt").read_bytes() == b"frozen-reference"
+    if final_games:
+        assert (logs / "final-invocations").read_text() == "2"
+        assert (logs / "final-vs-iter0-complete.sha256").is_file()
+        third = subprocess.run(["bash", str(logs / "resume.sh")], cwd=tmp_path, env=env,
+                               text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               timeout=20)
+        assert third.returncode == 0, third.stdout
+        assert "Reusing completed final comparison" in third.stdout
+        assert (logs / "final-invocations").read_text() == "2"
+        assert (logs / "invoked").stat().st_mtime_ns == invoked
+        (logs / "final-vs-iter0.jsonl").write_text("changed results")
+        corrupted = subprocess.run(["bash", str(logs / "resume.sh")], cwd=tmp_path, env=env,
+                                   text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                   timeout=20)
+        assert corrupted.returncode != 0 and "FAILED" in corrupted.stdout
+        assert (logs / "final-invocations").read_text() == "2"
