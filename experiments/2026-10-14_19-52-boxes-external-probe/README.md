@@ -4,8 +4,66 @@ Compare the genuine external engines with autoboxes on the same 100 frozen 5x5
 positions at 35–38 undrawn edges. BoxesZero is an algorithmic reference for now;
 the downloaded checkpoints have not established the published player's strength.
 
-**Status: both engines passed the three-root native Windows smoke on the user's
-machine (eoW2mg). The full 100-position launcher is ready; its results are pending.**
+**Status: the full 100-position Windows run completed and its raw evidence was
+audited (pilwGG). Dabble chose an exact-optimal move on all 100 roots. Both engines
+preserved all 73 theoretically winning positions. Full-game matches remain pending.**
+
+## Full Windows result: pilwGG
+
+| Engine / checkpoint | Exact-optimal moves | Mean margin regret | Wins preserved |
+| --- | ---: | ---: | ---: |
+| Dabble 1.3, pinned hash-enabled CLI | 100 / 100 | 0.00 | 73 / 73 |
+| PRsBoxes, normal Computer Move | 64 / 100 | 0.98 | 73 / 73 |
+| Autoboxes iter0, 400 simulations | 32 / 100 | 2.68 | 37 / 73 |
+| Autoboxes iter22, 400 simulations | 25 / 100 | 3.70 | 33 / 73 |
+
+These are individual decisions on the same 100 frozen development roots, with
+every legal child's exact value known. They are not match win rates. PRsBoxes'
+36 margin-suboptimal choices include 22 moves that still preserve a win and 14
+on already losing roots; none turns a winning root into a loss. Its 64% margin
+optimality therefore does not imply 36 lost games. Dabble also achieves 100%
+margin optimality separately at 35–36 (54 roots) and 37–38 (46 roots).
+
+The external workers requested five seconds per decision and could finish early.
+End-to-end decision totals were 196.486 seconds for PRsBoxes and 245.685 seconds
+for Dabble, about 7.4 minutes combined before launcher overhead. Their means were
+1.965 and 2.457 seconds. The stored iter0 search used 81.485 seconds across these
+roots. Those timers include different overhead, and the CPU bots and RTX 3070
+search have different budgets; this is not an equal-time comparison.
+
+Paired bootstrap over 68 source families gives a Dabble-minus-iter0 margin-regret
+difference of -2.68 points [95% interval -3.36, -2.08]; PRsBoxes-minus-iter0 is
+-1.70 [-2.40, -1.08]. This supports a large move-quality gap on these positions,
+without establishing overall strength or perfect play outside this sample.
+
+The uploaded archive SHA256 is
+`6bc94c069faa7781fc4cc41f85e500d07744cf81c4f2232ca5e25cd31122d607`, from code commit
+`b6acaf9c172ca5b52ef1d09a8b5007205ccd9708`. Audit reproduced the complete summary
+exactly, verified all seven input/script hashes, checked native PRsBoxes boards
+before and after all 100 moves against independent reference-rule replay, and
+reparsed both raw Dabble output channels on all 100 histories. Requests, atomic
+receipts, JSONL exports and process-output records agree. Both engines returned
+zero with no missing positions. Executable hashes match the pinned provenance;
+the raw archive contains the download receipts rather than executable bytes.
+
+Committed evidence: [per-position decisions](data/windows-pilwGG-decisions.csv)
+and [summary, intervals and audit receipt](data/windows-pilwGG-summary.json).
+The source archive also contains native saved boards and raw engine logs. To
+reproduce its scoring after extraction:
+
+```bash
+uv run python experiments/2026-10-14_19-52-boxes-external-probe/windows/score_results.py \
+  --results /path/to/extracted/results \
+  --tables experiments/2026-10-14_19-52-boxes-external-probe/data
+```
+
+Implication for training: our iter0 move loses 36 of the 73 winning roots that
+both external engines preserve. Exact-move supervision directly targets these
+errors, so the planned three-iteration policy-target run remains justified. This
+does not establish that our network will learn the required choices or isolate
+whether the bots' advantage comes from evaluation, pruning, chain reasoning or
+search budget. Their mechanisms merit a separate audit. No BoxesZero player ran
+in this comparison, and these results cannot identify a BoxesZero checkpoint bug.
 
 ## Successful Windows smoke: eoW2mg
 
@@ -177,7 +235,7 @@ frozen inputs, wrong engine hashes, wrong mover/scores and changed budgets. Miss
 decisions are reported separately; comparisons use common completed roots only.
 
 Send the printed `work/boxes-windows-full-*/results.tgz` file, including on failure.
-The full Windows orchestration still needs this first user run. Linux checks cover
+The full Windows orchestration succeeded in pilwGG. Linux checks cover
 the scorers, both encoders, 100-request dispatch and persistence after an injected
 worker failure; they do not simulate native search or GUI interaction.
 
