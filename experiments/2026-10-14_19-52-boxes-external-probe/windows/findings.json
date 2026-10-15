@@ -1,0 +1,76 @@
+{
+  "engine": "PRsBoxes, Paul R. Stevens, NewBoxes 1.0",
+  "official_page": "https://www.dianneandpaul.net/PRsBoxes/",
+  "official_binary_link": "https://www.dianneandpaul.net/PRsBoxes/PRsBoxes.exe",
+  "source_status": "No public source found; author page offers executable only. No native source port available.",
+  "mirror_url": "https://raw.githubusercontent.com/yimmon/dots-and-boxes/57c6a5fd849022bf3754c4aa530a2ab2ee7f300c/other/PRsBoxes.exe",
+  "mirror_commit": "57c6a5fd849022bf3754c4aa530a2ab2ee7f300c",
+  "exe_sha256": "2f603782446e0df640b832966ac7b19e5ad9e8781aa6bc0c279fa415901b9d55",
+  "format": "2007-01-31 PE32 Windows GUI, MFC42.DLL, MSVCRT.DLL",
+  "dimensions": "5x5 boxes require width=6,height=6 dots in native GUI.",
+  "text_format": {
+    "dots": "+",
+    "human_horizontal": "-",
+    "computer_horizontal": "=",
+    "human_vertical": "I",
+    "computer_vertical": "|",
+    "human_box": "H",
+    "computer_box": "C",
+    "empty": " ",
+    "layout": "(2*rows+1)x(2*cols+1) interleaved ASCII lattice, optional # comments; illegal first column ends board"
+  },
+  "normal_gui_interface": {
+    "file_new": "WM_COMMAND 0xe100",
+    "file_open": "WM_COMMAND 0xe101",
+    "file_save": "WM_COMMAND 0xe103",
+    "computer_move": "WM_COMMAND 0x8004",
+    "options": "WM_COMMAND 0x8009",
+    "new_game_width_control": 1000,
+    "new_game_height_control": 1001,
+    "new_game_seed_control": 1003,
+    "new_game_set_seed_radio": 1005,
+    "options_seconds_control": 1014,
+    "options_auto_play_control": 1027
+  },
+  "cli_test_mode": {
+    "invocation": "PRsBoxes.exe -tC:\\path\\position.txt",
+    "status": "Identified by binary disassembly, not executed; intentionally not used by smoke worker.",
+    "reason_not_benchmark": "Test-creation path runs explicitly selected analysis stages in different order from normal GUI Computer Move. Do not substitute test-mode decisions for normal PRsBoxes."
+  },
+  "wine_attempt": {
+    "version": "mmtrt/WINE_AppImage Wine staging11.19 WoW64",
+    "status": "Xvfb and Win64 utilities run; Win32 startup SIGSEGV before MFC/engine. No moves obtained.",
+    "xvfb": "Debian21.1.16-1.3+deb13u4 extracted locally, :97",
+    "logs": [
+      "wine-strace.log",
+      "windows-path.log",
+      "wow64-check.log"
+    ]
+  },
+  "smoke": {
+    "command_wsl": "bash path/to/run_windows_smoke.sh [optional positions.jsonl]",
+    "inputs": "100 frozen JSONL roots, first3used",
+    "requested_seconds": 5,
+    "position_watchdog_seconds": 60,
+    "worker_watchdog_seconds": 300,
+    "result_status": "unvalidated-smoke-prototype",
+    "seed_limitation": "Seed set in NewGame before FileOpen; persistence across FileOpen has not been verified.",
+    "elapsed_limitation": "Reported elapsed includes Windows GUI and250ms FileSave polling overhead.",
+    "checks": "Native loaded board/ownership roundtrip, exactlyone newlegal edge, resultingownership checked."
+  },
+  "python_runtime": {
+    "url": "https://www.python.org/ftp/python/3.12.8/python-3.12.8-embed-amd64.zip",
+    "sha256": "8d3f33be9eb810f23c102f08475af2854e50484b8e4e06275e937be61ce3d2fb",
+    "hash_source": "https://github.com/UniClipboard/UniClipboard/blob/ab7204e85a331244c3f5032986a3c8fb38b7aa81/apps/gui-go/e2e/windows_native_panel_remote.py",
+    "verification_limit": "Download policy403 in cloud; worker verifies published manifest hash against actual downloaded bytes on Windows."
+  },
+  "verification": [
+    "6format tests passed",
+    "converter roundtrip all100frozenroots passed",
+    "BoxesBoard agreement everyply80randomcomplete games includingdoublecaptures",
+    "ruff passed",
+    "python py_compile passed",
+    "bash -n passed",
+    "PowerShell/WindowsGUI execution not available in cloud"
+  ]
+}

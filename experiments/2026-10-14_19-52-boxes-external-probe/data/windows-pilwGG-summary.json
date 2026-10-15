@@ -1,0 +1,738 @@
+{
+  "complete": true,
+  "scope": "Frozen development positions; not full games or equal-time GPU comparisons",
+  "regret_units": "final score-margin points; transferring one box changes margin by two",
+  "timing": "wall_seconds includes startup and adapter work; raw timing in engine_details",
+  "failures": "Missing decisions are reported separately; paired comparisons use common roots",
+  "tables_sha256": {
+    "child-diagnostic-positions.jsonl": "6da273d48a4223824c39a4c507afd0d78c5dc18a24b95881dcef4d8e332f26e4",
+    "child-diagnostic-roots.csv": "ca7e9c6b6c1fe1cec203deb8c07c25f441985b6cf774dc578b7d7b34294b46ae",
+    "child-diagnostic-children.csv": "fd515981b8563fe89adbeb48aae6af1d8376edba0275b1a1b39fc8079b508825"
+  },
+  "runtime": {
+    "python_url": "https://www.python.org/ftp/python/3.12.8/python-3.12.8-embed-amd64.zip",
+    "python_sha256": "8d3f33be9eb810f23c102f08475af2854e50484b8e4e06275e937be61ce3d2fb",
+    "python_hash_reference": "https://github.com/UniClipboard/UniClipboard/blob/ab7204e85a331244c3f5032986a3c8fb38b7aa81/apps/gui-go/e2e/windows_native_panel_remote.py",
+    "python_cloud_verification": "Cloud download policy denied python.org; pinned manifest digest is checked against bytes downloaded here.",
+    "input_sha256": {
+      "run_windows_smoke.ps1": "fa82f7533bcc1715188483c170e17e0652ad5e276c01b9c3eaef6da6d761986e",
+      "score_results.py": "46ab15242b27053a2ecb0d31b3747c58fabb046484bd47fad3e4859cd8d3cc98",
+      "positions.jsonl": "6da273d48a4223824c39a4c507afd0d78c5dc18a24b95881dcef4d8e332f26e4",
+      "dabble_windows_smoke.py": "59b2fe8b9818c47cb377500cb3e56fe687b83edc458434bee77edc11f70fb3e1",
+      "dabble_worker.py": "23a2ba31bf30529055da5909a54bc6473fff609bf1e79f01601255e6d206c9e1",
+      "prsboxes_windows_smoke.py": "191a4d75ad62d818147a3db83b065f0230e2f3034e850ffc676ad7cf10aa1b91",
+      "run_windows_smoke.sh": "4766ac11775f7ec60371c43ba679eb10ea975a323cf5b10412ba8e80ac562c8e"
+    },
+    "selected_position_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99
+    ],
+    "mode": "full",
+    "requested_seconds": 5,
+    "selected_positions_sha256": "ca0bb44c90aed035a44b140321f7b1e0960d3396ccf3ce6dc01758a4e23ab511",
+    "windows_version": "Microsoft Windows NT 10.0.26200.0",
+    "windows_64bit_process": true,
+    "note": "Frozen-position diagnostic; timings are not equal-time GPU comparisons. Each decision starts a fresh engine."
+  },
+  "engines": {
+    "prsboxes": {
+      "complete": true,
+      "exit_status": 0,
+      "missing_positions": [],
+      "provenance": {
+        "engine_url": "https://raw.githubusercontent.com/yimmon/dots-and-boxes/57c6a5fd849022bf3754c4aa530a2ab2ee7f300c/other/PRsBoxes.exe",
+        "x86_runtimes": [
+          {
+            "path": "C:\\WINDOWS\\SysWOW64\\mfc42.dll",
+            "sha256": "893811154ddef2f99c2e91ccc46c942243afb64573a079d64852348306545194",
+            "pe_machine": "0x14c"
+          }
+        ],
+        "engine_sha256": "2f603782446e0df640b832966ac7b19e5ad9e8781aa6bc0c279fa415901b9d55"
+      },
+      "aggregate": {
+        "positions": 100,
+        "winning_roots": 73,
+        "optimal_rate": 0.64,
+        "mean_margin_regret": 0.98,
+        "wins_preserved": 73,
+        "win_preservation_rate": 1.0,
+        "win_to_loss": 0,
+        "win_to_draw": 0,
+        "total_wall_seconds": 196.4860000004992
+      },
+      "bands": {
+        "35..36": {
+          "positions": 54,
+          "winning_roots": 38,
+          "optimal_rate": 0.5925925925925926,
+          "mean_margin_regret": 1.1851851851851851,
+          "wins_preserved": 38,
+          "win_preservation_rate": 1.0,
+          "win_to_loss": 0,
+          "win_to_draw": 0,
+          "total_wall_seconds": 95.23500000010245
+        },
+        "37..38": {
+          "positions": 46,
+          "winning_roots": 35,
+          "optimal_rate": 0.6956521739130435,
+          "mean_margin_regret": 0.7391304347826086,
+          "wins_preserved": 35,
+          "win_preservation_rate": 1.0,
+          "win_to_loss": 0,
+          "win_to_draw": 0,
+          "total_wall_seconds": 101.25100000039674
+        }
+      },
+      "comparisons": {
+        "reference": {
+          "overall": {
+            "common_positions": 100,
+            "families": 68,
+            "direction": "engine minus baseline; win metrics use all common roots",
+            "bootstrap": "paired source-family percentile, position-weighted",
+            "resamples": 10000,
+            "seed": 20261015,
+            "metrics": {
+              "optimal": {
+                "delta": 0.32,
+                "ci95": [
+                  0.1875,
+                  0.4519230769230769
+                ]
+              },
+              "margin_regret": {
+                "delta": -1.7,
+                "ci95": [
+                  -2.3958333333333335,
+                  -1.0833333333333333
+                ]
+              },
+              "win_preserved": {
+                "delta": 0.36,
+                "ci95": [
+                  0.25961538461538464,
+                  0.4653633567240217
+                ]
+              },
+              "win_to_loss": {
+                "delta": -0.36,
+                "ci95": [
+                  -0.4653633567240219,
+                  -0.25961538461538464
+                ]
+              }
+            }
+          },
+          "bands": {
+            "35..36": {
+              "common_positions": 54,
+              "families": 49,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.24074074074074073,
+                  "ci95": [
+                    0.05555555555555555,
+                    0.42309322033898283
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -0.9629629629629629,
+                  "ci95": [
+                    -1.5925925925925926,
+                    -0.27450980392156865
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.2777777777777778,
+                  "ci95": [
+                    0.16666666666666666,
+                    0.4
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.2777777777777778,
+                  "ci95": [
+                    -0.4,
+                    -0.16666666666666666
+                  ]
+                }
+              }
+            },
+            "37..38": {
+              "common_positions": 46,
+              "families": 37,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.41304347826086957,
+                  "ci95": [
+                    0.23404255319148937,
+                    0.5918367346938775
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -2.5652173913043477,
+                  "ci95": [
+                    -3.7674418604651163,
+                    -1.5319148936170213
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.45652173913043476,
+                  "ci95": [
+                    0.3023255813953488,
+                    0.6086956521739131
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.45652173913043476,
+                  "ci95": [
+                    -0.6086956521739131,
+                    -0.3023255813953488
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "candidate": {
+          "overall": {
+            "common_positions": 100,
+            "families": 68,
+            "direction": "engine minus baseline; win metrics use all common roots",
+            "bootstrap": "paired source-family percentile, position-weighted",
+            "resamples": 10000,
+            "seed": 20261015,
+            "metrics": {
+              "optimal": {
+                "delta": 0.39,
+                "ci95": [
+                  0.26666666666666666,
+                  0.5109356639247934
+                ]
+              },
+              "margin_regret": {
+                "delta": -2.72,
+                "ci95": [
+                  -3.549019607843137,
+                  -1.9433962264150944
+                ]
+              },
+              "win_preserved": {
+                "delta": 0.4,
+                "ci95": [
+                  0.3,
+                  0.5
+                ]
+              },
+              "win_to_loss": {
+                "delta": -0.4,
+                "ci95": [
+                  -0.5,
+                  -0.3
+                ]
+              }
+            }
+          },
+          "bands": {
+            "35..36": {
+              "common_positions": 54,
+              "families": 49,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.37037037037037035,
+                  "ci95": [
+                    0.2,
+                    0.5263157894736842
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -3.111111111111111,
+                  "ci95": [
+                    -4.26427793904209,
+                    -2.0
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.4074074074074074,
+                  "ci95": [
+                    0.2830188679245283,
+                    0.5370370370370371
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.4074074074074074,
+                  "ci95": [
+                    -0.5370370370370371,
+                    -0.2830188679245283
+                  ]
+                }
+              }
+            },
+            "37..38": {
+              "common_positions": 46,
+              "families": 37,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.41304347826086957,
+                  "ci95": [
+                    0.23404255319148937,
+                    0.5777777777777777
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -2.260869565217391,
+                  "ci95": [
+                    -3.125,
+                    -1.4222222222222223
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.391304347826087,
+                  "ci95": [
+                    0.2558139534883721,
+                    0.5217391304347826
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.391304347826087,
+                  "ci95": [
+                    -0.5217391304347826,
+                    -0.2558139534883721
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "dabble": {
+      "complete": true,
+      "exit_status": 0,
+      "missing_positions": [],
+      "provenance": {
+        "engine_url": "https://raw.githubusercontent.com/ofenrohr/ksquares/3376c69a2b95cbc44241c65da224411967b32801/aux/dabble/dabble.exe",
+        "x86_runtimes": [
+          {
+            "path": "C:\\WINDOWS\\SysWOW64\\mfc120.dll",
+            "sha256": "5855b0e1e04f2dbff129c8d9f6954c0bd538e4dc12addf7aa5531ab073e8beee",
+            "pe_machine": "0x14c"
+          },
+          {
+            "path": "C:\\WINDOWS\\SysWOW64\\MSVCR120.dll",
+            "sha256": "86e39b5995af0e042fcdaa85fe2aefd7c9ddc7ad65e6327bd5e7058bc3ab615f",
+            "pe_machine": "0x14c"
+          },
+          {
+            "path": "C:\\WINDOWS\\SysWOW64\\MSVCP120.dll",
+            "sha256": "87c42ca155473e4e71857d03497c8cbc28fa8ff7f2c8d72e8a1f39b71078f608",
+            "pe_machine": "0x14c"
+          }
+        ],
+        "engine_sha256": "7e88069a551edae2fc8a404eca9fcb0366b3ba729738e0f4f5bea399a7704c32"
+      },
+      "aggregate": {
+        "positions": 100,
+        "winning_roots": 73,
+        "optimal_rate": 1.0,
+        "mean_margin_regret": 0.0,
+        "wins_preserved": 73,
+        "win_preservation_rate": 1.0,
+        "win_to_loss": 0,
+        "win_to_draw": 0,
+        "total_wall_seconds": 245.68500000005588
+      },
+      "bands": {
+        "35..36": {
+          "positions": 54,
+          "winning_roots": 38,
+          "optimal_rate": 1.0,
+          "mean_margin_regret": 0.0,
+          "wins_preserved": 38,
+          "win_preservation_rate": 1.0,
+          "win_to_loss": 0,
+          "win_to_draw": 0,
+          "total_wall_seconds": 113.73399999924004
+        },
+        "37..38": {
+          "positions": 46,
+          "winning_roots": 35,
+          "optimal_rate": 1.0,
+          "mean_margin_regret": 0.0,
+          "wins_preserved": 35,
+          "win_preservation_rate": 1.0,
+          "win_to_loss": 0,
+          "win_to_draw": 0,
+          "total_wall_seconds": 131.95100000081584
+        }
+      },
+      "comparisons": {
+        "reference": {
+          "overall": {
+            "common_positions": 100,
+            "families": 68,
+            "direction": "engine minus baseline; win metrics use all common roots",
+            "bootstrap": "paired source-family percentile, position-weighted",
+            "resamples": 10000,
+            "seed": 20261015,
+            "metrics": {
+              "optimal": {
+                "delta": 0.68,
+                "ci95": [
+                  0.5794392523364486,
+                  0.78
+                ]
+              },
+              "margin_regret": {
+                "delta": -2.68,
+                "ci95": [
+                  -3.3617021276595747,
+                  -2.0761904761904764
+                ]
+              },
+              "win_preserved": {
+                "delta": 0.36,
+                "ci95": [
+                  0.25961538461538464,
+                  0.4653633567240217
+                ]
+              },
+              "win_to_loss": {
+                "delta": -0.36,
+                "ci95": [
+                  -0.4653633567240219,
+                  -0.25961538461538464
+                ]
+              }
+            }
+          },
+          "bands": {
+            "35..36": {
+              "common_positions": 54,
+              "families": 49,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.6481481481481481,
+                  "ci95": [
+                    0.5283018867924528,
+                    0.7678571428571429
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -2.1481481481481484,
+                  "ci95": [
+                    -2.6666666666666665,
+                    -1.6666666666666667
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.2777777777777778,
+                  "ci95": [
+                    0.16666666666666666,
+                    0.4
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.2777777777777778,
+                  "ci95": [
+                    -0.4,
+                    -0.16666666666666666
+                  ]
+                }
+              }
+            },
+            "37..38": {
+              "common_positions": 46,
+              "families": 37,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.717391304347826,
+                  "ci95": [
+                    0.5652173913043478,
+                    0.8571428571428571
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -3.3043478260869565,
+                  "ci95": [
+                    -4.5777777777777775,
+                    -2.1818181818181817
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.45652173913043476,
+                  "ci95": [
+                    0.3023255813953488,
+                    0.6086956521739131
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.45652173913043476,
+                  "ci95": [
+                    -0.6086956521739131,
+                    -0.3023255813953488
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "candidate": {
+          "overall": {
+            "common_positions": 100,
+            "families": 68,
+            "direction": "engine minus baseline; win metrics use all common roots",
+            "bootstrap": "paired source-family percentile, position-weighted",
+            "resamples": 10000,
+            "seed": 20261015,
+            "metrics": {
+              "optimal": {
+                "delta": 0.75,
+                "ci95": [
+                  0.66,
+                  0.8350515463917526
+                ]
+              },
+              "margin_regret": {
+                "delta": -3.7,
+                "ci95": [
+                  -4.6138613861386135,
+                  -2.8627450980392157
+                ]
+              },
+              "win_preserved": {
+                "delta": 0.4,
+                "ci95": [
+                  0.3,
+                  0.5
+                ]
+              },
+              "win_to_loss": {
+                "delta": -0.4,
+                "ci95": [
+                  -0.5,
+                  -0.3
+                ]
+              }
+            }
+          },
+          "bands": {
+            "35..36": {
+              "common_positions": 54,
+              "families": 49,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.7777777777777778,
+                  "ci95": [
+                    0.66,
+                    0.8813808574277164
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -4.296296296296297,
+                  "ci95": [
+                    -5.607843137254902,
+                    -3.076923076923077
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.4074074074074074,
+                  "ci95": [
+                    0.2830188679245283,
+                    0.5370370370370371
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.4074074074074074,
+                  "ci95": [
+                    -0.5370370370370371,
+                    -0.2830188679245283
+                  ]
+                }
+              }
+            },
+            "37..38": {
+              "common_positions": 46,
+              "families": 37,
+              "direction": "engine minus baseline; win metrics use all common roots",
+              "bootstrap": "paired source-family percentile, position-weighted",
+              "resamples": 10000,
+              "seed": 20261015,
+              "metrics": {
+                "optimal": {
+                  "delta": 0.717391304347826,
+                  "ci95": [
+                    0.5813953488372093,
+                    0.8400227272727269
+                  ]
+                },
+                "margin_regret": {
+                  "delta": -3.0,
+                  "ci95": [
+                    -3.875063775510204,
+                    -2.142857142857143
+                  ]
+                },
+                "win_preserved": {
+                  "delta": 0.391304347826087,
+                  "ci95": [
+                    0.2558139534883721,
+                    0.5217391304347826
+                  ]
+                },
+                "win_to_loss": {
+                  "delta": -0.391304347826087,
+                  "ci95": [
+                    -0.5217391304347826,
+                    -0.2558139534883721
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "audit": {
+    "archive_sha256": "6bc94c069faa7781fc4cc41f85e500d07744cf81c4f2232ca5e25cd31122d607",
+    "code_commit": "b6acaf9c172ca5b52ef1d09a8b5007205ccd9708",
+    "summary_reproduced": true,
+    "input_code_hashes_verified": 7,
+    "native_evidence_verified": {
+      "prs_native_before_and_after": 100,
+      "dabble_both_raw_move_channels": 100
+    },
+    "all_requests_and_outputs_agree": true,
+    "complete": true,
+    "scope": "One decision on 100 frozen development roots; no full-game or equal-time claim"
+  }
+}

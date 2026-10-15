@@ -1,0 +1,31 @@
+{
+  "engine": "Dabble1.3 hash-enabled, KSquares command-line build",
+  "official_homepage": "https://www.mathstat.dal.ca/~jpg/dabble/",
+  "upstream_repository": "https://github.com/ofenrohr/ksquares",
+  "upstream_commit": "3376c69a2b95cbc44241c65da224411967b32801",
+  "exe_url": "https://raw.githubusercontent.com/ofenrohr/ksquares/3376c69a2b95cbc44241c65da224411967b32801/aux/dabble/dabble.exe",
+  "exe_sha256": "7e88069a551edae2fc8a404eca9fcb0366b3ba729738e0f4f5bea399a7704c32",
+  "sources": {
+    "readme": "https://raw.githubusercontent.com/ofenrohr/ksquares/3376c69a2b95cbc44241c65da224411967b32801/aux/dabble/README",
+    "move_parser": "https://raw.githubusercontent.com/ofenrohr/ksquares/3376c69a2b95cbc44241c65da224411967b32801/src/dbgame.cpp",
+    "savegame_writer": "https://raw.githubusercontent.com/ofenrohr/ksquares/3376c69a2b95cbc44241c65da224411967b32801/src/ksquaresio.cpp"
+  },
+  "protocol": "dabble.exe SAVEGAME TIMEOUT_SECONDS",
+  "verified_executable_format_strings": {
+    "stdout": "DABBLE MOVE: %d: (%d, %d) - (%d, %d)",
+    "dabble_log": "%d: (%d, %d) - (%d, %d)"
+  },
+  "format_verification": "Actual pinned PE32 executable strings plus upstream savegame writer/parser; no successful Windows execution in cloud",
+  "budget": "Positive integer seconds, passed unchanged; seed is not exposed by upstream CLI",
+  "requirements": [
+    "Native Windows Python",
+    "VisualC++2013 x86 runtime: mfc120.dll,MSVCR120.dll,MSVCP120.dll"
+  ],
+  "scope": "Single move from complete replay, first edge of a possibly multi-edge capture turn",
+  "artifact_sha256": {
+    "dabble_worker.py": "23a2ba31bf30529055da5909a54bc6473fff609bf1e79f01601255e6d206c9e1"
+  },
+  "status": "Format and independent replay tests passed; native Windows smoke required",
+  "native_port_status": "Rejected for benchmark: replay errors on tiny nonterminal positions; no substitute-engine result",
+  "native_port_failure_record": "../data/dabble-native-port-replay-failure.json"
+}

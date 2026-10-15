@@ -1,0 +1,61 @@
+{
+  "status": "Blocked diagnostic native port; excluded from opponent strength comparisons",
+  "engine_under_test": "Dabble nohash core from KSquares, locally ported to Linux",
+  "upstream_commit": "3376c69a2b95cbc44241c65da224411967b32801",
+  "upstream_source": "https://github.com/ofenrohr/ksquares/blob/3376c69a2b95cbc44241c65da224411967b32801/src/dbgame-nohash.cpp",
+  "port_changes": [
+    "Remove Qt GUI wrappers",
+    "Width-correct undo snapshot and restore for64bit pointers",
+    "Expose seed",
+    "Steady-clock timeout plumbing",
+    "TRACE tostderr"
+  ],
+  "rows": 2,
+  "cols": 2,
+  "prefix": [
+    1,
+    0,
+    6,
+    8,
+    9,
+    2,
+    5,
+    4,
+    7,
+    10,
+    11
+  ],
+  "expected": {
+    "to_play": 2,
+    "scores": [
+      2,
+      0
+    ],
+    "undrawn": [
+      3
+    ],
+    "explanation": "Edges7 and10 capture the two left boxes forP1; edge11 captures nothing and must pass toP2"
+  },
+  "observed": {
+    "nummoves": 8,
+    "to_play": 1,
+    "bottom_right_node_degree": 0,
+    "bottom_right_node_owner_zero_based": 0,
+    "assertion": "(game->nummoves & 1) == mover"
+  },
+  "scope": "Nonterminal position. Root replay success does not establish fidelity of the native port or its internal search.",
+  "broader_validation": {
+    "frozen_root_replays_passed": 100,
+    "random_prefixes_checked": 1410,
+    "random_prefix_failures": 249,
+    "random_seed": 17
+  },
+  "provenance_hashes": {
+    "native-port.patch": "9b7a33090ba50fc829067b7cf12f4e62e8f988a4ff79dc9190722f5a72328f09",
+    "native_main.cpp": "8743151b6ded3bf0c33070828313800961e769475178ac31157ba9a288b544c6",
+    "native/dabble-nohash": "cac7c47fa52481d16ef674d8799ba8dff5cffeef8ef6e07d91a1ccf17c06e1d4",
+    "ksquares/src/dbgame-nohash.cpp": "e255cc51a0be7f7b31635efe2fa6c4e2a16842bf40f35d9dc491afd21aecc6aa",
+    "ksquares/src/dbgame-nohash.h": "e862aaf47e91f6b4fcb8e498a9d85feda46b5ae1393514088aff08c294c35e86"
+  },
+  "interpretation": "Unresolved archived-core/native-port mismatch; does not establish that the official Windows executable has this bug."
+}
