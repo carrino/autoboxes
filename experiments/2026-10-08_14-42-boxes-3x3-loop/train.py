@@ -96,6 +96,23 @@ def evaluate(model: BoxesNet, loader: DataLoader, device: torch.device,
             "policy_positions": policy_n}
 
 
+def exact_policy_metrics(model: BoxesNet, dataset: BoxesDataset, device: torch.device) -> dict:
+    """Measure optimal-set mass on labelled roots, counting any optimal edge as correct."""
+    from alpha_go.boxes.policy_target_ab import evaluate as evaluate_roots
+    from alpha_go.boxes.validation import replay_group
+    games = []
+    for game in dataset.games:
+        marked = game.get("exact_policy_root_mask")
+        if marked is not None and marked.any():
+            selected = marked & game.get("train_mask", np.ones(len(marked), bool))
+            games.append(dict(game, train_mask=selected))
+    roots = BoxesDataset([], games=games, like=dataset)
+    metrics = evaluate_roots(model, roots, 256, device)
+    return {key: metrics[key] for key in ("positions", "optimal_mass", "optimal_move_rate")} | {
+        "families": len({replay_group(game, roots.geo) for game, indices in
+                         zip(roots.games, roots.position_indices) if len(indices)})}
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--dataset-txt", required=True)
@@ -240,6 +257,11 @@ def main() -> None:
     elapsed = time.time() - start
     train_eval = evaluate(model, loader, device)
     val_eval = evaluate(model, val_loader, device, max_batches=10**9)
+    root_metrics = {}
+    if any("exact_policy_root_mask" in game for game in dataset.games):
+        root_metrics = {"train_exact_policy": exact_policy_metrics(model, train_set, device),
+                        "val_exact_policy": exact_policy_metrics(model, val_set, device)}
+        print("exact move targets (replay diagnostic): " + json.dumps(root_metrics))
     ckpt_dir = EXP_DIR / "checkpoints" / (args.tag or f"{rows}x{cols}")
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = ckpt_dir / f"iter{args.iteration}.pt"
@@ -252,6 +274,7 @@ def main() -> None:
           f"policy_acc {val_eval['policy_acc']:.3f} value_acc {val_eval['value_acc']:.3f}")
     print("\n===RESULT===")
     print(json.dumps({
+        **root_metrics,
         "iteration": args.iteration, "train_loss": round(train_eval["loss"], 6),
         "seed": seed, "split_seed": args.split_seed, "batch_size": args.batch_size,
         "exact_weight": args.exact_weight,

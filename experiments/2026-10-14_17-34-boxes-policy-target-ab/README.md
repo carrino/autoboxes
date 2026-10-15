@@ -5,6 +5,73 @@ ordering after exact-value training. This experiment asks whether exact move tar
 can improve the prior on fresh games. It does not restart the league or promote a model.
 There are no 5x5 training or strength results yet.
 
+## Integrated self-play loop
+
+The same teacher can now run automatically after every fresh self-play batch:
+
+```
+latest model -> new games -> exact move/child targets -> replay -> training -> arena
+      ^                                                            |
+      +------------------------------------------------------------+
+```
+
+After pulling `astra/policy-target-ab` through the usual Windows-to-WSL mirror, run
+this from the repository root:
+
+```bash
+bash experiments/2026-10-14_17-34-boxes-policy-target-ab/run_loop.sh
+```
+
+This creates a fresh `5x5-policy-loop-XXXXXX` tag from the surviving iter0 snapshot
+and runs **three iterations**, each with 100 new full games at 1600 simulations,
+four collection processes, and four CPU labelling workers. The first run labels
+35–36 undrawn edges, at most two mistakes per game, then trains for four epochs.
+It keeps normal full-game examples in the replay window and adds the collapsed
+value-only children. Exact policy targets replace the selected root targets; the raw
+copies are not added again. There is no offline pilot or old-game archive prerequisite.
+
+The loop reports training/validation probability mass on exact-optimal moves, top-move
+optimality and source-family counts. These are replay diagnostics, not evidence of
+playing strength. Arena games still compare with the champion and classic. `GATE=0`
+uses the latest trained model for the next batch; the independent champion/promotion
+record stays in place. We stop after three iterations to inspect the learning signal
+before increasing the budget. BoxesZero matches remain a separate external test.
+
+The wrapper deliberately uses `RELABEL_N=0`: selected roots and children already get
+exact values, and this avoids a second blanket value-solving pass. The underlying loop
+can combine `RELABEL_N` and `POLICY_LABELS` if requested. Unselected trajectory rows
+keep their existing values and search policies. This is a training recipe experiment,
+not the policy-only A/B contrast described below.
+
+Each game has bounded root/child solves (20 million nodes per call); each iteration's
+labelling stage has a two-hour cap. There is no unbounded solve. If any child remains
+unknown, that root receives no replacement policy or child group. Ordinary game rows
+remain available. Coverage is printed; a batch with no complete policies does not prove
+that policy learning occurred.
+
+The command prints a `resume.sh` and a `results.tgz` path. Send back the results archive.
+To resume the same run after interruption, run its printed `resume.sh`; rerunning
+`run_loop.sh` intentionally creates a new tag. The resume script skips completed
+iterations. During an unfinished iteration, it reuses completed self-play and verified
+per-game labels. An interrupted collection is preserved under the run's logs and replaced
+with a new complete collection; interrupted labelling only repeats unfinished games.
+Changing the checkpoint, collection settings, source arrays, label settings or labeller
+code is detected. Use a new tag for a different experiment. Training/arena stages can be
+repeated while the arena result is uncommitted. A committed arena result is verified
+against the checkpoint hash and reused even if its timing write was interrupted, avoiding
+duplicate promotions or candidate-versus-itself matches. Collection process groups are
+terminated and reaped on interruption; a run lock prevents two loops writing the same tag.
+
+For an existing compatible run, the underlying switch is `POLICY_LABELS=1` on
+`run_iteration_local.sh`. Settings include `POLICY_MIN_UNDRAWN`, `POLICY_MAX_UNDRAWN`,
+`POLICY_MAX_PER_GAME`, `POLICY_WORKERS`, `POLICY_NODE_BUDGET`, `POLICY_CHILD_BUDGET`,
+`POLICY_TIMEOUT`, and optional `POLICY_EXCLUDE_POSITIONS`. Completed collections from
+this mode have receipts; it will not silently adopt an existing unverified raw collection.
+The default loop remains unchanged when `POLICY_LABELS=0`.
+
+For a shorter first run, set `ITERATIONS=1` before the wrapper. `SP_GAMES` can be changed
+but must be divisible by `SP_PROCS`. No C++ rebuild is needed for these Python changes.
+
 ## The contrast
 
 Both arms start from the frozen iter0 checkpoint and see identical positions, exact
@@ -116,7 +183,11 @@ source immutability and portable hashes; policy-mask gradients and legacy compat
 and end-to-end tiny training with equal update traces and a common validation target.
 Use `--cpu` only for such small smoke runs. Full 5x5 training belongs on the 3070.
 
-Local verification: 577 passed, 29 skipped (`test_gpu_lease.py` excluded as in CI).
+Local verification: 619 passed, 29 skipped (`test_gpu_lease.py` excluded as in CI).
+The integrated loop is exercised on CPU for two iterations, with a labelling-stage
+interruption, source-game reuse, rolling exact/child replay, training metrics, and arena
+commit recovery. Separate tests terminate active collectors and exercise the generated
+fresh-run/resume wrapper.
 Repository CI-scope Ruff passes. Strict mypy with `--follow-imports=silent` passes for
 the four changed core modules. The broader CI mypy command reports 112 errors in 12
 unchanged imported files in this environment, also reproduced on base commit `236a4f2`.

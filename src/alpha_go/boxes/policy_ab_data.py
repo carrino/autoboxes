@@ -229,7 +229,7 @@ def append_rows(path: Path, rows: list[dict[str, Any]]) -> None:
 
 def write_arms(output: Path, index: int, path: Path, source: dict[str, Any],
                labels: list[tuple[Mistake, list[ChildLabel]]], source_hash: str,
-               geo: BoxesGeometry) -> Counter[str]:
+               geo: BoxesGeometry, *, write_control: bool = True) -> Counter[str]:
     """Write matched source copies and one shared, deduplicated child collection."""
     family = replay_group(source, geo).hex()
     shared = dict(source, source_replay_group=np.array(family),
@@ -295,10 +295,15 @@ def write_arms(output: Path, index: int, path: Path, source: dict[str, Any],
         shared["exact_margin_p1"] = margins
     shared["policy_ab_root_mask"] = root_mask
     exact = dict(shared)
+    if not write_control:
+        # Explicit semantics for live-loop reporting; A/B control roots also have the
+        # shared selection mask but their policies are still ordinary search targets.
+        exact["exact_policy_root_mask"] = root_mask
     if counts["replaced_roots"]:
         exact["mcts_visits"] = exact_visits
     name = f"source-{index:07d}.npz"
-    save_game(output / "control" / name, shared)
+    if write_control:
+        save_game(output / "control" / name, shared)
     save_game(output / "exact" / name, exact)
     ordered = sorted(children_by_state.values(), key=lambda pair: (
         pair[0].move_count(), pair[0].edges, pair[0].player(), pair[1]))
