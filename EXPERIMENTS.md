@@ -864,3 +864,23 @@ Measure every arm after 8 iterations with:
 ```bash
 uv run $EXP/oracle_eval.py --tag <tag> --positions-tag 5x5-solver --min-undrawn 29 --max-undrawn 34 --solver_max_undrawn 28 --value-depths --iterations 0 4 8
 ```
+
+## External engines on the frozen 35–38 roots (2026-10-14, preparation)
+
+`experiments/2026-10-14_19-52-boxes-external-probe/` commits the 100 frozen prefixes,
+all 3,640 exact child margins and the original 3070 move choices. The comparison
+reports score-margin regret and preservation of winning positions separately, with
+paired source-family intervals. Rescoring all 100 roots gives reference iter0
+32% optimal / 2.68 regret / 37 of 73 wins preserved; iter22 gives 25% / 3.70 /
+33 of 73. Earlier probe reports used 98 solved roots; this is expanded label
+coverage, not a new search run.
+
+No trustworthy external-engine result yet. Our Linux port of the archived Dabble
+nohash source fails capture replay tests beyond the frozen sample, so it is excluded. The
+hash-enabled Windows CLI executable and PRsBoxes' normal GUI move path are the
+targets. PRsBoxes' `-t` mode is a different analysis path and is excluded. The
+cloud's portable Wine fails before either 32-bit executable starts its search;
+bounded native Windows adapter smoke tests are the next step. BoxesZero remains
+an algorithmic reference until a trained checkpoint or official working player
+is established. These frozen positions are a development diagnostic, followed
+by equal-machine tests and full paired games for strength claims.

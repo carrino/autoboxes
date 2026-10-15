@@ -1,0 +1,5 @@
+# Preserve exact input hashes across the Windows mirror and WSL checkout.
+data/* -text
+data/*.csv whitespace=cr-at-eol
+windows/* text eol=lf
+*.py text eol=lf
