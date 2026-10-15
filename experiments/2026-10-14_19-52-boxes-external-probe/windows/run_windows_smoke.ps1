@@ -109,6 +109,10 @@ try {
             $child = Start-Process -FilePath $python -ArgumentList $arguments -WorkingDirectory $staging -PassThru `
                 -RedirectStandardOutput (Join-Path $engineOutput 'worker.stdout.log') `
                 -RedirectStandardError (Join-Path $engineOutput 'worker.stderr.log')
+            # Retain the native handle while the process is alive. Windows
+            # PowerShell's Start-Process object can otherwise lose ExitCode
+            # after WaitForExit, turning a successful worker into null/"1".
+            $null = $child.Handle
             # Independent per-engine watchdog covers hung window calls and descendants.
             if (-not $child.WaitForExit(300000)) {
                 & "$env:SystemRoot\System32\taskkill.exe" /PID $child.Id /T /F | Out-Null
@@ -116,7 +120,9 @@ try {
             }
             $child.WaitForExit()
             $engineCode = $child.ExitCode
-            if ($null -eq $engineCode) { $engineCode = 1 }
+            if ($null -eq $engineCode) {
+                throw 'Worker exited but Windows did not return its exit code; engine status is unknown. Inspect worker logs.'
+            }
             $statuses[$name] = $engineCode
             Write-Host ($name + ' exit status: ' + $engineCode)
             Get-Content (Join-Path $engineOutput 'worker.stdout.log')

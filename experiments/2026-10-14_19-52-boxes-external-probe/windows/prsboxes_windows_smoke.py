@@ -67,9 +67,14 @@ def position_text(rows, cols, prefix):
         if owner:
             y, x = divmod(box, cols)
             grid[2 * y + 1][2 * x + 1] = "C" if owner == mover else "H"
+    lines = ["".join(line) for line in grid]
+    # The native loader commits the width only on a non-edge character after
+    # the final dot (0x406ca2), not at the end of a well-formed first row.
+    # Match its own writer's marker (0x406a48); otherwise width stays 12 dots.
+    lines[0] += "#The first row determines width"
     return "\n".join(
         ["#Root mover is Computer; captured boxes preserve score."]
-        + ["".join(line) for line in grid]
+        + lines
         + ["Anything illegal in column one determines height.", ""]
     )
 

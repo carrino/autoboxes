@@ -4,8 +4,31 @@ Compare the genuine external engines with autoboxes on the same 100 frozen 5x5
 positions at 35–38 undrawn edges. BoxesZero is an algorithmic reference for now;
 the downloaded checkpoints have not established the published player's strength.
 
-**Status: comparison harness ready; Windows engine adapters require a local smoke
-test. No Dabble or PRsBoxes performance results have been obtained.**
+**Status: Dabble returned three exact-optimal smoke moves on Windows. PRsBoxes
+rejected the exported header; the format and launcher-status fixes need a rerun.
+The full 100-position comparison remains pending.**
+
+## First Windows smoke: Hgt9uU
+
+User-reported console output and error logs: Dabble returned edges 45, 37 and 55
+on frozen IDs 1, 3 and 6, respectively. All three attain the exact root margin
+(+5, +1, +3). Elapsed times were 1.968, 2.625 and 6.766 seconds at a requested
+five-second budget. The reference autoboxes search preserved one of these three
+wins. This tiny, unequal-budget adapter sample does not establish relative strength.
+
+PRsBoxes displayed "Expected Horizontal line character" during File/Open. Its
+loader at PE addresses 0x406c26–0x406cab only commits the first-row width when it
+hits a non-edge separator after the last dot. Our valid-looking row without that
+separator left the constructor's 12-dot width unchanged. The exporter now emits
+`#The first row determines width` immediately after the final dot, matching the
+native writer at 0x406a48. A regression test characterizes the external parser's
+width rule; the previous encoder/decoder roundtrip tests did not cover that rule.
+
+Dabble printed all three results with an empty worker error log, but the Windows
+launcher reported failure. The launcher previously converted a null Process.ExitCode
+to 1. It now retains the process handle before waiting, and reports an unavailable
+exit code explicitly instead of attributing it to the engine. Native verification
+of both fixes is pending. Focused checks: 35 tests passed and Ruff passed.
 
 ## What is measured
 
