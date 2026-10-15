@@ -1,0 +1,34 @@
+{
+  "source_sha256": "85fb535765c618cd51792957dd000a0ad420b5b73b8927be20f55108cf66e8b6",
+  "units": "final-score margin points; transferring a box shifts margin by two",
+  "scope": "hindsight description of arena games; not training data or a strength test",
+  "arms": [
+    {
+      "arm": "control",
+      "known_moves": 184,
+      "unknown_moves": 0,
+      "total_margin_regret": 626.0,
+      "top1_regret_share": 0.8178913738019169,
+      "top2_regret_share": 1.0,
+      "positive_regret_moves": 112
+    },
+    {
+      "arm": "exact",
+      "known_moves": 186,
+      "unknown_moves": 0,
+      "total_margin_regret": 634.0,
+      "top1_regret_share": 0.7949526813880127,
+      "top2_regret_share": 1.0,
+      "positive_regret_moves": 117
+    },
+    {
+      "arm": "reference",
+      "known_moves": 171,
+      "unknown_moves": 0,
+      "total_margin_regret": 538.0,
+      "top1_regret_share": 0.8141263940520446,
+      "top2_regret_share": 1.0,
+      "positive_regret_moves": 116
+    }
+  ]
+}
