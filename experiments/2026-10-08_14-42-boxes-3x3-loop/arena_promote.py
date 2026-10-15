@@ -16,6 +16,8 @@ import argparse
 import json
 from pathlib import Path
 
+from arena_completed import checkpoint_hash, write_atomic_json
+
 from alpha_go.boxes.arena import play_match
 from alpha_go.boxes.inference import PlaneBatchedEngine
 from alpha_go.boxes.nn_agent import (
@@ -86,11 +88,13 @@ def main() -> None:
     ckpt_dir = EXP_DIR / "checkpoints" / tag
     state_file = EXP_DIR / f"league_state-{tag}.json"
     candidate_ckpt = ckpt_dir / f"iter{args.iteration}.pt"
+    candidate_sha256 = checkpoint_hash(candidate_ckpt)
     candidate = register_boxes_mcts_agent(f"cand-it{args.iteration}", candidate_ckpt, args.rows,
                                           args.cols, engine=shared_engine(candidate_ckpt), **mcts)
     state = load_state(state_file)
     entry: dict = {"iteration": args.iteration, "promotion_metric": "game_score_paired_swap",
-                   "promotion_threshold": args.threshold, "promotion_alpha": 0.05}
+                   "promotion_threshold": args.threshold, "promotion_alpha": 0.05,
+                   "candidate_checkpoint_sha256": candidate_sha256}
     if state["champion"] is None:
         promoted, vs_champion = True, None
     else:
@@ -116,7 +120,8 @@ def main() -> None:
         state["champion"] = args.iteration
     entry["champion_after"] = state["champion"]
     state["history"].append(entry)
-    state_file.write_text(json.dumps(state, indent=2))
+    assert checkpoint_hash(candidate_ckpt) == candidate_sha256, "candidate changed during arena"
+    write_atomic_json(state_file, state)
     print(f"league: champion=iter{state['champion']} promoted={promoted} -> {state_file.name}")
     print("===RESULT===")
     print(json.dumps(entry))

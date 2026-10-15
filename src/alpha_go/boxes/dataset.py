@@ -8,6 +8,8 @@ distribution, or a label-smoothed one-hot of the played edge without search data
 final margin for the side to move, and the root value for the z/Q mix option. `min_undrawn`
 drops the positions with fewer undrawn edges than that: in a solver run those are the
 solver's in play, and the net's capacity is better spent above the solver zone.
+An optional boolean `policy_mask` keeps exact value-only rows in the dataset without
+inventing a policy target from their sentinel move; absent masks mean all policies are used.
 `save_labelled_positions` writes solver-labelled positions in the same format (exact margin,
 uniform policy over the optimal edges), the supervised foothold for the midgame value.
 """
@@ -96,6 +98,16 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             if mask.dtype != np.bool_ or mask.shape != selected.shape:
                 raise ValueError("train_mask must have one boolean per stored position")
             selected &= mask
+        if "policy_mask" in game:
+            mask = np.asarray(game["policy_mask"])
+            if mask.dtype != np.bool_ or mask.shape != selected.shape:
+                raise ValueError("policy_mask must have one boolean per stored position")
+            if np.any(~mask):
+                exact = np.asarray(game.get("exact_margin_p1", []))
+                if (not self.use_exact or exact.shape != mask.shape
+                        or np.any(exact[~mask] == EXACT_UNKNOWN)):
+                    raise ValueError("policy_mask=False rows require known exact_margin_p1 "
+                                     "targets and use_exact=True")
         return np.asarray(np.flatnonzero(selected), dtype=np.int64)
 
     def split(self, val_fraction: float, seed: int = 0) -> tuple[BoxesDataset, BoxesDataset]:
@@ -154,8 +166,12 @@ class BoxesDataset(Dataset[dict[str, Any]]):
         # game, and no row at all in an unsearched one: their target is the played move.
         visits = (game["mcts_visits"][local].astype(np.float32) if "mcts_visits" in game
                   else np.zeros(self.geo.num_edges, dtype=np.float32))
-        searched = bool(visits.sum() > 0)
-        if searched:
+        has_policy = bool(game["policy_mask"][local]) if "policy_mask" in game else True
+        searched = has_policy and bool(visits.sum() > 0)
+        if not has_policy:
+            policy = np.zeros(self.geo.num_edges, dtype=np.float32)
+            root_value = float(margin > 0) + 0.5 * float(margin == 0)
+        elif searched:
             # The policy target is the search's visit distribution regardless of the
             # temperature the move was sampled with (AlphaZero): a one-hot of the chosen
             # move would discard the search's ranking of the other moves.
@@ -175,5 +191,6 @@ class BoxesDataset(Dataset[dict[str, Any]]):
             "root_value": torch.tensor(root_value, dtype=torch.float32),
             "has_mcts": searched,
             "exact": exact != EXACT_UNKNOWN,
+            "policy_weight": torch.tensor(float(has_policy), dtype=torch.float32),
         }
 

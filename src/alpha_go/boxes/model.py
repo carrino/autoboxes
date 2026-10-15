@@ -142,17 +142,27 @@ class BoxesNet(nn.Module):
         target_margin_B: torch.Tensor,
         target_win_B: torch.Tensor | None = None,
         weight_B: torch.Tensor | None = None,
+        policy_weight_B: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Policy CE against a distribution over edges + CE over the final margin class.
 
         With `target_win_B` (e.g. BoxesZero's 0.75 outcome + 0.25 root-Q mix) a binary
         cross-entropy on the derived P(win) is added to the value loss. `weight_B` scales each
         position's value loss (a position with weight w counts w times; ones = unweighted).
+        `policy_weight_B` gives nonnegative finite weights for the policy loss, normalised
+        by their sum. Zero masks exact value-only rows without diluting the policy loss;
+        an all-zero mask gives a differentiable zero policy loss.
         Remaining-head logits are shifted by the known score in forward: final-margin CE
         then equals CE against (target final margin - current score) on the remaining head.
         """
         policy_BE, margin_BM = self.forward(planes_BKHW)
-        policy_loss = -(target_policy_BE * F.log_softmax(policy_BE, dim=-1)).sum(dim=-1).mean()
+        policy_B = -(target_policy_BE * F.log_softmax(policy_BE, dim=-1)).sum(dim=-1)
+        if policy_weight_B is None:
+            policy_loss = policy_B.mean()
+        else:
+            if policy_weight_B.shape != policy_B.shape or not policy_weight_B.is_floating_point():
+                raise ValueError("policy_weight_B must have one floating weight per position")
+            policy_loss = (policy_B * policy_weight_B).sum() / policy_weight_B.sum().clamp_min(1)
         value_B = F.cross_entropy(margin_BM, (target_margin_B + self.num_boxes).long(),
                                   reduction="none")
         if target_win_B is not None:
