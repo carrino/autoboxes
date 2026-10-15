@@ -291,7 +291,7 @@ def run_position(engine, position, root, seconds, seed, watchdog):
                     "seed_after_load_verified": False,
                     "elapsed_includes_gui_and_save_poll": True,
                     "native_root_roundtrip_verified": True,
-                    "adapter_status": "unvalidated-smoke-prototype",
+                    "adapter_status": "native-roundtrip-verified",
                     "mode": "normal-gui-computer-move",
                 }
         raise TimeoutError(f"No single saved move within {watchdog}s")
@@ -314,7 +314,7 @@ def main():
     ap.add_argument("--limit", type=int, default=3)
     args = ap.parse_args()
     assert os.name == "nt", "Run this with native Windows Python, not WSL Python"
-    assert 1 <= args.limit <= 3, "Validate the three-root smoke before broadening"
+    assert 1 <= args.limit <= 100, "Use between one and 100 frozen positions"
     assert args.seconds > 0 and args.watchdog > args.seconds
     engine = args.exe.resolve()
     assert hashlib.sha256(engine.read_bytes()).hexdigest() == ENGINE_SHA256, (
@@ -328,6 +328,9 @@ def main():
         for position in positions:
             root = (args.output / f"root-{position['position']:03}").resolve()
             root.mkdir()
+            request = dict(position, seconds=args.seconds, seed=args.seed)
+            (root / "request.json").write_text(json.dumps(request) + "\n")
+            started = time.monotonic()
             try:
                 result = run_position(
                     engine, position, root, args.seconds, args.seed, args.watchdog
@@ -335,6 +338,11 @@ def main():
             except Exception:
                 (root / "failure.txt").write_text(traceback.format_exc(), encoding="utf-8")
                 raise
+            receipt = dict(request=request, response=result,
+                           wall_seconds=time.monotonic() - started)
+            temporary = root / "result.json.tmp"
+            temporary.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
+            temporary.replace(root / "result.json")
             output.write(json.dumps(result) + "\n")
             output.flush()
             print(json.dumps(result), flush=True)

@@ -4,9 +4,23 @@ Compare the genuine external engines with autoboxes on the same 100 frozen 5x5
 positions at 35–38 undrawn edges. BoxesZero is an algorithmic reference for now;
 the downloaded checkpoints have not established the published player's strength.
 
-**Status: Dabble returned three exact-optimal smoke moves on Windows. PRsBoxes
-rejected the exported header; the format and launcher-status fixes need a rerun.
-The full 100-position comparison remains pending.**
+**Status: both engines passed the three-root native Windows smoke on the user's
+machine (eoW2mg). The full 100-position launcher is ready; its results are pending.**
+
+## Successful Windows smoke: eoW2mg
+
+The user reported both workers exiting zero after the header and process-handle
+fixes. Each chose edges 45, 37 and 55 on frozen IDs 1, 3 and 6: all exact-optimal,
+with final margins +5, +1 and +3. PRsBoxes reported a verified native board and
+ownership roundtrip for every decision. Its measured move/save times were 0.500,
+0.750 and 3.032 seconds; Dabble's process times were 1.875, 2.406 and 6.797 seconds.
+Both requested five seconds. Their timers include different overhead and neither
+measurement establishes equal-time strength. The three roots are adapter checks.
+
+This evidence is the pasted console transcript; the raw archive has not yet been
+independently audited. Foreground GUI windows were not observed, but the successful
+native roundtrip and returned decisions do not require foreground visibility.
+PRsBoxes' seed after loading is unverified; Dabble exposes no seed control.
 
 ## First Windows smoke: Hgt9uU
 
@@ -27,8 +41,8 @@ width rule; the previous encoder/decoder roundtrip tests did not cover that rule
 Dabble printed all three results with an empty worker error log, but the Windows
 launcher reported failure. The launcher previously converted a null Process.ExitCode
 to 1. It now retains the process handle before waiting, and reports an unavailable
-exit code explicitly instead of attributing it to the engine. Native verification
-of both fixes is pending. Focused checks: 35 tests passed and Ruff passed.
+exit code explicitly instead of attributing it to the engine. The subsequent eoW2mg
+run verified both fixes on Windows. Focused checks at that fix: 35 tests and Ruff passed.
 
 ## What is measured
 
@@ -102,8 +116,8 @@ Computer. It requires an interactive Windows desktop and MFC42 x86.
 
 Cloud execution tried portable Wine/WoW64: 64-bit utilities ran, but both 32-bit
 engines failed during runtime startup before executing their search. This tells
-us nothing about their move quality. Windows GUI automation remains explicitly
-unvalidated until the bounded local smoke succeeds.
+us nothing about their move quality. The subsequent user-run Windows smoke succeeded;
+broader native validation remains part of the 100-position run.
 
 ## Run the Windows smoke from WSL
 
@@ -130,13 +144,42 @@ The command prints a `work/boxes-windows-smoke-*/results.tgz` path. Send that
 archive back, including on failure: it contains per-engine status, exact input
 prefixes, hashes, native saved boards, raw moves and errors. The GPU is unused.
 The script leaves its temporary runtime directory for diagnosis and prints the
-path. A full 100-root run follows successful native validation; the smoke is
-deliberately bounded to three roots.
+path. The default smoke remains bounded to three roots.
 
 Cloud checks cover Python compilation, Bash syntax and state conversion. The
-PowerShell orchestration and real Windows GUI have not been executed here. The
+PowerShell orchestration and real Windows GUI run on the user's machine. The
 CPython ZIP hash is pinned from the manifest linked in `windows/findings.json`;
 the launcher checks downloaded bytes before extraction/execution.
+
+## Run all 100 positions
+
+After updating the Windows mirror and pulling `astra/external-position-probe` in
+WSL, run:
+
+```bash
+bash experiments/2026-10-14_19-52-boxes-external-probe/windows/run_windows_smoke.sh --full
+```
+
+Each bot visits all 100 frozen roots at a requested five seconds per decision.
+Progress is printed every 30 seconds. A completed decision gets an atomic receipt
+with its request, response and end-to-end wall time; completed receipts are copied
+to WSL at each progress update. Each engine stops on its first error, preserving
+earlier decisions, and the other engine still gets its own attempt. The normal
+exit path copies all native diagnostics, including failed roots. Windows staging
+is retained even if the launcher is interrupted. This wrapper starts a fresh run;
+it does not automatically resume one that stopped.
+
+WSL then scores saved choices using the committed exact tables, with no GPU or
+new solver work. `results/summary.json` contains overall and per-band metrics,
+paired family-bootstrap deltas against both autoboxes checkpoints, raw decisions,
+engine provenance and missing-position lists. It rejects illegal edges, changed
+frozen inputs, wrong engine hashes, wrong mover/scores and changed budgets. Missing
+decisions are reported separately; comparisons use common completed roots only.
+
+Send the printed `work/boxes-windows-full-*/results.tgz` file, including on failure.
+The full Windows orchestration still needs this first user run. Linux checks cover
+the scorers, both encoders, 100-request dispatch and persistence after an injected
+worker failure; they do not simulate native search or GUI interaction.
 
 ## General diagnostic worker protocol
 
@@ -170,6 +213,6 @@ win versus margin metrics, common-position family bootstraps, real subprocess
 exchange, illegal results, resume integrity and worker timeout cleanup. Format
 tests validate external encodings; they do not certify the executables or GUI.
 
-Local verification: 570 tests passed, 29 skipped (the documented upstream GPU
-lease test excluded); Ruff and the new core module's strict mypy check pass.
+Local verification: 585 tests passed, 29 skipped (the documented upstream GPU
+lease test excluded); Ruff and strict mypy for the core and Windows scorer pass.
 Both encoders also agree with the reference rules on all 100 frozen roots.
