@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "source": "Qdab-0.1-linux-amd64-quctann",
+  "source_commit": "57c6a5fd849022bf3754c4aa530a2ab2ee7f300c",
+  "archive_sha256": "cddc6a6c533acd5c47c99ea3c708b342b78ef31a2e260b3f85e65d1ad041dafa",
+  "artifacts": {
+    "server": "9ee41ab1bffc9ad3a176215cbc3239b08950f2964fb0edddb5297072357cee0a",
+    "libfann.so.2": "a0190ec77a5bde66991ce78fe6d297e862989853eaea9be1fb8825d75cfcb575",
+    "AnnModels/24.ann": "720c356ab6a2ec8024ab9e5f6ec8879e4bf1b963f6d8e035364463ebfcd96ac1",
+    "AnnModels/28.ann": "a6c2b283739040611fdb48e2a7e3f18a96da159b91ca0befac460b1d06b223d7",
+    "AnnModels/32.ann": "fd816937f512c8418854b6dfa617a489035b6f8307ef5fada9376792337d9b47",
+    "AnnModels/stats": "c5742accc673429a87e351019b3d26812f764b0394df457099d871ff6a7bea2b"
+  },
+  "requested_seconds": 5.0,
+  "hard_timeout_seconds": 20,
+  "max_moves": 30,
+  "seed": 20261016,
+  "seed_control": "Qdab uses wall clock; gameplay seed does not control search",
+  "scope": "searched branch sources only; truncated outcomes are never targets",
+  "max_attempts": 1
+}

@@ -1,0 +1,13 @@
+{
+  "scope": "Native Qdab collection and replay evidence; not a training-strength result",
+  "histories": 6,
+  "distinct_opening_families": 6,
+  "searched_edges": 180,
+  "total_seconds": 839.8603185950196,
+  "requested_seconds_per_decision": 5,
+  "moves_per_history": 30,
+  "pool_sha256": "4b88963f225f541ac3ae2a4034bd7249240867bbae07ef037cdd8f9fbe3e775a",
+  "all_outcome_targets_null": true,
+  "source_commit": "57c6a5fd849022bf3754c4aa530a2ab2ee7f300c",
+  "seed_control": "upstream Qdab RNG is wall-clock based; gameplay seed is not a deterministic search seed"
+}

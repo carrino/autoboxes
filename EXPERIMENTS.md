@@ -923,3 +923,34 @@ bounded native Windows adapter smoke tests are the next step. BoxesZero remains
 an algorithmic reference until a trained checkpoint or official working player
 is established. These frozen positions are a development diagnostic, followed
 by equal-machine tests and full paired games for strength claims.
+
+
+## Qdab-sourced backward curriculum (2026-10-15, prepared)
+
+The completed `5x5-policy-loop-cS6u3n` iter24 endpoint lost 87–113 to frozen
+iter0 over 200 full games from 100 side-swapped openings. Independent replay and
+available completion hashes verified all games. Paired swap p=0.10479; opening-pair
+bootstrap 95% win interval approximately [0.365, 0.505]; mean margin -0.70.
+This run did not establish improvement. It generated 2,209 exact-policy roots;
+the final training window contained 686 roots in 41,131 positions. Its 82 exact
+validation roots gave 11 optimal top moves. Replay validation samples change
+between iterations, so these figures are not a fixed-set learning curve.
+
+The new recipe is in `experiments/2026-10-15_20-57-boxes-qdab-curriculum/README.md`.
+It starts from frozen iter0, labels all complete decision roots in newly searched
+Qdab histories plus retained searched replay, trains primarily on distinct exact
+roots at 31–34 undrawn, and retains at most 25% searched opening rehearsal.
+A fixed family-excluded Qdab monitor controls development-parent acceptance and
+conditional expansion to 31–36. The default is eight hours of collection/solving/
+training, finishing the current cycle, followed by a predeclared 200-game match
+of the last candidate against iter0. New outputs never modify the old league.
+
+The native Linux Qdab adapter pins upstream commit
+`57c6a5fd849022bf3754c4aa530a2ab2ee7f300c`, verifies the release and all executable,
+library and ANN hashes, and replays histories through shared `play_game`.
+Six cloud starter histories are included: six distinct canonical opening
+families, 180 searched edges, five seconds requested per decision, about 840s
+total. Truncated scores/outcomes are not teaching targets. An exact solver
+independently supplies policy/value labels; incomplete child groups are skipped.
+These are collection/integration results. No new model-strength improvement is
+claimed before the overnight run and independent final arena finish.
