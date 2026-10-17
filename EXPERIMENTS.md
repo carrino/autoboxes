@@ -1025,3 +1025,36 @@ the actual gameplay -> NPZ -> dataset path. Instrumented and uninstrumented
 visits, chosen moves, policies and proof status matched on eight real roots.
 The current overnight run stays on its original code; evaluate its result
 before designing a matched training test of the corrected targets.
+
+## Proof-target learning mechanism and pipeline review (2026-10-17)
+
+`experiments/2026-10-17_10-34-boxes-proof-learning/` compares raw and proof-filtered
+targets from the same searches on 2x3, immediately above an exact solver frontier.
+Three matched seeds use 512 training roots, 128 untouched heldout roots and 800
+updates per arm. Opening RNG windows do not overlap, canonical families are
+disjoint, and every root from the pilot and superseded preliminary experiment is
+excluded. Both arms have identical initialization, batches, augmentation and
+exact value labels; only the policy target changes.
+
+Heldout optimal top moves rise from 69.8% to 86.5%, optimal policy mass from
+57.8% to 82.3%, and selected-move exact regret falls from 1.151 to 0.578
+score-margin points. However, value MAE worsens from 1.160 to 1.672. This is a
+policy-learning mechanism success with a shared-network value tradeoff, not
+evidence of a stronger 5x5 player. All 640 prefixes and 5,760 child labels were
+independently rechecked. The fixed endpoint, sample exclusions, per-root results
+and corrected seed protocol are retained with the scripts.
+
+`experiments/2026-10-17_10-35-boxes-learning-path-audit/` follows the actual
+collection, solved endpoint, extra-turn, exact-child and training paths. It
+found no error in those perspective conversions. It did reproduce a latent
+metadata bug: ordinary collection omits Q semantics, so shaped Q inside [0,1]
+can be accepted by the optional q_mix path as a win probability. The actual
+trainer accepted this replay in a one-step reproduction. The running recipe
+uses q_mix=0 and is unaffected; before enabling mixing, new data must carry
+semantics and the trainer must require known probability targets, including
+an explicit policy for legacy untagged data. No production fix is included.
+
+Forced-prefix probing was also measured on 24 source families. The 36 forced
+moves used 364,408 solver nodes; all 12 repeated probes were two-node warmed
+table hits. This is lower priority than expensive quiet-leaf probes. The review
+passed 83 focused tests and remains separate from the active GPU run.
