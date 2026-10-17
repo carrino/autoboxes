@@ -954,3 +954,38 @@ total. Truncated scores/outcomes are not teaching targets. An exact solver
 independently supplies policy/value labels; incomplete child groups are skipped.
 These are collection/integration results. No new model-strength improvement is
 claimed before the overnight run and independent final arena finish.
+
+## Earlier solver frontier and continuing self-play (2026-10-16)
+
+Frozen iter0 with solver34/200k beat the same weights with solver30/50k by
+175–25 in 200 full games (100 side-swapped four-edge openings, 400 simulations,
+seed 20261026, four workers). Opening-pair bootstrap game-score interval:
+[0.83, 0.92]; mean margin +5.52. All 200 games were independently replayed in
+the cloud from the uploaded `solver34-vs30-Qeqlwh` archive. The reference hash is
+`46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0`.
+
+Recorded mean move times were 3.436s versus 0.3809s, about 9x; these are
+concurrent-game wall times, not isolated CPU timings. Total match time was
+5,875s. Both solver reach and node budget changed, so this establishes stronger
+play at greater expense, not equal-time efficiency or better learned weights.
+
+The follow-up solver34/50k versus solver30/50k uses fresh seed 20261027. At the
+time of writing it is incomplete: 62–18 through 80 games in 1,252s. The previous
+200k run reached 80 games in 2,401s. These interim counts are not a final result.
+
+`experiments/2026-10-16_21-41-boxes-solver34-loop/` prepares eight hours of fresh
+solver34/50k self-play and continuing training, followed by 200 full paired
+games of the LAST learner versus frozen iter0, both at solver34/50k. It uses
+400 simulations, exact mistake targets at 35–36, four training epochs, a replay
+window of eight iterations and a conservative 1e-4 warm-start learning rate.
+Every iteration starts from the latest weights regardless of small arena
+promotion results. This avoids the Qdab controller's repeated reset to an
+accepted parent. Optimizer state still restarts per iteration in the existing
+trainer. No improvement is claimed until the final matched arena completes.
+
+The timed launcher retains all checkpoints, freezes settings and code hashes,
+counts prior active work when resumed, and finishes the current iteration
+before entering the final match. CPU integration exercises real collection,
+labelling, training, paired final games, independent replay and recovery after
+an interrupted controller state write. An explicit empty `BASELINES` now
+disables baseline matches instead of restoring defaults and evaluating zero games.

@@ -16,7 +16,7 @@ SOLVER_N=${SOLVER_N:-0}  # exact endgame solver at <= N undrawn edges in self-pl
 SOLVER_BUDGET=${SOLVER_BUDGET:-20000}  # nodes the solver may spend per position before the search takes over
 ARENA_SOLVER_N=${ARENA_SOLVER_N:-$SOLVER_N}  # solver depth in the arena only; 0 makes promotion compare the nets
                                             # themselves (with the solver on, two nets of any quality tie)
-BASELINES=${BASELINES:-boxes-greedy,boxes-ab-d4}  # arena absolute-scale opponents
+BASELINES=${BASELINES-boxes-greedy,boxes-ab-d4}  # empty explicitly disables baseline matches
 MERGE_EQ=${MERGE_EQ:-0}  # 1: one search action per independent chain or loop (equivalent edges)
 SP_PROCS=${SP_PROCS:-1}  # self-play processes per iteration; each gets SP_WORKERS/SP_PROCS threads and
                          # its own GPU engine, which sidesteps the interpreter lock across threads
