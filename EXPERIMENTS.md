@@ -1058,3 +1058,30 @@ Forced-prefix probing was also measured on 24 source families. The 36 forced
 moves used 364,408 solver nodes; all 12 repeated probes were two-node warmed
 table hits. This is lower priority than expensive quiet-leaf probes. The review
 passed 83 focused tests and remains separate from the active GPU run.
+
+## Solver speed and retry tradeoffs (2026-10-17)
+
+`experiments/2026-10-17_10-33-boxes-canonical-speed/` replaces bit-by-bit
+symmetry transformation with byte lookup tables. Canonical keys, solver node
+budgets and search decisions remain identical. The lookup payload is 112 KiB
+for a square-board solver, alongside its usual 16 MiB transposition table.
+Native root-plus-child benchmarks and two alternating 12-root full-MCTS runs
+compare baseline and candidate using process CPU time. Full-search time drops
+from about 41.75s to 34.96s, **16.3% less time / 1.19x throughput**, including
+CPU inference. All chosen edges, visits, policies and root proofs match.
+This is an exact-equivalent CPU optimization; GPU loop throughput is unmeasured.
+
+`experiments/2026-10-17_10-33-boxes-probe-retries/` traces every bounded call
+on the preceding 48-root solver34 sample. There are 686 retries of masks whose
+previous calls all timed out, consuming 28.45M of 191.64M nodes (14.85%). But
+**203 previously timed-out masks are subsequently solved exactly** under the
+same per-call budget. Partial table information survives earlier attempts.
+Permanently caching timeouts would prevent these later proofs; it cannot be
+treated as a semantics-preserving optimization. All 48 search traces and
+work counters match the original audit. No timeout cache or budget change is
+included. This result favors the measured exact canonicalization speedup
+before a separate strength/cost test of heuristic probe allocation.
+
+The optimized extension passes 793 Python tests, with 29 skipped and the known
+upstream GPU-lease test excluded. New canonical tests check independent lattice
+transforms across byte boundaries, rectangular boards and 64-edge geometries.
