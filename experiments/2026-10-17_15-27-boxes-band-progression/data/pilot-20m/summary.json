@@ -1,0 +1,38 @@
+{
+  "scope": "Tiny solve-cost pilot; observed moves belong to BOTH nets on different positions. No checkpoint strength comparison, no full optimal-policy labels.",
+  "regret_units": "Final score-margin points, not boxes captured",
+  "node_budget": 20000000,
+  "wall_seconds": 172.6816545749989,
+  "bands": {
+    "35..36": {
+      "attempted": 12,
+      "root_known": 12,
+      "root_and_child_known": 12,
+      "unknown": 0,
+      "total_solve_seconds": 34.7735261639973,
+      "total_nodes": 40727464,
+      "observed_move_mistakes": 5,
+      "observed_move_mean_regret": 1.1666666666666667
+    },
+    "37..38": {
+      "attempted": 12,
+      "root_known": 6,
+      "root_and_child_known": 6,
+      "unknown": 6,
+      "total_solve_seconds": 197.08991008799967,
+      "total_nodes": 231527919,
+      "observed_move_mistakes": 4,
+      "observed_move_mean_regret": 1.6666666666666667
+    },
+    "39..40": {
+      "attempted": 12,
+      "root_known": 0,
+      "root_and_child_known": 0,
+      "unknown": 12,
+      "total_solve_seconds": 361.679032238997,
+      "total_nodes": 398081498,
+      "observed_move_mistakes": 0,
+      "observed_move_mean_regret": null
+    }
+  }
+}
