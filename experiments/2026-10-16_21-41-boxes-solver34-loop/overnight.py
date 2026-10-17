@@ -51,7 +51,9 @@ def recipe() -> dict[str, str]:
     )
 
 
-def create(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
+def create(args: argparse.Namespace, *, tag_prefix: str = "5x5-solver34-",
+           final_seed: int = 20261028, resume_script: Path = SCRIPT
+           ) -> tuple[Path, dict[str, Any]]:
     """Freeze inputs and settings in a fresh run; never reuse an old league."""
     if not 0 < args.hours <= 168 or args.final_games <= 0 or args.final_games % 2:
         raise ValueError("Require 0 < hours <= 168 and positive even final-games")
@@ -72,7 +74,7 @@ def create(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
         raise ValueError("This run requires a 5x5 checkpoint with chain features")
     data = Path(os.environ.get("GAME_DATA_DIR", str(Path.home() / "autoboxes-data/game_data_root")))
     (EXP / "logs").mkdir(parents=True, exist_ok=True)
-    output = Path(tempfile.mkdtemp(prefix="5x5-solver34-", dir=EXP / "logs")).resolve()
+    output = Path(tempfile.mkdtemp(prefix=tag_prefix, dir=EXP / "logs")).resolve()
     checkpoint_dir = (EXP / "checkpoints" / output.name).resolve()
     checkpoint_dir.mkdir(parents=True)
     frozen = checkpoint_dir / "iter0.pt"
@@ -81,12 +83,12 @@ def create(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     settings = recipe()
     settings.update(TAG=output.name, GAME_DATA_DIR=str(data.resolve()))
     code = source_code()
-    for path in [SCRIPT, *EXP.glob("*.py"), EXP / "run_iteration_local.sh"]:
+    for path in [SCRIPT, resume_script, *EXP.glob("*.py"), EXP / "run_iteration_local.sh"]:
         code[str(path.resolve())] = digest(path)
     import alpha_go_cpp
     code[str(Path(alpha_go_cpp.__file__).resolve())] = digest(Path(alpha_go_cpp.__file__))
     config = dict(hours=args.hours, final_games=args.final_games, final_workers=4,
-                  final_seed=20261028, cpu=args.cpu, checkpoint_dir=str(checkpoint_dir),
+                  final_seed=final_seed, cpu=args.cpu, checkpoint_dir=str(checkpoint_dir),
                   environment=settings, reference=str(frozen), reference_sha256=digest(frozen),
                   code_sha256=code, cwd=str(Path.cwd()), scope="Exploratory stronger-teacher loop")
     write_json(output / "config.json", config)
@@ -96,7 +98,7 @@ def create(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     (output / "resume.sh").write_text(
         "#!/usr/bin/env bash\nset -euo pipefail\ncd " + shlex.quote(str(Path.cwd())) + "\n"
         "export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1\nuv run python -u " +
-        shlex.quote(str(SCRIPT)) + " --resume " + shlex.quote(str(output)) + "\n")
+        shlex.quote(str(resume_script)) + " --resume " + shlex.quote(str(output)) + "\n")
     return output, config
 
 

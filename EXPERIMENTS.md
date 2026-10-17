@@ -1085,3 +1085,29 @@ before a separate strength/cost test of heuristic probe allocation.
 The optimized extension passes 793 Python tests, with 29 skipped and the known
 upstream GPU-lease test excluded. New canonical tests check independent lattice
 transforms across byte boundaries, rectangular boards and 64-edge geometries.
+
+## Prepared proof-target overnight run (2026-10-17; no GPU result yet)
+
+`experiments/2026-10-17_14-14-boxes-proof-overnight/` prepares a fresh eight-hour
+self-play run from verified frozen iter0, followed by 200 paired games of the
+last learner against iter0 with identical solver34/50k and 400 simulations.
+Final seed 20261029 differs from the pending solver34 run's 20261028. Corrected
+proof-filtered policy targets and the exact-equivalent canonicalization speedup
+are included; the learning recipe otherwise remains at four epochs, lr 1e-4,
+eight-iteration replay, natural-weight exact mistakes at 35..36 and q_mix=0.
+
+Fresh launch rebuilds the extension, verifies imported module/binary identity,
+and runs the target-saving and canonicalization checks. Resume validates the
+frozen runtime without rebuilding. Each source collection is audited before
+labelling or training for proof-filter metadata and valid visit masks, with
+per-undrawn-band changed-position and removed-mass reports. No historical replay
+is reused. The existing controller still continues the latest weights, finishes
+the current iteration after eight active work hours, preserves checkpoints and
+independently replays the final match. Label timeouts stop visibly.
+
+Validation: real fresh-build preflight passed 17 checks; 814 Python tests passed,
+29 skipped, excluding the known upstream GPU-lease test. The real CPU loop covers
+collection through training/final evaluation/recovery with the new audit enabled.
+All three native C++ suites, Ruff, focused strict type checks and shell syntax
+passed. This is preparation, not a new training result; the prior overnight's
+archive is still pending and has not influenced this run's final seed.
