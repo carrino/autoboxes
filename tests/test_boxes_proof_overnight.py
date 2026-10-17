@@ -42,11 +42,53 @@ def test_resume_rejects_native_source_change(launcher, tmp_path: Path) -> None:
 def test_resume_rejects_another_reference(launcher, tmp_path: Path, monkeypatch) -> None:
     checkpoint = tmp_path / "reference.pt"
     checkpoint.write_bytes(b"candidate instead of iter0")
-    config = dict(reference=str(checkpoint),
+    config = dict(reference=str(checkpoint), reference_sha256=launcher.ITER0_SHA,
                   preflight=dict(build_inputs_sha256={}, runtime={}))
     monkeypatch.setattr(launcher, "runtime_identity", lambda: {})
-    with pytest.raises(ValueError, match="verified frozen iter0"):
+    with pytest.raises(ValueError, match="verified frozen baseline"):
         launcher.verify_preflight(config)
+
+
+def test_resume_cannot_switch_between_verified_baselines(
+        launcher, tmp_path: Path, monkeypatch) -> None:
+    checkpoint = tmp_path / "reference.pt"
+    checkpoint.write_bytes(b"new incumbent")
+    current_sha = launcher.file_sha(checkpoint)
+    monkeypatch.setattr(launcher, "REFERENCES", {current_sha: "iter15", "old": "iter0"})
+    monkeypatch.setattr(launcher, "runtime_identity", lambda: {})
+    config = dict(reference=str(checkpoint), reference_sha256="old",
+                  preflight=dict(build_inputs_sha256={}, runtime={}))
+    with pytest.raises(ValueError, match="verified frozen baseline"):
+        launcher.verify_preflight(config)
+    config["reference_sha256"] = current_sha
+    launcher.verify_preflight(config)
+
+
+def test_missing_default_does_not_fall_back_to_iter0(
+        launcher, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(launcher, "REPO", tmp_path)
+    with pytest.raises(FileNotFoundError, match="iter15.pt"):
+        launcher.select_reference(None)
+
+
+def test_default_and_explicit_references_have_unambiguous_identity(
+        launcher, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(launcher, "REPO", tmp_path)
+    reference = tmp_path / launcher.DEFAULT_REFERENCE
+    reference.parent.mkdir(parents=True)
+    reference.write_bytes(b"verified iter15")
+    new_sha = launcher.file_sha(reference)
+    old = tmp_path / "original.pt"
+    old.write_bytes(b"original iter0")
+    old_sha = launcher.file_sha(old)
+    monkeypatch.setattr(launcher, "ITER15_SHA", new_sha)
+    monkeypatch.setattr(launcher, "REFERENCES",
+                        {new_sha: "solver34 iter15", old_sha: "original iter0"})
+    assert launcher.select_reference(None) == (reference, "solver34 iter15")
+    assert launcher.select_reference(old) == (old, "original iter0")
+    reference.write_bytes(old.read_bytes())
+    with pytest.raises(ValueError, match="Default iter15 path"):
+        launcher.select_reference(None)
 
 
 def test_explicit_reference_cannot_bypass_identity_before_build(

@@ -61,7 +61,8 @@ os.execv(sys.executable, [sys.executable, *args])
     args = argparse.Namespace(reference=reference, hours=0.00001, final_games=2, cpu=True)
     resume_script = repo / "experiments/2026-10-17_14-14-boxes-proof-overnight/overnight.py"
     options = dict(tag_prefix="5x5-proof34-", final_seed=20261029,
-                   resume_script=resume_script) if proof_audit else {}
+                   resume_script=resume_script,
+                   reference_label="solver34 iter15") if proof_audit else {}
     output, config = launcher.create(args, **options)
     if proof_audit:
         assert str(resume_script) in (output / "resume.sh").read_text()
@@ -82,6 +83,8 @@ os.execv(sys.executable, [sys.executable, *args])
     assert state["active_seconds"] > args.hours * 3600
     summary = json.loads((output / "final.json").read_text())
     assert summary["games"] == 2 and summary["independent_replay_verified"]
+    assert summary["reference_sha256"] == config["reference_sha256"]
+    assert summary["reference_label"] == ("solver34 iter15" if proof_audit else "iter0")
     assert (output / "results.tgz").is_file()
     if proof_audit:
         audit = json.loads((output / "targets-it0.json").read_text())

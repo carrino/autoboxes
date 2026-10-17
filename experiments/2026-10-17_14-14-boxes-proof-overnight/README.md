@@ -1,18 +1,25 @@
 # Overnight learning with proof-filtered targets
 
-This is the next prepared run after `5x5-solver34-8pt6ai3d`; that run's results
-are still pending. It starts a **new replay and league from verified frozen
-iter0**, with the corrected policy targets and the exact-equivalent faster
-solver. It does not resume or alter the previous experiment.
+This continues learning after `5x5-solver34-8pt6ai3d`. Its predeclared final
+checkpoint, **iter15, beat original iter0 126–74**, with a paired 95% game-score
+interval of 56–69.5% under identical solver34/50k and 400 simulations. The archive,
+independent replay and ancestry analysis are retained in
+`experiments/2026-10-17_15-12-boxes-solver34-learning-result/`.
+
+The new run starts **fresh replay and a new league from verified iter15**, with
+corrected policy targets and the exact-equivalent faster solver. Original iter0
+and the previous experiment remain preserved. The new run's local `iter0.pt`
+is a copy of the old run's **iter15**; startup and final summaries identify it
+as `solver34 iter15` and retain its hash to avoid confusing the two baselines.
 
 The question is whether the corrected self-play targets teach a stronger 5x5
 network. The small-board mechanism test improved policy decisions but worsened
 value predictions, so a learning gain is not assumed. The final match compares
-the last learner with iter0 under identical search. This is an exploratory loop,
+the last learner with frozen **iter15** under identical search. This is an exploratory loop,
 not a matched-data A/B attribution experiment: faster collection can also change
 the number of iterations completed in eight hours.
 
-## Start after the previous results have been collected
+## Start the continuation
 
 Update the Windows GitHub mirror, then in WSL:
 
@@ -29,21 +36,27 @@ under `work/proof-preflight-*`; this takes a few minutes before collection start
 The venv, current checkout and imported modules are pinned for every subprocess.
 The usual C++ build prerequisites from `GETTING_STARTED.md` must be installed.
 
-The known iter0 is found in the prior solver arena, Qdab run, probe snapshot or
-pending solver34 run's iter0. `--reference /path/to/iter0.pt` handles another
-location; its SHA256 must still equal
+The default starting checkpoint is
+`experiments/2026-10-08_14-42-boxes-3x3-loop/checkpoints/5x5-solver34-8pt6ai3d/iter15.pt`.
+Its SHA256 must equal
+`3f17b19f3caa66905be1f33a960c038fec01fa499cda483ed00367b99e164dac`.
+`--reference /path/to/iter15.pt` handles another location. A missing or changed
+default fails rather than silently reverting to older weights.
+
+An explicit reference may also select the original iter0 for a separate control
+experiment, with SHA256
 `46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0`.
-Starting from a different candidate is a separate decision after the pending
-results arrive.
+Other checkpoints are rejected. Whichever verified reference is selected is
+both the learner's initialization and its frozen final opponent.
 
 ## Fixed recipe and evaluation
 
 - Eight active work hours, finishing the current iteration, then 200 paired
-  full games of the last learner versus iter0. Build/check time and final arena
+  full games of the last learner versus frozen iter15. Build/check time and final arena
   are additional. `--hours 10` changes a fresh run's work budget.
 - Both final players use solver34/50k, 400 simulations, identical utility,
   four-edge paired openings and fresh final seed **20261029**. The previous run
-  used 20261028. Seeds are fixed before viewing either final result.
+  used 20261028. This final seed was fixed before viewing the previous run's result.
 - Each iteration collects 100 full-start self-play games with the latest weights,
   four processes/eight workers and the same search settings as the previous run.
 - Before any relabelling or training, every collected game must carry
@@ -71,16 +84,18 @@ Do not switch code or rebuild while a run is active or needs resuming.
 
 The archive includes preflight/build logs, recipe, target-accounting reports,
 all stage logs, timings, checkpoint hashes and independently replayed final games.
-Send that archive for analysis. No training result is recorded yet.
+Send that archive for analysis. The corrected-target continuation has not run yet.
 
 ## Validation
 
 The actual fresh-run preflight rebuilt the optimized extension and passed its
-17 proof-policy/canonicalization checks. The full Python suite passed **814
+17 proof-policy/canonicalization checks. The continuation's Python suite passed **817
 tests, 29 skipped**, excluding the known upstream GPU-lease test. The controller
 integration runs real collection, audit, bounded exact labelling, training, paired
 final games, independent replay, completed-run resume and interrupted-state
-recovery, with and without the new audit. Six wrapper tests reject stale runtime,
-source and baseline identities. All three native C++ suites passed (143 Go,
+recovery, with and without the new audit. Nine wrapper tests cover stale runtime,
+source and baseline identities, including rejection of an accidental reset to
+older weights or a different frozen opponent on resume. All three native C++ suites passed (143 Go,
 42 Boxes and 34 MCTS assertions). Ruff, focused strict type checks and shell syntax
-checks passed. GPU throughput and learned 5x5 strength remain unmeasured.
+checks passed. The continuation's GPU throughput and further learned improvement
+remain unmeasured; the previous run's gain predates both new fixes.

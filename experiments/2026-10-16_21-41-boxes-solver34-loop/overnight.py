@@ -52,7 +52,8 @@ def recipe() -> dict[str, str]:
 
 
 def create(args: argparse.Namespace, *, tag_prefix: str = "5x5-solver34-",
-           final_seed: int = 20261028, resume_script: Path = SCRIPT
+           final_seed: int = 20261028, resume_script: Path = SCRIPT,
+           reference_label: str = "iter0"
            ) -> tuple[Path, dict[str, Any]]:
     """Freeze inputs and settings in a fresh run; never reuse an old league."""
     if not 0 < args.hours <= 168 or args.final_games <= 0 or args.final_games % 2:
@@ -90,6 +91,7 @@ def create(args: argparse.Namespace, *, tag_prefix: str = "5x5-solver34-",
     config = dict(hours=args.hours, final_games=args.final_games, final_workers=4,
                   final_seed=final_seed, cpu=args.cpu, checkpoint_dir=str(checkpoint_dir),
                   environment=settings, reference=str(frozen), reference_sha256=digest(frozen),
+                  reference_label=reference_label,
                   code_sha256=code, cwd=str(Path.cwd()), scope="Exploratory stronger-teacher loop")
     write_json(output / "config.json", config)
     (output / "config.sha256").write_text(digest(output / "config.json") + "\n")
@@ -170,7 +172,8 @@ def run(output: Path, config: dict[str, Any]) -> None:
     env = dict(os.environ, **config["environment"])
     print(f"Run: {output}\nResume: bash {output / 'resume.sh'}\n"
           f"Work budget: {config['hours']:g} hours; finish the current iteration, then "
-          f"{config['final_games']} games of LAST learner vs iter0 with identical search.\n"
+          f"{config['final_games']} games of LAST learner vs "
+          f"{config.get('reference_label', 'iter0')} with identical search.\n"
           "Every iteration continues the latest weights; small arena results never reset them.",
           flush=True)
     try:
@@ -211,6 +214,8 @@ def run(output: Path, config: dict[str, Any]) -> None:
             text = log.read_text().rsplit("===RESULT===", 1)[1].lstrip()
             summary = json.JSONDecoder().raw_decode(text)[0]
             verify_match(games, summary, config["final_games"])
+            summary["reference_label"] = config.get("reference_label", "iter0")
+            summary["reference_sha256"] = config["reference_sha256"]
             write_json(output / "final.json", summary)
             state["phase"] = "complete"
             state["final_sha256"] = {str(p): digest(p) for p in (games, log, output / "final.json")}

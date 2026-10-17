@@ -21,11 +21,28 @@ REPO = SCRIPT.parents[2]
 FINAL_SEED = 20261029
 BASE_EXP = Path("experiments/2026-10-08_14-42-boxes-3x3-loop")
 ITER0_SHA = "46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0"
+ITER15_SHA = "3f17b19f3caa66905be1f33a960c038fec01fa499cda483ed00367b99e164dac"
+REFERENCES = {ITER0_SHA: "original iter0", ITER15_SHA: "solver34 iter15"}
+DEFAULT_REFERENCE = BASE_EXP / "checkpoints/5x5-solver34-8pt6ai3d/iter15.pt"
 
 
 def file_sha(path: Path) -> str:
     """Hash build inputs without importing the package before its extension is rebuilt."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def select_reference(explicit: Path | None) -> tuple[Path, str]:
+    """Default to the verified winner; never silently fall back to older weights."""
+    reference = explicit if explicit is not None else REPO / DEFAULT_REFERENCE
+    if not reference.is_file():
+        raise FileNotFoundError(f"Missing starting checkpoint: {reference}. "
+                                "Supply --reference /path/to/verified/iter15.pt")
+    digest = file_sha(reference)
+    if digest not in REFERENCES:
+        raise ValueError("Reference differs from verified iter15 or original iter0")
+    if explicit is None and digest != ITER15_SHA:
+        raise ValueError("Default iter15 path contains different weights")
+    return reference, REFERENCES[digest]
 
 
 def pin_runtime() -> None:
@@ -115,15 +132,16 @@ def build_and_check(output: Path) -> dict[str, Any]:
 
 
 def verify_preflight(config: dict[str, Any]) -> None:
-    """Resuming must use the same imported binary and the verified frozen iter0."""
+    """Resuming must use the same imported binary and the selected frozen baseline."""
     from alpha_go.boxes.curriculum import checked_files, digest
 
     expected = config["preflight"]
     checked_files(expected["build_inputs_sha256"])
     if runtime_identity() != expected["runtime"]:
         raise ValueError("Runtime changed since preflight; restore the original venv/extension")
-    if digest(Path(config["reference"])) != ITER0_SHA:
-        raise ValueError("This experiment requires the verified frozen iter0 checkpoint")
+    expected_sha = config["reference_sha256"]
+    if expected_sha not in REFERENCES or digest(Path(config["reference"])) != expected_sha:
+        raise ValueError("This experiment requires its selected verified frozen baseline")
 
 
 def main() -> None:
@@ -152,18 +170,9 @@ def main() -> None:
         import torch
         if not args.cpu and not torch.cuda.is_available():
             raise RuntimeError("CUDA unavailable; no training or build started")
-        choices = [REPO / "work/solver34-vs30-Qeqlwh/reference.pt",
-                   REPO / "experiments/2026-10-15_20-57-boxes-qdab-curriculum/logs/"
-                          "qdab-20261016-044033/reference.pt",
-                   REPO / BASE_EXP / "logs/astra-probe-PCcE6W/reference.pt",
-                   REPO / BASE_EXP / "checkpoints/5x5-solver34-8pt6ai3d/iter0.pt"]
-        reference = args.reference or next((p for p in choices if p.is_file()), None)
-        if reference is None or not reference.is_file():
-            raise FileNotFoundError("Supply --reference /path/to/frozen/iter0.pt")
-        if file_sha(reference) != ITER0_SHA:
-            raise ValueError("Reference differs from verified iter0; "
-                             "candidate selection is pending")
-        args.reference = reference
+        args.reference, reference_label = select_reference(args.reference)
+        print(f"Starting from {reference_label}; the final match uses the same frozen baseline.",
+              flush=True)
         (REPO / "work").mkdir(exist_ok=True)
         scratch = Path(tempfile.mkdtemp(prefix="proof-preflight-", dir=REPO / "work"))
         preflight = build_and_check(scratch)
@@ -172,7 +181,9 @@ def main() -> None:
             return
         runner = controller()
         output, config = runner.create(args, tag_prefix="5x5-proof34-",
-                                       final_seed=FINAL_SEED, resume_script=SCRIPT)
+                                       final_seed=FINAL_SEED, resume_script=SCRIPT,
+                                       reference_label=reference_label)
+        config["starting_checkpoint_source"] = str(args.reference.resolve())
         config["preflight"] = preflight
         config["environment"].update(PROOF_TARGET_AUDIT="1", PYTHONPATH=str(REPO / "src"),
                                      PYTHONNOUSERSITE="1", UV_PROJECT_ENVIRONMENT=sys.prefix)
