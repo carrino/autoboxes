@@ -1,0 +1,20 @@
+{
+  "plain": {
+    "npz": "semantics-game0000000.npz",
+    "termination": "all_edges",
+    "rows": 12,
+    "saved_semantics": null,
+    "first_root_value": 0.5833333730697632,
+    "metadata_guard_accepts": true,
+    "range_guard_accepts": true
+  },
+  "shaped": {
+    "npz": "semantics-game0000000.npz",
+    "termination": "all_edges",
+    "rows": 12,
+    "saved_semantics": null,
+    "first_root_value": 0.636918842792511,
+    "metadata_guard_accepts": true,
+    "range_guard_accepts": true
+  }
+}

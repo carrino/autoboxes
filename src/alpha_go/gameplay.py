@@ -51,6 +51,9 @@ class MoveMetric:
     # Deepest depth reached in the subtree under each root child (teacher-mode).
     # 0 for actions never expanded.
     max_subtree_depths: NDArray[Any] | None = None  # (board_size^2+1,) int16 dense
+    # Boxes can exclude proven-inferior moves from the teaching visits. Retain the
+    # original exploration counts separately for diagnostics; Go leaves this unset.
+    raw_visit_counts: NDArray[Any] | None = None
 
 
 @dataclass
@@ -265,6 +268,7 @@ def play_game(
             if collect_metrics:
                 entropy = None
                 visit_counts = None
+                raw_visit_counts = None
                 q_values = None
                 policy_priors = None
                 temperature = None
@@ -281,6 +285,12 @@ def play_game(
                     visit_counts = np.zeros(n_actions, dtype=np.int16)
                     for flat_idx, count in search_result.tree.get_child_visit_counts().items():
                         visit_counts[game.action_index(board, flat_idx)] = count
+
+                    if game.name == "boxes" and hasattr(search_result, "training_visit_counts"):
+                        raw_visit_counts = visit_counts.copy()
+                        visit_counts.fill(0)
+                        for flat_idx, count in search_result.training_visit_counts().items():
+                            visit_counts[game.action_index(board, flat_idx)] = count
 
                     q_values = np.zeros(n_actions, dtype=np.float32)
                     for flat_idx, q in search_result.tree.get_child_q_values().items():
@@ -305,6 +315,7 @@ def play_game(
                     policy_priors=policy_priors,
                     temperature=temperature,
                     root_value=root_value,
+                    raw_visit_counts=raw_visit_counts,
                 ))
 
             if move == RESIGN:
@@ -482,6 +493,13 @@ def save_game_data(
         save_kwargs["is_teacher"] = all_is_teacher
         save_kwargs["mcts_first_eval_values"] = all_first_eval
         save_kwargs["mcts_max_subtree_depths"] = all_max_depth
+        if record.game == "boxes" and any(m.raw_visit_counts is not None for m in record.move_metrics):
+            all_raw_visits = np.zeros((n_moves, n_actions), dtype=np.int16)
+            for i, m in enumerate(record.move_metrics):
+                if m.raw_visit_counts is not None:
+                    all_raw_visits[i] = m.raw_visit_counts
+            save_kwargs["mcts_raw_visits"] = all_raw_visits
+            save_kwargs["policy_target_semantics"] = "proof_filtered_visits_v1"
 
     np.savez_compressed(filepath, **save_kwargs)
     return filepath

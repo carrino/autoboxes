@@ -1,0 +1,25 @@
+{
+  "a": "iter0-solver34-50k",
+  "b": "iter0-solver30",
+  "board": "5x5",
+  "games": 200,
+  "a_wins": 163,
+  "b_wins": 37,
+  "draws": 0,
+  "a_win_rate": 0.815,
+  "a_paired_win_pvalue": 3.4249061479387204e-15,
+  "a_win_rate_ci95": "[0.755, 0.863]",
+  "a_first_win_rate": 0.76,
+  "a_second_win_rate": 0.87,
+  "a_pair_score": 0.87,
+  "a_pair_score_ci95": "[0.790, 0.922]",
+  "a_mean_margin": 4.11,
+  "a_margin_std": 5.21,
+  "a_sec_per_move": 1.7564,
+  "b_sec_per_move": 0.3968,
+  "paired_game_score_ci95": [
+    0.755,
+    0.87
+  ],
+  "independent_replay_verified": true
+}

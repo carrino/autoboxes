@@ -1,0 +1,8 @@
+dataset: 1 positions with >= 12 undrawn edges from 1 games (1 searched), 0 with exact value targets, 0.0 MB in RAM, loaded in 0.0s
+split: 1 training / 0 validation positions (0 games, stable opening-family split 0); q-mix 0.25; seed 20261030
+Replay validation is diagnostic: warm-start weights may have seen these games. Use an untouched external set to measure generalisation.
+model: BoxesNet {'channels': 8, 'n_blocks': 1, 'value_hidden': 64} 3,226 params on cpu; value target final
+saved /workspace/work/autoboxes-target-review/experiments/2026-10-08_14-42-boxes-3x3-loop/checkpoints/audit-q-mix-shape/iter0.pt after 1 steps in 0s; train loss 4.6748 policy_acc 0.000 value_acc 1.000; val loss 0.0000 policy_acc 0.000 value_acc 0.000
+
+===RESULT===
+{"iteration": 0, "train_loss": 4.674819, "seed": 20261030, "split_seed": 0, "batch_size": 1, "exact_weight": 1.0, "train_policy_acc": 0.0, "train_policy_positions": 1, "train_value_acc": 1.0, "val_loss": 0.0, "val_policy_acc": 0.0, "val_value_acc": 0.0, "val_positions": 0, "val_policy_positions": 0, "q_mix": 0.25, "min_undrawn": 12, "features": "basic", "value_target": "final", "reset_value_head": false, "model": {"channels": 8, "n_blocks": 1, "value_hidden": 64}, "steps_completed": 1, "positions": 1, "elapsed_seconds": 0, "n_params": 3226, "peak_vram_mb": 0, "checkpoint": "/workspace/work/autoboxes-target-review/experiments/2026-10-08_14-42-boxes-3x3-loop/checkpoints/audit-q-mix-shape/iter0.pt", "resumed_from": ""}

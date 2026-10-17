@@ -207,6 +207,19 @@ class BoxesSearchResult:
 
     tree: Any
 
+    def training_visit_counts(self) -> dict[int, int]:
+        """Keep visit weights only on actions retained by the search's proof filter.
+
+        The actual move may use temperature zero, but teaching still uses temperature
+        one. Raw tree counts include exploration before a move was proven inferior.
+        Calling the tree's policy method preserves exactly its proof/fallback rules
+        without changing search, move selection, or the raw diagnostic counts.
+        """
+        visits = self.tree.get_child_visit_counts()
+        probabilities = self.tree.get_action_probabilities(1.0)
+        return {int(edge): int(count) if probabilities.get(edge, 0.0) > 0 else 0
+                for edge, count in visits.items()}
+
     @property
     def N(self) -> int:  # noqa: N802
         return int(self.tree.get_root_visit_count())
@@ -244,6 +257,10 @@ class BoxesSolvedResult:
 
     def get_child_visit_counts(self) -> dict[int, int]:
         return {e: 1 for e in self.optimal}
+
+    def training_visit_counts(self) -> dict[int, int]:
+        """An exactly solved root already has one visit per optimal edge."""
+        return self.get_child_visit_counts()
 
     def get_child_q_values(self) -> dict[int, float]:
         return {e: self.utility() for e in self.optimal}

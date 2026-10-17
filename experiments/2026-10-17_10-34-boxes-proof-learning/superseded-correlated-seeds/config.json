@@ -1,0 +1,21 @@
+{
+  "output": "experiments/2026-10-17_10-34-boxes-proof-learning/data",
+  "train": 512,
+  "heldout": 128,
+  "simulations": 160,
+  "solver": 8,
+  "data_seed": 20261031,
+  "steps": 800,
+  "batch": 64,
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "collect_only": false,
+  "rows": 2,
+  "cols": 3,
+  "code_commit": "ed3fe2c6b6f8b891d96e2e573f6520d1049fdeb1",
+  "script_sha256": "32cb5e5a7d59f78475e08cec22db44ddc566d63cc9dfbc261700f553ca1990c1",
+  "extension_sha256": "a99ae814aa1f5c2dada2cecf838f8ff08ee5dee2387663c3121dcae6a2599b0b"
+}

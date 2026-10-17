@@ -989,3 +989,72 @@ before entering the final match. CPU integration exercises real collection,
 labelling, training, paired final games, independent replay and recovery after
 an interrupted controller state write. An explicit empty `BASELINES` now
 disables baseline matches instead of restoring defaults and evaluating zero games.
+
+## Solver34/50k confirmation and teaching-target audit (2026-10-17)
+
+The completed `solver34-50k-vs30-UV94Z4` match finished **163–37** in 3,211s,
+with mean margin +4.11 and an opening-pair bootstrap game-score interval of
+[0.755, 0.87]. All 200 games independently replayed. Mean move times were
+1.7564s versus 0.3968s, 4.43x. Both sides used the same frozen iter0; this is
+a search improvement, not evidence of a stronger trained network. The separate
+solver34 overnight learning run remains pending.
+
+`experiments/2026-10-17_10-17-boxes-search-target-audit/` freezes 48 quiet roots
+from that completed match (eight each at 32, 34, 35, 36, 38 and 40 undrawn).
+At 400 simulations, solver34/50k made 7,377 bounded solver calls over the roots,
+visited 191.6 million nodes and exhausted 2,707 call budgets. The node budget
+is per probe, not per move: one 36-undrawn root used 14.4 million nodes across
+366 calls. Bounded solver calls accounted for 222s of 263s sampled CPU wall
+time; unbounded exact-root enumeration took 0.179s. Concurrent work makes the
+times descriptive, not a controlled speed comparison. Repeated leaf probes
+are the next performance target; no search-budget change is made here.
+
+The audit also reproduced a training bug: action selection respects terminal
+proofs, but the NPZ policy target was the raw visit distribution, including
+exploration of proven-inferior moves. In a tiny exhaustive 1x2 case, selection
+is 100% winning move while the old target is 50% winning / 50% losing. Two of
+48 real sampled roots had 73.61% and 91.67% target mass on filtered-out moves
+(at 32 and 34 undrawn). No 35–40 sampled root changed, so this is not evidence
+that the bug alone explains the learning plateau.
+
+The isolated fix saves proof-filtered teaching visits for new Boxes games and
+retains raw counts separately. It leaves search and Go behavior unchanged;
+existing NPZs remain unchanged. All 784 tests passed, 29 skipped, with the known
+upstream GPU-lease test excluded. Eight added cases cover proof semantics and
+the actual gameplay -> NPZ -> dataset path. Instrumented and uninstrumented
+visits, chosen moves, policies and proof status matched on eight real roots.
+The current overnight run stays on its original code; evaluate its result
+before designing a matched training test of the corrected targets.
+
+## Proof-target learning mechanism and pipeline review (2026-10-17)
+
+`experiments/2026-10-17_10-34-boxes-proof-learning/` compares raw and proof-filtered
+targets from the same searches on 2x3, immediately above an exact solver frontier.
+Three matched seeds use 512 training roots, 128 untouched heldout roots and 800
+updates per arm. Opening RNG windows do not overlap, canonical families are
+disjoint, and every root from the pilot and superseded preliminary experiment is
+excluded. Both arms have identical initialization, batches, augmentation and
+exact value labels; only the policy target changes.
+
+Heldout optimal top moves rise from 69.8% to 86.5%, optimal policy mass from
+57.8% to 82.3%, and selected-move exact regret falls from 1.151 to 0.578
+score-margin points. However, value MAE worsens from 1.160 to 1.672. This is a
+policy-learning mechanism success with a shared-network value tradeoff, not
+evidence of a stronger 5x5 player. All 640 prefixes and 5,760 child labels were
+independently rechecked. The fixed endpoint, sample exclusions, per-root results
+and corrected seed protocol are retained with the scripts.
+
+`experiments/2026-10-17_10-35-boxes-learning-path-audit/` follows the actual
+collection, solved endpoint, extra-turn, exact-child and training paths. It
+found no error in those perspective conversions. It did reproduce a latent
+metadata bug: ordinary collection omits Q semantics, so shaped Q inside [0,1]
+can be accepted by the optional q_mix path as a win probability. The actual
+trainer accepted this replay in a one-step reproduction. The running recipe
+uses q_mix=0 and is unaffected; before enabling mixing, new data must carry
+semantics and the trainer must require known probability targets, including
+an explicit policy for legacy untagged data. No production fix is included.
+
+Forced-prefix probing was also measured on 24 source families. The 36 forced
+moves used 364,408 solver nodes; all 12 repeated probes were two-node warmed
+table hits. This is lower priority than expensive quiet-leaf probes. The review
+passed 83 focused tests and remains separate from the active GPU run.

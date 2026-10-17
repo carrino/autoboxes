@@ -1,0 +1,15 @@
+{
+  "roots_replayed": 640,
+  "exact_children_rechecked": 5760,
+  "canonical_families": 640,
+  "excluded_prior_families": 683,
+  "script_hash_verified": true,
+  "excluded_families_hash_verified": true,
+  "minimum_game_seed_gap": 64,
+  "complete_model_seeds": [
+    101,
+    202,
+    303
+  ],
+  "primary_heldout": 128
+}

@@ -1,0 +1,24 @@
+{
+  "output": "experiments/2026-10-17_10-34-boxes-proof-learning/data",
+  "train": 512,
+  "heldout": 128,
+  "simulations": 160,
+  "solver": 8,
+  "data_seed": 20261107,
+  "seed_stride": 64,
+  "exclude_family_file": "/workspace/work/autoboxes-proof-learning/experiments/2026-10-17_10-34-boxes-proof-learning/data/excluded-families.json",
+  "steps": 800,
+  "batch": 64,
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "collect_only": false,
+  "excluded_families_sha256": "dc81933d2ffb8275c2fa0a22c1017798cac0dae9a77a09d8d88f0cdb3ae1ae66",
+  "rows": 2,
+  "cols": 3,
+  "code_commit": "6dd61dc36a1f1fc3986db1f542b15dd0530b7f68",
+  "script_sha256": "53cc17908d1184e3832f3c086e3fa591b3b144d7fae654d7a803b9d865bc34a2",
+  "extension_sha256": "a99ae814aa1f5c2dada2cecf838f8ff08ee5dee2387663c3121dcae6a2599b0b"
+}
