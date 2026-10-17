@@ -1,0 +1,13 @@
+{
+  "base": "ed3fe2c6b6f8b891d96e2e573f6520d1049fdeb1",
+  "source_positions_sha256": "3cb57d086ab0ce67eae31df922df2be3fd75f50c3f103a632190f69c67aa3bf0",
+  "compiler": "g++ (Debian 14.2.0-19) 14.2.0",
+  "clock": "std::clock process CPU time, one runtime thread",
+  "flags": "-O3 -DNDEBUG -std=c++17",
+  "repeats": 2,
+  "candidate_solver_sha256": {
+    "boxes_solver.cpp": "c5db778aeed67e206ac232ee6526dafce878b655ca6d18e8b372d07640bb1673",
+    "boxes_solver.h": "ac8781a9f5891dd627326f45c99a508d0164594223f2ff45ed7fda37c2fb4de0"
+  },
+  "bench_sha256": "be5337b4dddae2fc134e8fc3440881896801cd35e2f505c09b1f4e629f833a85"
+}

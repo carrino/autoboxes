@@ -110,6 +110,8 @@ def main() -> None:
                           visits=raw, selection_policy=policy)
             if hasattr(agent.solver, "profile"):
                 record["solver_profile"] = agent.solver.profile()
+            if hasattr(agent.solver, "probe_trace"):
+                record["probe_trace"] = agent.solver.probe_trace()
             out.write(json.dumps(record) + "\n")
             out.flush()
             print(f"solver{args.solver}: root {position['id']}, {position['undrawn']} left, "

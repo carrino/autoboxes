@@ -19,6 +19,7 @@ def replace(path: Path, old: str, new: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--trace", action="store_true", help="Record mask/nodes/abort per probe")
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -56,6 +57,19 @@ def main() -> None:
     replace(bindings, '        .def("nodes", &alpha_go::BoxesSolver::nodes,',
             '        .def("profile", &alpha_go::BoxesSolver::profile)\n'
             '        .def("nodes", &alpha_go::BoxesSolver::nodes,')
+    if args.trace:
+        replace(header, "    std::vector<uint64_t> profile() const { return profile_; }",
+                "    std::vector<std::vector<uint64_t>> probe_trace() const { return probes_; }\n"
+                "    std::vector<uint64_t> profile() const { return profile_; }")
+        replace(header, "    std::vector<uint64_t> profile_ = std::vector<uint64_t>(7, 0);",
+                "    std::vector<std::vector<uint64_t>> probes_;\n"
+                "    std::vector<uint64_t> profile_ = std::vector<uint64_t>(7, 0);")
+        replace(impl, "    ++profile_[0]; profile_[1] += nodes_; profile_[2] += aborted_;",
+                "    probes_.push_back({mask, nodes_, static_cast<uint64_t>(aborted_)});\n"
+                "    ++profile_[0]; profile_[1] += nodes_; profile_[2] += aborted_;")
+        replace(bindings, '        .def("profile", &alpha_go::BoxesSolver::profile)',
+                '        .def("probe_trace", &alpha_go::BoxesSolver::probe_trace)\n'
+                '        .def("profile", &alpha_go::BoxesSolver::profile)')
     sources = [cpp / "bindings/bindings.cpp", cpp / "go/go_game.cpp", cpp / "mcts/mcts.cpp",
                *sorted((cpp / "boxes").glob("*.cpp"))]
     sources = [p for p in sources if not p.name.endswith("_test.cpp")]
