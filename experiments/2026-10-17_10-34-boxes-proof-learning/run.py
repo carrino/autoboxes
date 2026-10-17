@@ -60,7 +60,8 @@ def canonical(mask):
 
 def collect(args, folder):
     oracle = Oracle(ROWS, COLS)
-    rows, seen = [], set()
+    rows = []
+    seen = set(json.loads(args.exclude_family_file.read_text())["families"])
     random_agent = BoxesRandomAgent()
     searched = BoxesMCTSAgent(UniformEvaluator(), num_simulations=args.simulations,
                              leaf_batch_size=8, c_puct=1.5, temperature=0,
@@ -70,8 +71,9 @@ def collect(args, folder):
     start = time.perf_counter()
     attempt = 0
     while len(rows) < args.train + args.heldout:
-        # Separate feasibility pilot seeds from the frozen main collection.
-        seed = args.data_seed + attempt
+        # play_game uses seed + move_index. Disjoint windows avoid reusing a
+        # move's random-number generator in another game's opening.
+        seed = args.data_seed * 1_000_000 + attempt * args.seed_stride
         attempt += 1
         opening = play_game(random_agent, random_agent, board_size=ROWS, board_cols=COLS,
                             max_moves=8, seed=seed, game=get_game("boxes"))
@@ -205,17 +207,25 @@ def main():
     parser.add_argument("--heldout", type=int, default=128)
     parser.add_argument("--simulations", type=int, default=160)
     parser.add_argument("--solver", type=int, default=8)
-    parser.add_argument("--data-seed", type=int, default=20261031)
+    parser.add_argument("--data-seed", type=int, default=20261107)
+    parser.add_argument("--seed-stride", type=int, default=64)
+    parser.add_argument("--exclude-family-file", type=Path,
+                        default=Path(__file__).parent / "data/excluded-families.json")
     parser.add_argument("--steps", type=int, default=800)
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--seeds", type=int, nargs="+", default=[101, 202, 303])
     parser.add_argument("--collect-only", action="store_true")
     args = parser.parse_args()
+    assert args.seed_stride > GEO.num_edges
     torch.set_num_threads(1)
     torch.set_num_interop_threads(1)
     torch.use_deterministic_algorithms(True)
     args.output.mkdir(parents=True, exist_ok=True)
-    configuration = {**vars(args), "output": str(args.output), "rows": ROWS, "cols": COLS,
+    configuration = {**vars(args), "output": str(args.output),
+                     "exclude_family_file": str(args.exclude_family_file),
+                     "excluded_families_sha256": hashlib.sha256(
+                         args.exclude_family_file.read_bytes()).hexdigest(),
+                     "rows": ROWS, "cols": COLS,
                      "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"],
                                                               text=True).strip(),
                      "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),

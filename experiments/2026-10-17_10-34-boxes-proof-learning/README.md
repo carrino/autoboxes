@@ -9,38 +9,39 @@ training plateau.
 ## Fixed endpoint results
 
 Three matched initialization/batch seeds, 800 updates per arm, averaged over
-the same 123 untouched canonical board families:
+the same 128 untouched canonical board families with disjoint move-RNG seeds:
 
 | Heldout metric | Raw exploration visits | Proof-filtered visits |
 |---|---:|---:|
-| Probability mass on exact-optimal moves | 0.597 | **0.834** |
-| Top move is exact-optimal | 75.1% | **87.8%** |
-| Exact margin lost by top move | 0.846 | **0.455** |
-| Expected margin lost under the policy | 1.634 | **0.648** |
-| Value margin MAE | **1.260** | 1.838 |
+| Probability mass on exact-optimal moves | 0.578 | **0.823** |
+| Top move is exact-optimal | 69.8% | **86.5%** |
+| Exact margin lost by top move | 1.151 | **0.578** |
+| Expected margin lost under the policy | 1.625 | **0.739** |
+| Value margin MAE | **1.160** | 1.672 |
 
-The policy improves in all three seeds. Top-move regret (raw → filtered) is
-0.992 → 0.455, 0.780 → 0.520, and 0.764 → 0.390 boxes. Averaging each root's
-paired difference across the three fitted seeds, then bootstrapping the 123
-roots, gives a regret reduction of 0.390 boxes, 95% interval [0.168, 0.612].
-The analogous value-MAE increase is 0.578 [0.392, 0.764]. These intervals are
-conditional on these three trained models; there are **123 independent roots,
-not 369**. They do not measure variability over new training datasets or large
-board distributions.
+The policy improves in all three seeds. Regret and MAE are measured in
+**score-margin points**: transferring one box from one player to the other
+changes that margin by two points. Averaging each root's paired difference
+across the three fitted seeds, then bootstrapping the 128 roots, gives a regret
+reduction of 0.573 points, 95% interval [0.297, 0.870]. The analogous value-MAE
+increase is 0.512 [0.369, 0.654]. These are descriptive root-bootstrap intervals
+conditional on these three trained models, treating the 128 distinct families
+as sampling units; there are **128 roots, not 384**. They do not measure
+variability over new training datasets or large board distributions.
 
-Training reads show the same tradeoff. Optimal policy mass rises from 0.572 to
-0.943 and top-move regret falls from 0.828 to 0.008; value MAE rises from 1.207
-to 1.980. Identical value targets do not imply identical value learning:
+Training reads show the same tradeoff. Optimal policy mass rises from 0.556 to
+0.940 and top-move regret falls from 0.992 to 0.026; value MAE rises from 1.080
+to 1.734. Identical value targets do not imply identical value learning:
 the changed policy gradients also change the shared trunk. No extra tuning
 was performed to eliminate this result.
 
 ## Why the target correction matters here
 
 Every collected root was proved and search selected an exact-optimal move.
-However, 411 of 512 training roots retained visits on inferior actions in the
-old target, averaging **40.1% target mass** across all training roots. The
+However, 421 of 512 training roots retained visits on inferior actions in the
+old target, averaging **41.3% target mass** across all training roots. The
 corrected target assigns zero mass to those inferior actions. The untouched
-heldout roots show 37.4% inferior mass in the raw targets and zero after
+heldout roots show 36.5% inferior mass in the raw targets and zero after
 filtering. This is a direct teaching-target mismatch, not imperfect oracle
 labels or a stronger policy choosing a different data distribution.
 
@@ -67,15 +68,16 @@ window.
   value targets and every legal child's exact remaining margin. Regret is
   root-optimal remaining margin minus that child's margin. Root score cancels.
   Truncated collection outcomes are never used for training.
-- **Split:** collect 640 canonical families with seed sequence beginning
-  20261031, then sort by a fixed SHA256 family hash; the first 512 train and
-  the last 128 are held out. A separate feasibility pilot used 64 families
-  generated from seed 70101. A protocol audit found five of the 128 heldout
-  masks overlapped that pilot; those five are excluded from the primary read,
-  leaving 123. No roots were replaced and training was not changed. Their IDs
-  and masks are in `data/summary.json`. Sixteen training families overlapped
-  the feasibility pilot, which is allowed. The original 128-root results
-  remain available in `data/metrics.json` and the per-root files.
+- **Split and random streams:** collect 640 canonical families with game seed
+  `20261107 * 1_000_000 + attempt * 64`, then sort by the same fixed SHA256
+  family hash; the first 512 train and the last 128 are held out. Shared
+  `play_game` adds move index to the game seed. A stride of 64 exceeds the
+  entire 17-edge game, so no games reuse those move RNG seeds. All 683 family
+  masks previously seen in the original collection or feasibility pilot are
+  rejected **before** the new collection and split. Consequently all 640 new
+  roots are fresh, the 128 heldout roots have no training or earlier evaluation
+  symmetry equivalents, and no after-training exclusions are needed. The
+  fixed exclusion list is committed and hashed in `data/config.json`.
 - **Feasibility:** without a solver, both 160- and 1,600-simulation pilots
   produced zero completed shaped proofs and zero changed targets. With the
   solver at eight, all 64 roots were proved and 51 targets changed. This
@@ -95,10 +97,12 @@ window.
 
 ## Reproduction and validation
 
-Base code: `ed3fe2c` (PR #21). The data config records the run script and C++
+Base code: `ed3fe2c` (PR #21), experiment revision based on `6dd61dc`. The data
+config records the run script and C++
 extension SHA256 hashes. The main executable is unchanged after collection
-and training; `analyze.py` applies the documented pilot-family exclusion and
-paired root bootstrap.
+and training; `analyze.py` computes the fixed endpoint read and paired root
+bootstrap. Sample counts are derived from the roots, so nondefault
+`--train` / `--heldout` settings are reported correctly.
 
 From a checkout with the current extension built:
 
@@ -117,9 +121,26 @@ the committed endpoint without training, run `analyze.py` with no arguments.
 Collection asserts legality, nonempty targets, exact optimality of every
 retained move in a proved root, and disjoint canonical train/heldout masks.
 An independent post-run audit replayed every prefix, recomputed all exact
-child labels, checked all selected moves, target normalization and symmetry
-family separation, and verified both arms' sample counts. Ruff passes. No
-production files were changed.
+child labels, checked all selected moves, target normalization, symmetry
+family separation and absence of previously seen masks, and verified both
+arms' sample counts and disjoint move-seed windows. Ruff passes. No production
+files were changed.
+
+## Superseded collection and reason for rerun
+
+The original collection used consecutive game seeds. Independent review found
+that `play_game(seed + move_index)` therefore reused a move RNG seed in nearby
+games. Although canonical masks were distinct and the split had no exact
+symmetry leakage, the root-level uncertainty calculation could understate
+correlation. That methodological defect triggered this complete fresh-data
+rerun; it was not a search for a more favorable result. Architecture, losses,
+optimizer, 800-step endpoint, model seeds and search budgets remain unchanged.
+
+`superseded-correlated-seeds/` retains every original result, root, configuration
+and the old five-pilot-mask exclusion for audit. The new exclusion list is the
+union of all 640 original roots and all 64 pilot roots (683 distinct masks).
+Both runs show the same qualitative finding: policy improves, value degrades.
+Only the corrected collection above supports the primary numerical report.
 
 The next practical test remains a matched 5×5 training comparison after the
 current overnight results arrive, measuring both policy quality and value

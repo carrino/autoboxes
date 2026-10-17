@@ -17,7 +17,8 @@ def main():
     roots = [json.loads(s) for s in (data / "roots.jsonl").read_text().splitlines()]
     feasibility = json.loads((Path(__file__).parent / "data/feasibility.json").read_text())
     excluded = set(feasibility["families"])
-    seeds = json.loads((data / "config.json").read_text())["seeds"]
+    config = json.loads((data / "config.json").read_text())
+    seeds = config["seeds"]
     output, bootstrap = [], {}
     all_arrays = {}
     for split in ("train", "heldout"):
@@ -32,8 +33,8 @@ def main():
                                    **{k: float(v.mean()) for k, v in arrays.items()}))
         if split == "heldout":
             rng = np.random.default_rng(20261101)
-            # One root per independent canonical family; average across the three
-            # fixed model seeds first. Interval is conditional on these fitted nets.
+            # One root per canonical family; average across the three fixed model
+            # seeds first. Root bootstrap is conditional on these fitted nets.
             sample = rng.integers(int(keep.sum()), size=(10000, int(keep.sum())))
             for metric in arrays:
                 delta = np.mean([all_arrays[s, "filtered", split][metric]
@@ -42,7 +43,7 @@ def main():
                                         ci95=np.quantile(delta[sample].mean(axis=1),
                                                          [0.025, 0.975]).tolist())
     with (data / "primary-metrics.csv").open("w") as f:
-        writer = csv.DictWriter(f, fieldnames=list(output[0]))
+        writer = csv.DictWriter(f, fieldnames=list(output[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(output)
     targets = {}
@@ -64,13 +65,20 @@ def main():
         targets[split] = dict(positions=len(group),
                              **{k: float(np.mean([r[k] for r in target_rows]))
                                 for k in target_rows[0]})
+    excluded_heldout = [dict(id=r["id"], family=r["family"]) for r in roots
+                       if r["split"] == "heldout" and r["family"] in excluded]
+    game_seeds = sorted(r["seed"] for r in roots)
     summary = dict(
-        seeds=seeds, training_positions=512, original_heldout_positions=128,
+        seeds=seeds, training_positions=sum(r["split"] == "train" for r in roots),
+        original_heldout_positions=sum(r["split"] == "heldout" for r in roots),
+        minimum_game_seed_gap=min(b - a for a, b in zip(game_seeds, game_seeds[1:])),
+        configured_seed_stride=config.get("seed_stride", 1),
+        regret_units="score-margin points",
         primary_heldout_positions=sum(r["split"] == "heldout" and r["family"] not in excluded
                                       for r in roots),
-        excluded_heldout=[dict(id=r["id"], family=r["family"]) for r in roots
-                          if r["split"] == "heldout" and r["family"] in excluded],
-        exclusion_reason="Canonical masks seen in feasibility pilot; no replacement or retuning",
+        excluded_heldout=excluded_heldout,
+        exclusion_reason=("Canonical masks seen in feasibility pilot; no replacement or retuning"
+                          if excluded_heldout else "None; no pilot-family overlap"),
         training_pilot_overlap=sum(r["split"] == "train" and r["family"] in excluded
                                   for r in roots),
         bootstrap=bootstrap, targets=targets,

@@ -2,13 +2,13 @@
   "train": {
     "positions": 512,
     "proven": 512,
-    "changed": 411,
-    "mean_removed_mass": 0.40078125
+    "changed": 421,
+    "mean_removed_mass": 0.41253865559895836
   },
   "heldout": {
     "positions": 128,
     "proven": 128,
-    "changed": 98,
-    "mean_removed_mass": 0.38525390625
+    "changed": 104,
+    "mean_removed_mass": 0.36455078125
   }
 }
