@@ -1,0 +1,701 @@
+{
+  "parity_verified_roots": 48,
+  "raw_masks": {
+    "roots": 48,
+    "calls": 7377,
+    "nodes": 191639804,
+    "distinct_root_mask_groups": 5572,
+    "groups_first_call_aborted": 2223,
+    "retries_before_first_success": 686,
+    "nodes_in_retries_before_first_success": 28453588,
+    "successful_retries": 203,
+    "recovered_groups": 203,
+    "roots_detail": [
+      {
+        "id": 0,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 1,
+        "undrawn": 32,
+        "calls": 33,
+        "distinct_masks": 26,
+        "recovered_masks": 0
+      },
+      {
+        "id": 2,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 3,
+        "undrawn": 32,
+        "calls": 217,
+        "distinct_masks": 170,
+        "recovered_masks": 0
+      },
+      {
+        "id": 4,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 5,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 6,
+        "undrawn": 32,
+        "calls": 12,
+        "distinct_masks": 12,
+        "recovered_masks": 0
+      },
+      {
+        "id": 7,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 8,
+        "undrawn": 34,
+        "calls": 95,
+        "distinct_masks": 75,
+        "recovered_masks": 3
+      },
+      {
+        "id": 9,
+        "undrawn": 34,
+        "calls": 20,
+        "distinct_masks": 20,
+        "recovered_masks": 0
+      },
+      {
+        "id": 10,
+        "undrawn": 34,
+        "calls": 35,
+        "distinct_masks": 22,
+        "recovered_masks": 0
+      },
+      {
+        "id": 11,
+        "undrawn": 34,
+        "calls": 219,
+        "distinct_masks": 198,
+        "recovered_masks": 4
+      },
+      {
+        "id": 12,
+        "undrawn": 34,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 13,
+        "undrawn": 34,
+        "calls": 164,
+        "distinct_masks": 135,
+        "recovered_masks": 5
+      },
+      {
+        "id": 14,
+        "undrawn": 34,
+        "calls": 24,
+        "distinct_masks": 22,
+        "recovered_masks": 0
+      },
+      {
+        "id": 15,
+        "undrawn": 34,
+        "calls": 174,
+        "distinct_masks": 145,
+        "recovered_masks": 9
+      },
+      {
+        "id": 16,
+        "undrawn": 35,
+        "calls": 307,
+        "distinct_masks": 230,
+        "recovered_masks": 6
+      },
+      {
+        "id": 17,
+        "undrawn": 35,
+        "calls": 64,
+        "distinct_masks": 55,
+        "recovered_masks": 0
+      },
+      {
+        "id": 18,
+        "undrawn": 35,
+        "calls": 69,
+        "distinct_masks": 54,
+        "recovered_masks": 0
+      },
+      {
+        "id": 19,
+        "undrawn": 35,
+        "calls": 108,
+        "distinct_masks": 77,
+        "recovered_masks": 0
+      },
+      {
+        "id": 20,
+        "undrawn": 35,
+        "calls": 44,
+        "distinct_masks": 37,
+        "recovered_masks": 0
+      },
+      {
+        "id": 21,
+        "undrawn": 35,
+        "calls": 285,
+        "distinct_masks": 214,
+        "recovered_masks": 12
+      },
+      {
+        "id": 22,
+        "undrawn": 35,
+        "calls": 19,
+        "distinct_masks": 18,
+        "recovered_masks": 0
+      },
+      {
+        "id": 23,
+        "undrawn": 35,
+        "calls": 301,
+        "distinct_masks": 227,
+        "recovered_masks": 10
+      },
+      {
+        "id": 24,
+        "undrawn": 36,
+        "calls": 147,
+        "distinct_masks": 114,
+        "recovered_masks": 4
+      },
+      {
+        "id": 25,
+        "undrawn": 36,
+        "calls": 181,
+        "distinct_masks": 128,
+        "recovered_masks": 4
+      },
+      {
+        "id": 26,
+        "undrawn": 36,
+        "calls": 253,
+        "distinct_masks": 172,
+        "recovered_masks": 15
+      },
+      {
+        "id": 27,
+        "undrawn": 36,
+        "calls": 328,
+        "distinct_masks": 152,
+        "recovered_masks": 1
+      },
+      {
+        "id": 28,
+        "undrawn": 36,
+        "calls": 366,
+        "distinct_masks": 270,
+        "recovered_masks": 13
+      },
+      {
+        "id": 29,
+        "undrawn": 36,
+        "calls": 196,
+        "distinct_masks": 136,
+        "recovered_masks": 12
+      },
+      {
+        "id": 30,
+        "undrawn": 36,
+        "calls": 318,
+        "distinct_masks": 258,
+        "recovered_masks": 12
+      },
+      {
+        "id": 31,
+        "undrawn": 36,
+        "calls": 173,
+        "distinct_masks": 114,
+        "recovered_masks": 1
+      },
+      {
+        "id": 32,
+        "undrawn": 38,
+        "calls": 238,
+        "distinct_masks": 162,
+        "recovered_masks": 15
+      },
+      {
+        "id": 33,
+        "undrawn": 38,
+        "calls": 158,
+        "distinct_masks": 98,
+        "recovered_masks": 1
+      },
+      {
+        "id": 34,
+        "undrawn": 38,
+        "calls": 156,
+        "distinct_masks": 123,
+        "recovered_masks": 10
+      },
+      {
+        "id": 35,
+        "undrawn": 38,
+        "calls": 249,
+        "distinct_masks": 218,
+        "recovered_masks": 6
+      },
+      {
+        "id": 36,
+        "undrawn": 38,
+        "calls": 198,
+        "distinct_masks": 136,
+        "recovered_masks": 5
+      },
+      {
+        "id": 37,
+        "undrawn": 38,
+        "calls": 315,
+        "distinct_masks": 239,
+        "recovered_masks": 9
+      },
+      {
+        "id": 38,
+        "undrawn": 38,
+        "calls": 195,
+        "distinct_masks": 134,
+        "recovered_masks": 17
+      },
+      {
+        "id": 39,
+        "undrawn": 38,
+        "calls": 260,
+        "distinct_masks": 202,
+        "recovered_masks": 4
+      },
+      {
+        "id": 40,
+        "undrawn": 40,
+        "calls": 95,
+        "distinct_masks": 80,
+        "recovered_masks": 0
+      },
+      {
+        "id": 41,
+        "undrawn": 40,
+        "calls": 158,
+        "distinct_masks": 107,
+        "recovered_masks": 5
+      },
+      {
+        "id": 42,
+        "undrawn": 40,
+        "calls": 124,
+        "distinct_masks": 90,
+        "recovered_masks": 2
+      },
+      {
+        "id": 43,
+        "undrawn": 40,
+        "calls": 187,
+        "distinct_masks": 161,
+        "recovered_masks": 4
+      },
+      {
+        "id": 44,
+        "undrawn": 40,
+        "calls": 290,
+        "distinct_masks": 198,
+        "recovered_masks": 6
+      },
+      {
+        "id": 45,
+        "undrawn": 40,
+        "calls": 184,
+        "distinct_masks": 170,
+        "recovered_masks": 3
+      },
+      {
+        "id": 46,
+        "undrawn": 40,
+        "calls": 162,
+        "distinct_masks": 151,
+        "recovered_masks": 2
+      },
+      {
+        "id": 47,
+        "undrawn": 40,
+        "calls": 250,
+        "distinct_masks": 216,
+        "recovered_masks": 3
+      }
+    ]
+  },
+  "symmetry_canonical_masks": {
+    "roots": 48,
+    "calls": 7377,
+    "nodes": 191639804,
+    "distinct_root_mask_groups": 5572,
+    "groups_first_call_aborted": 2223,
+    "retries_before_first_success": 686,
+    "nodes_in_retries_before_first_success": 28453588,
+    "successful_retries": 203,
+    "recovered_groups": 203,
+    "roots_detail": [
+      {
+        "id": 0,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 1,
+        "undrawn": 32,
+        "calls": 33,
+        "distinct_masks": 26,
+        "recovered_masks": 0
+      },
+      {
+        "id": 2,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 3,
+        "undrawn": 32,
+        "calls": 217,
+        "distinct_masks": 170,
+        "recovered_masks": 0
+      },
+      {
+        "id": 4,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 5,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 6,
+        "undrawn": 32,
+        "calls": 12,
+        "distinct_masks": 12,
+        "recovered_masks": 0
+      },
+      {
+        "id": 7,
+        "undrawn": 32,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 8,
+        "undrawn": 34,
+        "calls": 95,
+        "distinct_masks": 75,
+        "recovered_masks": 3
+      },
+      {
+        "id": 9,
+        "undrawn": 34,
+        "calls": 20,
+        "distinct_masks": 20,
+        "recovered_masks": 0
+      },
+      {
+        "id": 10,
+        "undrawn": 34,
+        "calls": 35,
+        "distinct_masks": 22,
+        "recovered_masks": 0
+      },
+      {
+        "id": 11,
+        "undrawn": 34,
+        "calls": 219,
+        "distinct_masks": 198,
+        "recovered_masks": 4
+      },
+      {
+        "id": 12,
+        "undrawn": 34,
+        "calls": 1,
+        "distinct_masks": 1,
+        "recovered_masks": 0
+      },
+      {
+        "id": 13,
+        "undrawn": 34,
+        "calls": 164,
+        "distinct_masks": 135,
+        "recovered_masks": 5
+      },
+      {
+        "id": 14,
+        "undrawn": 34,
+        "calls": 24,
+        "distinct_masks": 22,
+        "recovered_masks": 0
+      },
+      {
+        "id": 15,
+        "undrawn": 34,
+        "calls": 174,
+        "distinct_masks": 145,
+        "recovered_masks": 9
+      },
+      {
+        "id": 16,
+        "undrawn": 35,
+        "calls": 307,
+        "distinct_masks": 230,
+        "recovered_masks": 6
+      },
+      {
+        "id": 17,
+        "undrawn": 35,
+        "calls": 64,
+        "distinct_masks": 55,
+        "recovered_masks": 0
+      },
+      {
+        "id": 18,
+        "undrawn": 35,
+        "calls": 69,
+        "distinct_masks": 54,
+        "recovered_masks": 0
+      },
+      {
+        "id": 19,
+        "undrawn": 35,
+        "calls": 108,
+        "distinct_masks": 77,
+        "recovered_masks": 0
+      },
+      {
+        "id": 20,
+        "undrawn": 35,
+        "calls": 44,
+        "distinct_masks": 37,
+        "recovered_masks": 0
+      },
+      {
+        "id": 21,
+        "undrawn": 35,
+        "calls": 285,
+        "distinct_masks": 214,
+        "recovered_masks": 12
+      },
+      {
+        "id": 22,
+        "undrawn": 35,
+        "calls": 19,
+        "distinct_masks": 18,
+        "recovered_masks": 0
+      },
+      {
+        "id": 23,
+        "undrawn": 35,
+        "calls": 301,
+        "distinct_masks": 227,
+        "recovered_masks": 10
+      },
+      {
+        "id": 24,
+        "undrawn": 36,
+        "calls": 147,
+        "distinct_masks": 114,
+        "recovered_masks": 4
+      },
+      {
+        "id": 25,
+        "undrawn": 36,
+        "calls": 181,
+        "distinct_masks": 128,
+        "recovered_masks": 4
+      },
+      {
+        "id": 26,
+        "undrawn": 36,
+        "calls": 253,
+        "distinct_masks": 172,
+        "recovered_masks": 15
+      },
+      {
+        "id": 27,
+        "undrawn": 36,
+        "calls": 328,
+        "distinct_masks": 152,
+        "recovered_masks": 1
+      },
+      {
+        "id": 28,
+        "undrawn": 36,
+        "calls": 366,
+        "distinct_masks": 270,
+        "recovered_masks": 13
+      },
+      {
+        "id": 29,
+        "undrawn": 36,
+        "calls": 196,
+        "distinct_masks": 136,
+        "recovered_masks": 12
+      },
+      {
+        "id": 30,
+        "undrawn": 36,
+        "calls": 318,
+        "distinct_masks": 258,
+        "recovered_masks": 12
+      },
+      {
+        "id": 31,
+        "undrawn": 36,
+        "calls": 173,
+        "distinct_masks": 114,
+        "recovered_masks": 1
+      },
+      {
+        "id": 32,
+        "undrawn": 38,
+        "calls": 238,
+        "distinct_masks": 162,
+        "recovered_masks": 15
+      },
+      {
+        "id": 33,
+        "undrawn": 38,
+        "calls": 158,
+        "distinct_masks": 98,
+        "recovered_masks": 1
+      },
+      {
+        "id": 34,
+        "undrawn": 38,
+        "calls": 156,
+        "distinct_masks": 123,
+        "recovered_masks": 10
+      },
+      {
+        "id": 35,
+        "undrawn": 38,
+        "calls": 249,
+        "distinct_masks": 218,
+        "recovered_masks": 6
+      },
+      {
+        "id": 36,
+        "undrawn": 38,
+        "calls": 198,
+        "distinct_masks": 136,
+        "recovered_masks": 5
+      },
+      {
+        "id": 37,
+        "undrawn": 38,
+        "calls": 315,
+        "distinct_masks": 239,
+        "recovered_masks": 9
+      },
+      {
+        "id": 38,
+        "undrawn": 38,
+        "calls": 195,
+        "distinct_masks": 134,
+        "recovered_masks": 17
+      },
+      {
+        "id": 39,
+        "undrawn": 38,
+        "calls": 260,
+        "distinct_masks": 202,
+        "recovered_masks": 4
+      },
+      {
+        "id": 40,
+        "undrawn": 40,
+        "calls": 95,
+        "distinct_masks": 80,
+        "recovered_masks": 0
+      },
+      {
+        "id": 41,
+        "undrawn": 40,
+        "calls": 158,
+        "distinct_masks": 107,
+        "recovered_masks": 5
+      },
+      {
+        "id": 42,
+        "undrawn": 40,
+        "calls": 124,
+        "distinct_masks": 90,
+        "recovered_masks": 2
+      },
+      {
+        "id": 43,
+        "undrawn": 40,
+        "calls": 187,
+        "distinct_masks": 161,
+        "recovered_masks": 4
+      },
+      {
+        "id": 44,
+        "undrawn": 40,
+        "calls": 290,
+        "distinct_masks": 198,
+        "recovered_masks": 6
+      },
+      {
+        "id": 45,
+        "undrawn": 40,
+        "calls": 184,
+        "distinct_masks": 170,
+        "recovered_masks": 3
+      },
+      {
+        "id": 46,
+        "undrawn": 40,
+        "calls": 162,
+        "distinct_masks": 151,
+        "recovered_masks": 2
+      },
+      {
+        "id": 47,
+        "undrawn": 40,
+        "calls": 250,
+        "distinct_masks": 216,
+        "recovered_masks": 3
+      }
+    ]
+  }
+}
