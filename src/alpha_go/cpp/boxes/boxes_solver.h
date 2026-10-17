@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -71,7 +72,10 @@ private:
 
     BoxesBoard proto_;  // keeps the shared geometry alive
     uint64_t full_;
-    std::vector<std::vector<int>> perms_;  // edge permutation per lattice transform
+    // Each transform maps eight source bytes to disjoint destination edge bits.
+    // Identity needs no table. At most 112 KiB per square-board solver.
+    using BytePermutation = std::array<std::array<uint64_t, 256>, 8>;
+    std::vector<BytePermutation> byte_perms_;
     std::vector<Entry> table_;
     std::vector<uint32_t> history_;  // per edge: weighted beta cutoffs (halved when large)
     int log2_size_ = 0;

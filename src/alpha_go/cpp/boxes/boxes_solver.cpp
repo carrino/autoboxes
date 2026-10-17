@@ -35,7 +35,8 @@ BoxesSolver::BoxesSolver(int rows, int cols, std::size_t table_entries, bool use
     const int height = geo.lattice_rows();
     const int width = geo.lattice_cols();
     const bool square = geo.rows == geo.cols;
-    for (int k = 0; k < 8; ++k) {
+    byte_perms_.reserve(square ? 7 : 3);
+    for (int k = 1; k < 8; ++k) {
         if (!square && k % 2 == 1) {
             continue;  // rectangular boards keep the shape-preserving transforms only
         }
@@ -45,7 +46,17 @@ BoxesSolver::BoxesSolver(int rows, int cols, std::size_t table_entries, bool use
                                          width, k);
             perm[e] = geo.lattice_edge[r * width + c];
         }
-        perms_.push_back(perm);
+        BytePermutation table{};
+        for (int e = 0; e < geo.num_edges; ++e) {
+            table[e / 8][1 << (e % 8)] = chains::bit(perm[e]);
+        }
+        for (auto& byte : table) {
+            for (unsigned value = 1; value < byte.size(); ++value) {
+                const unsigned low = value & -value;
+                byte[value] = byte[value ^ low] | byte[low];
+            }
+        }
+        byte_perms_.push_back(table);
     }
     log2_size_ = 1;
     while ((std::size_t{1} << log2_size_) < table_entries) {
@@ -56,12 +67,12 @@ BoxesSolver::BoxesSolver(int rows, int cols, std::size_t table_entries, bool use
 }
 
 uint64_t BoxesSolver::canonical(uint64_t mask) const {
-    uint64_t best = ~uint64_t{0};
-    for (const auto& perm : perms_) {
-        uint64_t image = 0;
-        for (uint64_t bits = mask; bits; bits &= bits - 1) {
-            image |= chains::bit(perm[__builtin_ctzll(bits)]);
-        }
+    uint64_t best = mask;  // identity transform
+    for (const auto& perm : byte_perms_) {
+        const uint64_t image = perm[0][mask & 255] | perm[1][(mask >> 8) & 255] |
+                               perm[2][(mask >> 16) & 255] | perm[3][(mask >> 24) & 255] |
+                               perm[4][(mask >> 32) & 255] | perm[5][(mask >> 40) & 255] |
+                               perm[6][(mask >> 48) & 255] | perm[7][mask >> 56];
         best = std::min(best, image);
     }
     return best;

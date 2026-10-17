@@ -1,0 +1,99 @@
+{
+  "canonical": {
+    "cpu_seconds": {
+      "baseline": [
+        0.733093,
+        0.696507
+      ],
+      "candidate": [
+        0.140122,
+        0.143985
+      ]
+    },
+    "mean_cpu_seconds": {
+      "baseline": 0.7148,
+      "candidate": 0.1420535
+    },
+    "speedup": 5.0319069927879285,
+    "time_reduction": 0.8012681869054281,
+    "exact_trace_parity": true
+  },
+  "solve": {
+    "cpu_seconds": {
+      "baseline": [
+        76.925347,
+        74.45959
+      ],
+      "candidate": [
+        59.293259,
+        59.118445
+      ]
+    },
+    "mean_cpu_seconds": {
+      "baseline": 75.6924685,
+      "candidate": 59.205852
+    },
+    "speedup": 1.2784626171750726,
+    "time_reduction": 0.21781052760883346,
+    "exact_trace_parity": true,
+    "calls": 1768,
+    "nodes": 62307428,
+    "exact": 609,
+    "unknown": 1159
+  },
+  "mcts": {
+    "cpu_seconds": {
+      "baseline": [
+        41.741578911,
+        41.755075338999994
+      ],
+      "candidate": [
+        34.745712329,
+        35.169603540999994
+      ]
+    },
+    "mean_cpu_seconds": {
+      "baseline": 41.748327124999996,
+      "candidate": 34.957657935
+    },
+    "speedup": 1.1942541231631283,
+    "time_reduction": 0.16265727653392759,
+    "exact_trace_parity": true,
+    "roots": [
+      0,
+      1,
+      8,
+      9,
+      16,
+      17,
+      24,
+      25,
+      32,
+      33,
+      40,
+      41
+    ]
+  },
+  "construct": {
+    "2": {
+      "baseline": [
+        0.001156,
+        0.001088
+      ],
+      "candidate": [
+        0.024508,
+        0.012857
+      ]
+    },
+    "1048576": {
+      "baseline": [
+        0.721219,
+        0.625687
+      ],
+      "candidate": [
+        0.664673,
+        0.680149
+      ]
+    }
+  }
+}
