@@ -1,0 +1,25 @@
+{
+  "checkpoint_sha256": "46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0",
+  "games": 200,
+  "workers": 4,
+  "simulations": 400,
+  "seed": 20261027,
+  "opening_moves": 4,
+  "device": "cuda",
+  "a": {
+    "solver": 34,
+    "solver_budget": 50000
+  },
+  "b": {
+    "solver": 30,
+    "solver_budget": 50000
+  },
+  "c_puct": 1.5,
+  "leaf_batch_size": 16,
+  "policy_temperature": 1.0,
+  "margin_utility_lambda": 0.5,
+  "margin_utility_k": 6,
+  "prove_terminals": true,
+  "shape_terminals": true,
+  "scope": "Fixed simulations; compare strength and elapsed cost, not equal time"
+}

@@ -989,3 +989,39 @@ before entering the final match. CPU integration exercises real collection,
 labelling, training, paired final games, independent replay and recovery after
 an interrupted controller state write. An explicit empty `BASELINES` now
 disables baseline matches instead of restoring defaults and evaluating zero games.
+
+## Solver34/50k confirmation and teaching-target audit (2026-10-17)
+
+The completed `solver34-50k-vs30-UV94Z4` match finished **163–37** in 3,211s,
+with mean margin +4.11 and an opening-pair bootstrap game-score interval of
+[0.755, 0.87]. All 200 games independently replayed. Mean move times were
+1.7564s versus 0.3968s, 4.43x. Both sides used the same frozen iter0; this is
+a search improvement, not evidence of a stronger trained network. The separate
+solver34 overnight learning run remains pending.
+
+`experiments/2026-10-17_10-17-boxes-search-target-audit/` freezes 48 quiet roots
+from that completed match (eight each at 32, 34, 35, 36, 38 and 40 undrawn).
+At 400 simulations, solver34/50k made 7,377 bounded solver calls over the roots,
+visited 191.6 million nodes and exhausted 2,707 call budgets. The node budget
+is per probe, not per move: one 36-undrawn root used 14.4 million nodes across
+366 calls. Bounded solver calls accounted for 222s of 263s sampled CPU wall
+time; unbounded exact-root enumeration took 0.179s. Concurrent work makes the
+times descriptive, not a controlled speed comparison. Repeated leaf probes
+are the next performance target; no search-budget change is made here.
+
+The audit also reproduced a training bug: action selection respects terminal
+proofs, but the NPZ policy target was the raw visit distribution, including
+exploration of proven-inferior moves. In a tiny exhaustive 1x2 case, selection
+is 100% winning move while the old target is 50% winning / 50% losing. Two of
+48 real sampled roots had 73.61% and 91.67% target mass on filtered-out moves
+(at 32 and 34 undrawn). No 35–40 sampled root changed, so this is not evidence
+that the bug alone explains the learning plateau.
+
+The isolated fix saves proof-filtered teaching visits for new Boxes games and
+retains raw counts separately. It leaves search and Go behavior unchanged;
+existing NPZs remain unchanged. All 784 tests passed, 29 skipped, with the known
+upstream GPU-lease test excluded. Eight added cases cover proof semantics and
+the actual gameplay -> NPZ -> dataset path. Instrumented and uninstrumented
+visits, chosen moves, policies and proof status matched on eight real roots.
+The current overnight run stays on its original code; evaluate its result
+before designing a matched training test of the corrected targets.

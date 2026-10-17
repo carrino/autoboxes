@@ -1,0 +1,45 @@
+{
+  "base_code_commit": "3645000e194134d0a6750b1ee053eff7dffe54a0",
+  "branch": "astra/search-target-audit",
+  "checkpoint_sha256": "46c7264c4a0e9c7efa1cfccbb1b511c1c5faa3824fb69a62705d8cbfb1f953f0",
+  "source_archive_sediment_id": "file_000000005e8481f58ad4964ef48daf29",
+  "source_archive_sha256": "a9f7cf33b4c8bd7bd767c91829b010d85b694e07ac4d32ef89a8126db601894c",
+  "position_sampling_seed": 20261029,
+  "instrumented_extension_sha256": "d87f1a1d36364e6bd67627f8cd7193a5b373bb49f731285b03b76582f805a189",
+  "uninstrumented_extension_sha256": "a99ae814aa1f5c2dada2cecf838f8ff08ee5dee2387663c3121dcae6a2599b0b",
+  "uninstrumented_parity": {
+    "roots": 8,
+    "fields": [
+      "chosen",
+      "visits",
+      "selection_policy",
+      "root_proven"
+    ],
+    "exact_match": true
+  },
+  "timing_scope": "wall times with concurrent profiling jobs and overlapping tests; not equal-time GPU strength evidence",
+  "device": "cpu",
+  "dtype": "float32",
+  "torch_threads": 1,
+  "fresh_solver_table_per_root": true,
+  "file_sha256": {
+    "data/positions.jsonl": "3cb57d086ab0ce67eae31df922df2be3fd75f50c3f103a632190f69c67aa3bf0",
+    "data/solver30.jsonl": "c464cec57ec1cde78a902b6987a841d97327d4c91b8b4f078e5e7ba3944aec43",
+    "data/solver34.jsonl": "0531b042a0eb589049f30f0d0b4d8491d700cb71feb9b44438d82b0bd2e07605",
+    "data/source-match/cloud-verification.json": "f5a780e858cdd25a634ada7f35ea7035a0cbb2f405435773bfa1458f706b7292",
+    "data/source-match/config.json": "b9e42adf29aa3e6b63cd2eb5732f3d1f6e7129bc28ffc96e609d3f3bfea9e255",
+    "data/source-match/games.jsonl": "c62c3cea8f5df0745c597b67d533369912b80486f2dc5b8abdd2fd0fac3d8c02",
+    "data/source-match/summary.json": "01eaf8d44b6fd3faa74b2194e4ca3fde1511437628fd771362a1a35dadc8de2b",
+    "data/uninstrumented34.jsonl": "f50f86853269b03cd6b26851bc839c11cc9eac1675c0fd7440ff180680c646fe",
+    "data/summary.json": "d7f8ae6cf5ab1df3d2e0c3f8482511c952ed0f2689f975bc1d73a496223ca141"
+  },
+  "script_sha256": {
+    "bench.py": "8689ccd520b0f9294e2472622d82fc9070b70de1ad90a9777c74e20131d7e911",
+    "instrument.py": "8c6689d75ebada976f1bf756753df0400498fe8010d66e727e0af71f3d61c2c7",
+    "summarize.py": "a3969ba099998293fe7e3cddc62ac5811ebe9d4284a1e760bf4ac644213a9c8c"
+  },
+  "changed_product_files_sha256": {
+    "src/alpha_go/gameplay.py": "8e9abfb6abe81fee6e3deaf4520bf9d80fdfe78821f5c236d2f0d99428f4dd65",
+    "src/alpha_go/boxes/nn_agent.py": "8803c26718d58da3594227004fb12abe30d86d3c08f63da4640357966e887e11"
+  }
+}
