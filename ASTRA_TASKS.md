@@ -163,3 +163,18 @@ Needs `iter15.pt` and `iter54.pt` (about 12 MB each) uploaded to
    1 / 0.5 / 0 (EXPERIMENTS.md section 2). Make settled leaves use the same utility from
    their exact margin, then tune lambda.
 4. Report the best settings, and confirm them on iteration 15 as well.
+
+
+## Qdab curriculum handoff (2026-10-15)
+
+The native Linux Qdab collector and resumable overnight curriculum are implemented
+in `experiments/2026-10-15_20-57-boxes-qdab-curriculum/`. Six cloud-generated
+searched histories ship as a starter pool; the WSL run generates a separate fixed
+monitor and fresh training histories every cycle. Full instructions and bounded
+budgets are in its README. Start from frozen iter0: the completed policy-loop
+iter24 endpoint did not beat it (87/200 wins).
+
+Next evidence: fixed-monitor exact policy mass/regret and wins preserved, then
+200 independent paired games of the last overnight candidate versus iter0.
+Development acceptance is not champion promotion. Keep strong-opponent full-game
+benchmarks and authenticated BoxesZero weights as separate outstanding work.

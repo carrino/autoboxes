@@ -1,0 +1,32 @@
+{
+  "scope": "CPU integration only; tiny random network, not a strength experiment",
+  "network": {
+    "rows": 5,
+    "cols": 5,
+    "channels": 8,
+    "n_blocks": 1,
+    "features": "chains"
+  },
+  "collection_fixture": "Two genuine Qdab searched prefixes; native collector checked separately",
+  "pipeline": [
+    "fixed monitor labels",
+    "training labels",
+    "one training stage",
+    "two full paired games",
+    "completed resume"
+  ],
+  "independent_replay_verified": true,
+  "completed_cycles": 1,
+  "status": "complete",
+  "python_tests": {
+    "passed": 774,
+    "skipped": 29,
+    "command": "pytest tests/ --ignore=tests/test_gpu_lease.py -q"
+  },
+  "static_checks": [
+    "Ruff: changed Python files",
+    "strict mypy: five new Boxes modules",
+    "bash -n: run_overnight.sh",
+    "git diff --check"
+  ]
+}
