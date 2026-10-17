@@ -1,0 +1,10 @@
+{
+  "candidates": 971,
+  "families": 24,
+  "sequences": 24,
+  "forced_moves": 36,
+  "seconds": 0.43813891998433974,
+  "bounded_calls": 34,
+  "bounded_nodes": 364408,
+  "aborted_calls": 6
+}
