@@ -179,6 +179,11 @@ for ITER in $(seq "$START" "$END"); do
     else
       log "Reusing completed self-play iteration $ITER"
     fi
+    if [ "${PROOF_TARGET_AUDIT:-0}" = "1" ]; then
+        uv run python -u -m alpha_go.boxes.proof_target_audit \
+            --games "$GAME_DATA_DIR/${DATA}/selfplay-it${ITER}" \
+            --expected-games "$SP_GAMES" --output "$LOGS/targets-it${ITER}.json"
+    fi
     if [ "$RELABEL_N" -gt 0 ]; then
       VALUE_DONE="$LOGS/relabel-it${ITER}.done"
       if [ "$POLICY_LABELS" = "1" ] && [ -f "$VALUE_DONE" ]; then

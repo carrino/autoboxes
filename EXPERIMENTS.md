@@ -1085,3 +1085,69 @@ before a separate strength/cost test of heuristic probe allocation.
 The optimized extension passes 793 Python tests, with 29 skipped and the known
 upstream GPU-lease test excluded. New canonical tests check independent lattice
 transforms across byte boundaries, rectangular boards and 64-edge geometries.
+
+## Prepared proof-target overnight run (2026-10-17; no GPU result yet)
+
+`experiments/2026-10-17_14-14-boxes-proof-overnight/` prepares a fresh eight-hour
+self-play run from verified frozen iter0, followed by 200 paired games of the
+last learner against iter0 with identical solver34/50k and 400 simulations.
+Final seed 20261029 differs from the pending solver34 run's 20261028. Corrected
+proof-filtered policy targets and the exact-equivalent canonicalization speedup
+are included; the learning recipe otherwise remains at four epochs, lr 1e-4,
+eight-iteration replay, natural-weight exact mistakes at 35..36 and q_mix=0.
+
+Fresh launch rebuilds the extension, verifies imported module/binary identity,
+and runs the target-saving and canonicalization checks. Resume validates the
+frozen runtime without rebuilding. Each source collection is audited before
+labelling or training for proof-filter metadata and valid visit masks, with
+per-undrawn-band changed-position and removed-mass reports. No historical replay
+is reused. The existing controller still continues the latest weights, finishes
+the current iteration after eight active work hours, preserves checkpoints and
+independently replays the final match. Label timeouts stop visibly.
+
+Validation: real fresh-build preflight passed 17 checks; 814 Python tests passed,
+29 skipped, excluding the known upstream GPU-lease test. The real CPU loop covers
+collection through training/final evaluation/recovery with the new audit enabled.
+All three native C++ suites, Ruff, focused strict type checks and shell syntax
+passed. This is preparation, not a new training result; the prior overnight's
+archive is still pending and has not influenced this run's final seed.
+
+## Solver34 overnight: verified learned gain (2026-10-17)
+
+The completed `5x5-solver34-8pt6ai3d` run continued through 15 iterations in
+8.126 active work hours, then evaluated its predeclared last checkpoint against
+original iter0. With identical solver34/50k, 400 simulations and search settings,
+**iter15 won 126–74 (63%)** over 100 paired four-edge openings. The paired
+game-score bootstrap interval is **[0.560, 0.695]**, the two-sided paired label-swap
+p-value is 0.0005354, and mean score margin is +2.05. There were 40 swept pairs,
+46 splits and 14 lost pairs. All 200 games were independently replayed again;
+configuration/final artifact hashes and all 60 recorded source hashes validate.
+
+All 15 training stages resume the preceding checkpoint, for 6,100 cumulative
+optimizer updates. Small development arenas never promoted, leaving the legacy
+league's champion at iter0; they did not reset learning and do not override this
+separate final test. Collection/labels used 23,842s, training commands 976s
+(817s reported inside the trainer), and development arenas 4,428s. The final
+match took another 4,372s. Recorded move times were 1.0409s for iter15 and
+2.1003s for iter0 in this match; this is not an isolated inference-speed benchmark.
+
+Retained evidence and reproducible analysis are in
+`experiments/2026-10-17_15-12-boxes-solver34-learning-result/`. This establishes
+learned improvement against original iter0 under the tested search/openings,
+not strength against Dabble or BoxesZero. The policy-target fix and faster
+canonicalization were absent, so neither can explain this result.
+
+The prepared proof-target launcher now defaults to this verified iter15 as both
+initial weights and frozen final opponent. Its SHA256 is
+`3f17b19f3caa66905be1f33a960c038fec01fa499cda483ed00367b99e164dac`.
+Fresh replay excludes the old uncorrected targets. The next run retains final
+seed 20261029 selected before this archive arrived, and its 200-game endpoint
+will test improvement over **iter15**, rather than merely re-beating original
+iter0. Explicit original-iter0 controls remain possible; baseline identity is
+preserved and checked on resume.
+
+Continuation validation: 817 Python tests passed, 29 skipped, including real
+CPU collection/training/final-match recovery and tests that prevent silently
+falling back to iter0 or changing the frozen opponent on resume. Focused type
+checks, Ruff and shell syntax passed. No native source changed after the
+previously verified build. No further GPU run has been started here.

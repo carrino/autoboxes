@@ -26,7 +26,9 @@ def load_launcher():
     return module
 
 
-def test_real_cpu_iteration_final_match_and_recovery(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize("proof_audit", [False, True])
+def test_real_cpu_iteration_final_match_and_recovery(
+        tmp_path: Path, monkeypatch, proof_audit: bool) -> None:
     repo = Path(__file__).resolve().parents[1]
     launcher = load_launcher()
     experiment = tmp_path / launcher.EXP
@@ -57,12 +59,21 @@ os.execv(sys.executable, [sys.executable, *args])
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(launcher, "source_code", lambda: {})
     args = argparse.Namespace(reference=reference, hours=0.00001, final_games=2, cpu=True)
-    output, config = launcher.create(args)
+    resume_script = repo / "experiments/2026-10-17_14-14-boxes-proof-overnight/overnight.py"
+    options = dict(tag_prefix="5x5-proof34-", final_seed=20261029,
+                   resume_script=resume_script,
+                   reference_label="solver34 iter15") if proof_audit else {}
+    output, config = launcher.create(args, **options)
+    if proof_audit:
+        assert str(resume_script) in (output / "resume.sh").read_text()
+        assert config["final_seed"] == 20261029
     settings = config["environment"]
     settings.update(SP_GAMES="4", SP_PROCS="2", SP_WORKERS="2", SP_SIMS="2",
                     SOLVER_N="0", ARENA_SOLVER_N="0", TRAIN_EPOCHS="1",
                     TRAIN_ARGS="--lr 0.0001 --batch-size 16", ARENA_GAMES="2",
                     ARENA_SIMS="2", POLICY_NODE_BUDGET="64", POLICY_CHILD_BUDGET="64")
+    if proof_audit:
+        settings["PROOF_TARGET_AUDIT"] = "1"
     config["final_workers"] = 2
     launcher.write_json(output / "config.json", config)
     (output / "config.sha256").write_text(launcher.digest(output / "config.json") + "\n")
@@ -72,7 +83,12 @@ os.execv(sys.executable, [sys.executable, *args])
     assert state["active_seconds"] > args.hours * 3600
     summary = json.loads((output / "final.json").read_text())
     assert summary["games"] == 2 and summary["independent_replay_verified"]
+    assert summary["reference_sha256"] == config["reference_sha256"]
+    assert summary["reference_label"] == ("solver34 iter15" if proof_audit else "iter0")
     assert (output / "results.tgz").is_file()
+    if proof_audit:
+        audit = json.loads((output / "targets-it0.json").read_text())
+        assert audit["games"] == 4
     train = (output / "train-it1.log").read_text()
     result = json.loads(train.split("===RESULT===")[-1].strip())
     assert result["resumed_from"] == config["reference"]
