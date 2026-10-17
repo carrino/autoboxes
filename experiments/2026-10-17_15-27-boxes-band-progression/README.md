@@ -1,5 +1,9 @@
 # Where to extend the learning curriculum
 
+The agreed next steps, stage checks and cloud/3070 work split are in
+[CURRICULUM_PLAN.md](CURRICULUM_PLAN.md). The plan is preparation, not a change to
+the active run or evidence that a band has been mastered.
+
 The completed solver34 run beat its frozen iter0 126–74 with matched search. That
 establishes stronger overall play, not mastery through 38 undrawn edges. Leave the
 active proof-target run unchanged. The next candidate experiment should retain
