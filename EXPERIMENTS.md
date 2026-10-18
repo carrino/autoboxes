@@ -1151,3 +1151,36 @@ CPU collection/training/final-match recovery and tests that prevent silently
 falling back to iter0 or changing the frozen opponent on resume. Focused type
 checks, Ruff and shell syntax passed. No native source changed after the
 previously verified build. No further GPU run has been started here.
+
+## 2026-10-18: proof-target continuation improves on the previous winner
+
+Completed `5x5-proof34-a6gdsd3i`: 24 consecutive iterations, 2,400 fresh games,
+1,413 exact-policy replacements and 10,256 optimizer updates in 8.172 active
+hours. The predeclared final iter24 beat the frozen starting weights (the
+previous solver34 run's winning iter15) **121–79**, with paired game-score 95%
+interval **[0.540, 0.665]**, paired p=0.00309 and mean margin +1.11 boxes.
+Both sides used 400 simulations and solver34/50k. All 200 complete games were
+independently replayed, and training ancestry, manifests, source/build hashes
+and final receipts checked against the retained upload. This is a second
+successive measured learning gain; the two win rates have different opponents
+and must not be combined. First-seat win rate was 45%, second-seat 76%.
+
+The league promoted iter22 after a small 17/20 development match; learning
+correctly continued through iter24. The fixed final test supports using iter24
+as the next incumbent, without rewriting historical league results. Its SHA256
+is `73e9aa25856ebc1f01529013b215fcd7a5935909da2920a1b7b454aecaafbe8d`.
+
+Collection-stage proof filtering changed 501 of 65,321 searched targets (0.767%),
+before the separate exact-policy overrides. Saved reports are internally
+consistent; raw training NPZs, weights and native-library bytes were not uploaded.
+Recorded move times were 0.7515s versus 0.9408s, not a controlled speed benchmark.
+This run does not isolate the target fix from eight additional hours of training.
+
+Evidence, a reproducible audit and the next diagnostic are in
+`experiments/2026-10-18_10-40-boxes-proof24-result/`. The diagnostic freezes the
+verified checkpoints and compares them on 80 development roots each at 35–36
+and 37–38, with identical search, exact-only cache reuse, bounded label solves,
+paired source-family intervals and resumable partial output. It does not train
+or rebuild. These band reads are still pending on the 3070 machine; overall
+match improvement does not establish mastery through 36 or justify advancing
+the curriculum to 40 yet.
