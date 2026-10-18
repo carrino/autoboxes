@@ -1,0 +1,347 @@
+{
+  "status": "verified",
+  "declared_code_commit": "6901dbc641eb96c2de8ebcfa0bb65e6c42ba380e",
+  "source_files_verified": 62,
+  "build_inputs_verified": 25,
+  "source_archive_sha256": "8eef8346a33d2864db4f2d38af7f9d1391fb6f33d6dc491fce53ca7d585316b6",
+  "source_archive_bytes": 333065,
+  "completed_iterations": 24,
+  "active_work_seconds": 29418.077820886392,
+  "active_work_hours": 8.171688283579554,
+  "cumulative_optimizer_updates": 10256,
+  "trainer_reported_seconds": 1376,
+  "training_stage_wall_seconds": 1649,
+  "collection_and_labelling_wall_seconds": 23437,
+  "development_arena_wall_seconds": 4317,
+  "fresh_games": 2400,
+  "fresh_exact_policies": 1413,
+  "saved_league_champion": 22,
+  "promoted_iterations": [
+    22
+  ],
+  "final_match": {
+    "games": 200,
+    "a_wins": 121,
+    "b_wins": 79,
+    "draws": 0,
+    "a_game_score": 0.605,
+    "paired_game_score_ci95": [
+      0.54,
+      0.67
+    ],
+    "paired_two_sided_pvalue": 0.0030876764615186403,
+    "pair_sweeps": 34,
+    "pair_splits": 53,
+    "pair_losses": 13,
+    "unique_ordered_openings": 100,
+    "mean_score_margin": 1.11,
+    "first_player_win_rate": 0.45,
+    "second_player_win_rate": 0.76,
+    "legacy_margin_pair_score": 0.645,
+    "a_seconds_per_move": 0.7515,
+    "b_seconds_per_move": 0.9408,
+    "final_seed": 20261029,
+    "matched_search": {
+      "--rows": "5",
+      "--cols": "5",
+      "--num_games": "200",
+      "--num_workers": "4",
+      "--seed": "20261029",
+      "--opening_moves": "4",
+      "--sims": "400",
+      "--solver": "34",
+      "--solver_budget": "50000",
+      "--c_puct": "1.5",
+      "--leaf_batch_size": "16",
+      "--policy_temperature": "1.0",
+      "--prove_terminals": "1",
+      "--shape_terminals": "1",
+      "--margin_utility_lambda": "0.5",
+      "--margin_utility_k": "6"
+    },
+    "independent_python_replay_verified": true,
+    "checkpoint_sha256": {
+      "/home/carrino/autoboxes/experiments/2026-10-08_14-42-boxes-3x3-loop/checkpoints/5x5-proof34-a6gdsd3i/iter24.pt": "73e9aa25856ebc1f01529013b215fcd7a5935909da2920a1b7b454aecaafbe8d",
+      "/home/carrino/autoboxes/experiments/2026-10-08_14-42-boxes-3x3-loop/checkpoints/5x5-proof34-a6gdsd3i/iter0.pt": "3f17b19f3caa66905be1f33a960c038fec01fa499cda483ed00367b99e164dac"
+    },
+    "bootstrap_seed": 0,
+    "bootstrap_samples": 50000,
+    "archived_paired_game_score_ci95": [
+      0.54,
+      0.665
+    ],
+    "archived_bootstrap_seed": 20261018,
+    "archived_bootstrap_samples": 10000,
+    "first_mean_margin": -1.12,
+    "second_mean_margin": 3.34,
+    "recorded_a_seconds_per_move": 0.7515,
+    "recorded_b_seconds_per_move": 0.9408
+  },
+  "proof_target_audit": {
+    "status": "saved reports internally consistent; raw NPZ bytes are absent",
+    "total": {
+      "positions": 67144,
+      "searched_positions": 65321,
+      "changed_positions": 501,
+      "unsearched_positions": 1823,
+      "mean_raw_mass_removed": 0.005643116096420738
+    },
+    "bands": {
+      "0..23": {
+        "positions": 0,
+        "searched_positions": 0,
+        "changed_positions": 0,
+        "unsearched_positions": 0,
+        "mean_raw_mass_removed": null
+      },
+      "24..30": {
+        "positions": 91,
+        "searched_positions": 53,
+        "changed_positions": 0,
+        "unsearched_positions": 38,
+        "mean_raw_mass_removed": 0.0
+      },
+      "31..34": {
+        "positions": 4653,
+        "searched_positions": 3698,
+        "changed_positions": 419,
+        "unsearched_positions": 955,
+        "mean_raw_mass_removed": 0.08668039340024196
+      },
+      "35..36": {
+        "positions": 4800,
+        "searched_positions": 4275,
+        "changed_positions": 82,
+        "unsearched_positions": 525,
+        "mean_raw_mass_removed": 0.011244419120515612
+      },
+      "37..38": {
+        "positions": 4800,
+        "searched_positions": 4555,
+        "changed_positions": 0,
+        "unsearched_positions": 245,
+        "mean_raw_mass_removed": 0.0
+      },
+      "39..60": {
+        "positions": 52800,
+        "searched_positions": 52740,
+        "changed_positions": 0,
+        "unsearched_positions": 60,
+        "mean_raw_mass_removed": 0.0
+      },
+      "61..64": {
+        "positions": 0,
+        "searched_positions": 0,
+        "changed_positions": 0,
+        "unsearched_positions": 0,
+        "mean_raw_mass_removed": null
+      }
+    },
+    "iterations": [
+      {
+        "iteration": 0,
+        "positions": 2811,
+        "searched_positions": 2721,
+        "changed_positions": 14,
+        "unsearched_positions": 90,
+        "mean_raw_mass_removed": 0.003258605904691902
+      },
+      {
+        "iteration": 1,
+        "positions": 2805,
+        "searched_positions": 2732,
+        "changed_positions": 19,
+        "unsearched_positions": 73,
+        "mean_raw_mass_removed": 0.005486150394871113
+      },
+      {
+        "iteration": 2,
+        "positions": 2807,
+        "searched_positions": 2736,
+        "changed_positions": 25,
+        "unsearched_positions": 71,
+        "mean_raw_mass_removed": 0.007027388349345585
+      },
+      {
+        "iteration": 3,
+        "positions": 2805,
+        "searched_positions": 2732,
+        "changed_positions": 26,
+        "unsearched_positions": 73,
+        "mean_raw_mass_removed": 0.007248925580276239
+      },
+      {
+        "iteration": 4,
+        "positions": 2797,
+        "searched_positions": 2735,
+        "changed_positions": 25,
+        "unsearched_positions": 62,
+        "mean_raw_mass_removed": 0.006742331911436115
+      },
+      {
+        "iteration": 5,
+        "positions": 2798,
+        "searched_positions": 2729,
+        "changed_positions": 25,
+        "unsearched_positions": 69,
+        "mean_raw_mass_removed": 0.0069273950572045105
+      },
+      {
+        "iteration": 6,
+        "positions": 2808,
+        "searched_positions": 2726,
+        "changed_positions": 14,
+        "unsearched_positions": 82,
+        "mean_raw_mass_removed": 0.003830507808405828
+      },
+      {
+        "iteration": 7,
+        "positions": 2798,
+        "searched_positions": 2729,
+        "changed_positions": 21,
+        "unsearched_positions": 69,
+        "mean_raw_mass_removed": 0.005541305321444566
+      },
+      {
+        "iteration": 8,
+        "positions": 2799,
+        "searched_positions": 2722,
+        "changed_positions": 22,
+        "unsearched_positions": 77,
+        "mean_raw_mass_removed": 0.005535619525792192
+      },
+      {
+        "iteration": 9,
+        "positions": 2796,
+        "searched_positions": 2727,
+        "changed_positions": 20,
+        "unsearched_positions": 69,
+        "mean_raw_mass_removed": 0.00543083822271116
+      },
+      {
+        "iteration": 10,
+        "positions": 2779,
+        "searched_positions": 2722,
+        "changed_positions": 23,
+        "unsearched_positions": 57,
+        "mean_raw_mass_removed": 0.006088358127300081
+      },
+      {
+        "iteration": 11,
+        "positions": 2795,
+        "searched_positions": 2728,
+        "changed_positions": 25,
+        "unsearched_positions": 67,
+        "mean_raw_mass_removed": 0.0064531220907228974
+      },
+      {
+        "iteration": 12,
+        "positions": 2792,
+        "searched_positions": 2715,
+        "changed_positions": 15,
+        "unsearched_positions": 77,
+        "mean_raw_mass_removed": 0.004010512584407612
+      },
+      {
+        "iteration": 13,
+        "positions": 2795,
+        "searched_positions": 2726,
+        "changed_positions": 19,
+        "unsearched_positions": 69,
+        "mean_raw_mass_removed": 0.005338637197358768
+      },
+      {
+        "iteration": 14,
+        "positions": 2806,
+        "searched_positions": 2731,
+        "changed_positions": 31,
+        "unsearched_positions": 75,
+        "mean_raw_mass_removed": 0.0083531638450853
+      },
+      {
+        "iteration": 15,
+        "positions": 2802,
+        "searched_positions": 2718,
+        "changed_positions": 23,
+        "unsearched_positions": 84,
+        "mean_raw_mass_removed": 0.005883915824589114
+      },
+      {
+        "iteration": 16,
+        "positions": 2782,
+        "searched_positions": 2713,
+        "changed_positions": 17,
+        "unsearched_positions": 69,
+        "mean_raw_mass_removed": 0.004379815877696452
+      },
+      {
+        "iteration": 17,
+        "positions": 2789,
+        "searched_positions": 2721,
+        "changed_positions": 22,
+        "unsearched_positions": 68,
+        "mean_raw_mass_removed": 0.0058386272553858
+      },
+      {
+        "iteration": 18,
+        "positions": 2782,
+        "searched_positions": 2718,
+        "changed_positions": 27,
+        "unsearched_positions": 64,
+        "mean_raw_mass_removed": 0.0072922752299821834
+      },
+      {
+        "iteration": 19,
+        "positions": 2800,
+        "searched_positions": 2714,
+        "changed_positions": 20,
+        "unsearched_positions": 86,
+        "mean_raw_mass_removed": 0.00558789631364705
+      },
+      {
+        "iteration": 20,
+        "positions": 2793,
+        "searched_positions": 2713,
+        "changed_positions": 18,
+        "unsearched_positions": 80,
+        "mean_raw_mass_removed": 0.0046014070859721435
+      },
+      {
+        "iteration": 21,
+        "positions": 2799,
+        "searched_positions": 2702,
+        "changed_positions": 13,
+        "unsearched_positions": 97,
+        "mean_raw_mass_removed": 0.0038937207007155197
+      },
+      {
+        "iteration": 22,
+        "positions": 2785,
+        "searched_positions": 2701,
+        "changed_positions": 16,
+        "unsearched_positions": 84,
+        "mean_raw_mass_removed": 0.0046720736147106015
+      },
+      {
+        "iteration": 23,
+        "positions": 2821,
+        "searched_positions": 2710,
+        "changed_positions": 21,
+        "unsearched_positions": 111,
+        "mean_raw_mass_removed": 0.005955236338077667
+      }
+    ]
+  },
+  "recommendation": "Use verified iter24 as the new incumbent; measure bands before extending the curriculum",
+  "checkpoint_bytes_verified": false,
+  "compiled_extension_bytes_verified": false,
+  "raw_training_data_available": false,
+  "limitations": [
+    "Matched-search result versus old solver34 iter15 on four-edge openings",
+    "No strong-external-bot or separate empty-board measurement",
+    "Cannot isolate corrected targets from additional training",
+    "First/second seat performance differs substantially",
+    "Replay metrics use changing populations and are not a held-out band test",
+    "Weights, extension and raw NPZ hashes are recorded but bytes are absent"
+  ]
+}
