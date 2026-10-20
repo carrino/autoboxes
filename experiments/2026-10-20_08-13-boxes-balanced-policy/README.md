@@ -63,3 +63,27 @@ they remain in the run directory.
 
 Do not change checkout or rebuild during a run. A favourable result here is a
 reason to run a fresh full-game confirmation match, not an automatic promotion.
+
+## Recovering an evaluation timeout
+
+The first 347-root GPU comparison exceeded the original one-hour cap after
+training completed. Extend evaluation time without editing the frozen config:
+
+```bash
+uv run python -u experiments/2026-10-20_08-13-boxes-balanced-policy/resume_evaluation.py \
+  --run experiments/2026-10-08_14-42-boxes-3x3-loop/logs/balanced-policy-k3s3hb6v \
+  --probe-minutes 180
+```
+
+This verifies and reuses completed training and comparisons. An interrupted
+comparison restarts in a new attempt directory; old partial results stay intact.
+The two evaluation stages each have a three-hour cap, for up to six hours of
+remaining stage execution plus verification/reporting. This is a safety limit,
+not a forecast. Position-level partial search work is not resumed.
+
+The recovery writes a separate `evaluation-extension-180m.json` provenance record
+and a `resume-evaluation.sh` command. It preserves the original configuration,
+checkpoint hashes, data, training budget, positions, search settings and seed.
+It refuses to start if training is incomplete or any recorded artifact changed.
+Use the new resume command for later interruptions; the original `resume.sh`
+still has its original one-hour limits. Send the printed `results.tgz` afterward.
