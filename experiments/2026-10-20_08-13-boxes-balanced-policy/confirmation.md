@@ -91,7 +91,28 @@ twice for balanced and once for iter24 (165/200 moves labelled). At 35 there was
 one such mistake per agent (196/200 labelled). These are different positions for
 each player, so the counts are not a matched comparison of their policies.
 
-This suggests that the next diagnosis should include 37–38, rather than assume
-more raw-policy accuracy at 35–36 will necessarily change game winners. A small
-outcome-independent sample of the same opening pairs is being checked there.
-No new training, solver-threshold change or promotion follows from these reads.
+The follow-up selected 25 opening pairs (50 games) by the 25 lowest hashes of
+`arena-frontier-v1:<pair index>`, before solving their 37/38-edge prefixes. It
+reused exact 36-edge labels and used a five-million-node budget per new state,
+four workers, and a ten-minute wall cap; it finished in 134 seconds.
+
+Only 18/50 roots at 37 and 3/50 at 38 were solved, so this is evidence of specific
+mistakes rather than a credible error-rate estimate. Of the 17 labelled adjacent
+37-to-36 transitions, four turned a win into a loss: balanced in games 121/199,
+iter24 in games 34/170 (zero-based game indices). One of the three labelled
+38-to-37 transitions did so too: balanced in game 34. Do not treat these five
+moves as five independent games, compare the agents on different states, or
+infer good play from the unresolved cases.
+
+The next useful training experiment is a small targeted pilot at **37 edges**,
+with 35–36 retained as a regression check. Concentrate exact supervision on
+decisions that lose winning positions; retain ordinary replay so opening play
+and the already useful solver-supported endgame are rehearsed. Keep solver34
+and search settings fixed, use fresh training families, and evaluate both exact
+win preservation on reserved roots and a fresh full-game match before promotion.
+These arena games are now development evidence, not a fresh final test.
+
+This is a recommendation, not a completed training result. There is no claim
+that the raw network has mastered 36, no solver-threshold change, and no
+promotion. The unknown 36-edge roots still need attention; advancing one narrow
+training band is an experiment, not a graduation based on this diagnostic.
