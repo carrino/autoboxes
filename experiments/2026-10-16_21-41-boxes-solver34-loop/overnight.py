@@ -191,7 +191,11 @@ def run(output: Path, config: dict[str, Any]) -> None:
                 state["checkpoints"][str(candidate)] = digest(candidate)
                 write_json(state_path, state)
                 continue
-            if iteration and state["active_seconds"] >= config["hours"] * 3600:
+            # Opt-in runs finish an interrupted iteration even if its work used the
+            # remaining budget. job() opens this log before launching the child.
+            started = (config.get("finish_started_iteration", False)
+                       and (output / f"iteration-{iteration + 1}.log").is_file())
+            if iteration and state["active_seconds"] >= config["hours"] * 3600 and not started:
                 state["phase"] = "final"
                 write_json(state_path, state)
                 break
