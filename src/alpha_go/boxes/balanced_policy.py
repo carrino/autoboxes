@@ -342,6 +342,9 @@ def train_arm(name: str, reference: Path, train: BoxesDataset, validation: Boxes
     reads = {}
     started = time.monotonic()
     read_steps = {min(256, settings["steps"]), min(1024, settings["steps"]), settings["steps"]}
+    snapshot_every = settings.get("snapshot_every", 0)
+    if snapshot_every:
+        read_steps.update(range(snapshot_every, settings["steps"], snapshot_every))
     with (output / f"{name}-updates.jsonl").open("w") as log:
         for step, indices in enumerate(stream, 1):
             batch = default_collate([indexed[int(i)] for i in indices])
@@ -379,6 +382,9 @@ def train_arm(name: str, reference: Path, train: BoxesDataset, validation: Boxes
                     validation_roots=root_reads(
                     model, validation, labels, settings["batch_size"], device))
                 write_json(output / f"{name}-fit-{step}.json", reads[str(step)])
+            if snapshot_every and step % snapshot_every == 0 and step < settings["steps"]:
+                save_boxes_net(model, output / f"{name}-step{step}.pt", step=step,
+                               seed=settings["seed"], diagnostic_only=True)
     checkpoint = output / f"{name}.pt"
     save_boxes_net(model, checkpoint, step=settings["steps"], seed=settings["seed"],
                    balanced_policy_arm=name, split_seed=0)

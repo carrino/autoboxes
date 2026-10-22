@@ -77,12 +77,13 @@ def select_canary(dataset: BoxesDataset, band: int, count: int, seed: int
 def run(reference: Path, prepared: Path, output: Path, arm: str, *, steps: int = 8192,
         batch_size: int = 256, lr: float = 1e-4, seed: int = 20261105,
         cpu: bool = False, min_undrawn: int = 24, canary_band: int = 37,
-        canary_roots: int = 128) -> dict[str, Any]:
+        canary_roots: int = 128, snapshot_every: int = 0) -> dict[str, Any]:
     """Train one fixed endpoint from frozen replay; no monitor selects a checkpoint."""
     assert arm in ("control", "balanced", "canary")
     assert steps > 0 and batch_size >= 4 and batch_size % 4 == 0 and seed >= 0
     assert math.isfinite(lr) and lr > 0 and min_undrawn >= 0
     assert canary_band > 0 and canary_roots > 0
+    assert snapshot_every >= 0
     assert not output.exists(), f"output must be fresh: {output}"
     inputs = bundle_files(prepared)
     reference_hash = sha256(reference)
@@ -113,6 +114,8 @@ def run(reference: Path, prepared: Path, output: Path, arm: str, *, steps: int =
                     weight_decay=1e-4, gradient_clip=1.0, split_seed=0,
                     val_fraction=.1, min_undrawn=min_undrawn,
                     schedule="constant", optimizer="fresh AdamW")
+    if snapshot_every:
+        settings["snapshot_every"] = snapshot_every
     if arm == "canary":
         settings.update(roots_per_batch=batch_size, root_fraction=1.0)
     summary: dict[str, Any] = dict(
@@ -163,6 +166,8 @@ def main() -> None:
     parser.add_argument("--min-undrawn", type=int, default=24)
     parser.add_argument("--canary-band", type=int, default=37)
     parser.add_argument("--canary-roots", type=int, default=128)
+    parser.add_argument("--snapshot-every", type=int, default=0,
+                        help="save diagnostic weights without resetting optimizer; 0 disables")
     parser.add_argument("--cpu", action="store_true")
     run(**vars(parser.parse_args()))
 

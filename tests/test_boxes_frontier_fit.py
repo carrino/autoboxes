@@ -115,3 +115,23 @@ def test_empty_canary_band_is_rejected(prepared: Path) -> None:
     training, _ = load_arm(prepared, "exact", "chains", 0).split_stable(.1, 0)
     with pytest.raises(AssertionError, match="no eligible exact training roots"):
         select_canary(training, 24, 5, 0)
+
+
+def test_diagnostic_snapshots_do_not_change_training(prepared: Path, tmp_path: Path) -> None:
+    from alpha_go.boxes.nn_agent import load_boxes_net
+
+    torch.set_num_threads(1)
+    reference = tmp_path / "reference.pt"
+    save_boxes_net(BoxesNet(3, 3, channels=8, n_blocks=1, value_hidden=8,
+                           features="chains"), reference)
+    for name, interval in (("plain", 0), ("snapshots", 1)):
+        run(reference, prepared, tmp_path / name, "control", steps=3, batch_size=8,
+            seed=41, cpu=True, min_undrawn=0, canary_band=11, snapshot_every=interval)
+    snapshots = tmp_path / "snapshots"
+    assert (snapshots / "control-step1.pt").is_file()
+    assert (snapshots / "control-step2.pt").is_file()
+    assert not (tmp_path / "plain/control-step1.pt").exists()
+    plain = load_boxes_net(tmp_path / "plain/control.pt", torch.device("cpu"))
+    saved = load_boxes_net(snapshots / "control.pt", torch.device("cpu"))
+    assert all(torch.equal(tensor, saved.state_dict()[name])
+               for name, tensor in plain.state_dict().items())
