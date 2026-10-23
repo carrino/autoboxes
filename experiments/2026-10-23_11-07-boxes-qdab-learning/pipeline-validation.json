@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "tests": 36,
+  "elapsed_seconds": 10.75,
+  "command": "PYTHONPATH=src OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m pytest -q experiments/2026-10-23_11-07-boxes-qdab-learning",
+  "ruff": "passed for experiment folder",
+  "mypy": "strict follow-imports=skip passed for three new scripts with MYPYPATH=src",
+  "full_suite": "Not repeated during timed Qdab collection; prior source suite was 954 passed,29 skipped. New changes are isolated experiment files.",
+  "integration": "Real preparer export to tiny2x2 fitter;3heads,2updates; exhaustive tiny oracle labels.",
+  "limits": "No production-checkpoint fit or strength result yet. Actual GPU benchmark-state exclusions pending.",
+  "files": {
+    "prepare_structural.py": "19d30e77a1b83e5a17a46e85f84ffaac8d10a5b70be7917c5184af99393c8013",
+    "fit_structural.py": "d1528677a970465cb903cddf594e8d3938eb93bf7fb2356c57c8537b1a4b8496",
+    "queue_structural.py": "1c814f89b067b4a17c2b35e76251d19f03000819bbeee5fc194674536cb0c503",
+    "test_prepare_structural.py": "f7871f5181b61af0983b2536b880927708a5bc95e4ae1f1e53f0b83e49f85ed8",
+    "test_fit_structural.py": "a09065239021e787ba472b13b6ade48da9116ebf0bfad8f0461449a1190123a5",
+    "test_queue_structural.py": "35896d01a18a743e883b76ba943cfdccf01a1c5c0c17a9903ab4a6926d529f3b"
+  }
+}

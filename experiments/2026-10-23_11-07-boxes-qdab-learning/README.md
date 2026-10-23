@@ -26,6 +26,16 @@ a playing-strength improvement. The current model already receives ten coarse
 chain/loop planes; this experiment tests richer information and a direct path
 to the value head, not the first addition of chain awareness.
 
+The bounded offline pipeline is implemented in `prepare_structural.py`,
+`fit_structural.py` and `queue_structural.py`. The queue waits for every frozen
+collection game and a successful supervisor receipt, then labels roots/children
+for at most 45 minutes and fits three small readouts on cached frozen-network
+features. All arms use the same family-balanced sample indices and 1,024 updates.
+This is a development diagnostic: the actual GPU benchmark histories are still
+needed for its final state-overlap check. It does not alter the running GPU job,
+production weights or arena model loading. See [STRUCTURAL_VALUE.md](STRUCTURAL_VALUE.md)
+for commands, interpretation and limits.
+
 ## Evidence motivating the experiment
 
 The cloud diagnostic used checkpoint
@@ -63,9 +73,10 @@ sole cause of the overall strength gap.
 ## What the cloud and GPU each do
 
 The cloud collects fresh strong-opponent trajectories, expert corrections and
-bounded exact labels. The GPU trains matched candidates and performs the larger
-fixed full-game comparisons. Timed Qdab collection runs alone; CPU-heavy solving
-and tests finish before it starts. Four agents can research in parallel without
+bounded exact labels. It can also fit these small readouts after caching frozen
+CNN features; the GPU remains useful for full-network training and larger fixed
+full-game comparisons. Timed Qdab collection runs alone; CPU-heavy solving and
+fitting wait until it finishes. Four agents can research in parallel without
 pretending four shared CPU cores are four independent machines.
 
 Collection excludes canonical four-edge families from both known benchmarks and

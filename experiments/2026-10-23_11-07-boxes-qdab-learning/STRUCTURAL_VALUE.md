@@ -5,10 +5,10 @@ the network to reconstruct it. Autoboxes already receives coarse chain planes;
 the next useful change is **richer descriptors fed directly to the value head**.
 This is a small, testable hypothesis, not evidence that a CNN cannot learn Boxes.
 
-Status: isolated feature and residual-head prototypes are implemented and tested
-in this folder. They are **untrained and not connected to production loading,
-collection, training, or arena inference**. The current collection and checkpoint
-are unchanged. No strength improvement has been measured.
+Status: isolated feature/residual-head prototypes and the bounded offline
+preparation/fitting pipeline are implemented in this folder. They are **not
+connected to production checkpoint loading or arena inference**. The current
+collection and checkpoint are unchanged. No strength improvement has been measured.
 
 ## What the present model has
 
@@ -180,6 +180,50 @@ root sign improvement alone, or a fitting win on old self-play does not establis
 that this makes the bot stronger.
 
 ## Cost and validation so far
+
+### Executable offline pipeline
+
+`prepare_structural.py` writes replayable root/child JSON and exact-query receipts.
+Unknown values remain null. Complete-child decisions are evaluated only when
+every legal child is exact; partial groups can still supply individual value
+targets. Semantic state keys include D4 geometry and mover-relative scores, so
+transpositions and physical-color swaps cannot cross the training/validation
+boundary. Known diagnostic sources are checked now; actual GPU benchmark histories
+remain an explicitly pending exclusion input.
+
+`fit_structural.py` caches the frozen model's logits and actual value-layer input,
+then trains the three readouts with 1,024 updates of 256 examples, fresh AdamW at
+0.001 and one common saved sample-index matrix. Only these roughly 11,000-parameter
+heads learn. It saves final heads, per-root child reads, state calibration reads,
+family-weighted comparisons and family-bootstrap intervals. It reports the number
+of complete validation families; zero such families means no held-out ranking
+evidence. It neither selects a best epoch nor promotes a candidate.
+
+`queue_structural.py` waits for all planned source games and a successful collection
+supervisor receipt before starting any heavy work. It holds the Qdab runtime lock
+while solving/fitting, freezes source code/native/checkpoint hashes, gives labeling
+45 minutes and fitting 30 minutes, and preserves stage receipts for resume. The
+45-minute label cap can yield a partial bundle. Pending GPU exclusions are accepted
+only through the explicit provisional-development option; these outputs cannot
+be used to claim a fresh benchmark improvement.
+
+To queue this cloud-only experiment against a collection with a supervisor:
+
+```bash
+EXP=experiments/2026-10-23_11-07-boxes-qdab-learning
+PYTHONPATH=src OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 uv run python -u \
+  "$EXP/queue_structural.py" --collection /path/to/qdab-training-run \
+  --supervisor /path/to/collection-supervisor/job.json
+```
+
+The printed queue directory contains `resume.sh`, `state.json` and per-stage logs.
+At completion or interruption, `results.tgz` contains receipts, reports and small
+head checkpoints; the large frozen-feature/prediction caches remain on disk.
+Those heads are intentionally not loadable as ordinary Boxes checkpoints. Search
+integration and fresh opponent matches follow only if the offline result supports
+them. Existing benchmark weights remain frozen throughout.
+
+### Runtime and semantic checks
 
 Feature extraction is linear in this small graph using existing chain analysis.
 The cached float32 vector is 492 bytes per 5×5 state: about 49.2 MB for 100,000

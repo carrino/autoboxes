@@ -3,8 +3,9 @@
 The next artifact is a bounded, replay-verified training bundle from the **new**
 `alpha_go.boxes.qdab_training_collect` run. Wait until its timed games and teacher
 queries have stopped before running CPU solvers on the same machine. This plan
-does not change weights, turn benchmark games into training data, or describe an
-already implemented packing command.
+does not turn benchmark games into training data. `prepare_structural.py` now
+implements the portable JSON root/child bundle below. NPZ policy/replay packing
+remains future work; the separate small-head fitter consumes these JSON records.
 
 ## Input and boundary
 
@@ -30,7 +31,9 @@ not proof of later-state separation. Before training, compare against the actual
 completed GPU benchmark, pilot and existing frozen development roots. Check D4
 symmetry-equivalent state keys including edge mask, mover and score; report exact
 coverage of the exclusion inputs. Do not claim all-state disjointness before those
-actual histories are available. The empty board itself is a common start, not a
+actual histories are available. The offline structural fit can run provisionally
+with an explicit development flag, but its heads cannot enter an arena or be
+promoted on that evidence. The empty board itself is a common start, not a
 useful exclusion key; the checks concern sampled/training decision states and
 opening families.
 
@@ -67,14 +70,16 @@ must survive interruption. Resume verifies hashes and reuses saved results.
 
 The priority is global, not driven by whether a model won or made a mistake:
 
-| Pass | Population | Output | Initial session allocation |
+| Pass | Population | Output | Planning estimate |
 |---|---|---|---|
-| 1 | Every frozen 35–38 root and its actual played child | Exact root/selected-child values, or explicit unknown | Up to 10 minutes |
-| 2 | Legal alternatives of those same roots, in a frozen round-robin game/band order | Complete child tables where affordable | Remaining 35 minutes |
+| 1 | Every frozen 35–38 root and its actual played child | Exact root/selected-child values, or explicit unknown | About 10 minutes; may use the full session |
+| 2 | Legal alternatives of those same roots, in a frozen round-robin game/band order | Complete child tables where affordable | Remaining session time |
 
-If pass 1 uses its allocation, unfinished roots remain explicit and resume before
-pass 2. Within a root, prioritize a saved Qdab recommendation only if the receipt
-refers to that **identical** state; then use stable edge order. Teacher queries at
+Both passes share the hard 45-minute session limit. Pass 1 retains priority if it
+takes longer than estimated; there is no ten-minute stop leaving the rest idle.
+Unfinished roots remain explicit and resume before pass 2. The current exact
+preparer uses stable edge order for alternatives. A future teacher-priority variant
+must first verify the recommendation refers to the **identical** state. Teacher queries at
 39–50 edges remain approximate advice outside this initial exact-label pass.
 Do not spend the first session exhaustively solving the mostly unknown 41–42
 region, or attempt to infer perfect labels from Qdab's action alone.
@@ -134,10 +139,11 @@ Do **not** invoke `all_policy_data` directly on these JSON games: it expects NPZ
 histories with genuine MCTS counts and excludes unsearched/opponent roots. Do not
 invoke the existing `curriculum_labels` JSON path unchanged either: it rederives
 first-eight families, skips failed direct roots before child recovery, and only
-emits complete groups. A small fresh-schema adapter/packer is still required to
-preserve the collector's split, retain partial exact values and all unknown
-records, check transpositions, and enforce the two-pass time budget. Its schema
-should be finalized against a real completed collection game before implementation.
+emits complete groups. `prepare_structural.py` now preserves the collector's
+split, retains partial exact values and unknown records, checks transpositions,
+and enforces the two-pass time budget. It emits replayable `states.jsonl`,
+`roots.jsonl`, query receipts, exclusion receipts and a hashed manifest.
+It does not fabricate NPZ histories or policies for the existing training loop.
 
 ## Completion report and next GPU decision
 
@@ -147,7 +153,12 @@ all exclusions; budget failures; and wall/solver time. Include a manifest of
 artifact hashes and relative paths so the bundle can move from cloud to WSL.
 Checkpoint weights remain unchanged.
 
-The first GPU step is a short, matched training pilot on this bundle plus fixed
+The immediate cloud step fits the three small frozen-base value readouts described
+in [STRUCTURAL_VALUE.md](STRUCTURAL_VALUE.md). Complete-child ranking metrics use
+only groups whose every legal alternative is known; partial groups still provide
+valid independent value targets and explicit coverage counts.
+
+The subsequent GPU step is a short, matched training pilot on this bundle plus fixed
 rehearsal, using the same starting checkpoint and update budget. Check held-out
 fresh Qdab families for exact policy mass, value ordering and search regret, then
 confirm any candidate in new full games. The existing GPU benchmark remains an
