@@ -1,0 +1,44 @@
+{
+  "focused_tests": {
+    "passed": 17,
+    "command": "PYTHONPATH=src OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 /workspace/autoboxes/.venv/bin/python -m pytest -q tests/test_boxes_qdab_training_collect.py tests/test_boxes_qdab_benchmark.py"
+  },
+  "ruff": "passed",
+  "strict_mypy": "passed with --follow-imports=silent",
+  "source_sha256": {
+    "src/alpha_go/boxes/qdab_training_collect.py": "fe913008001dcffd8297e4ab2f756d8aa4af0bae72d92c241ff3e6e76e5ed7ba",
+    "tests/test_boxes_qdab_training_collect.py": "3b9b152a3c328fb31e897f4cee4e38162c5e28ad402f1f682d589e717edb992b",
+    "experiments/2026-10-23_11-07-boxes-qdab-learning/run_collect.sh": "5e06ef98fa23efd4ca321444913d56c5095462bda1050080ef01dadad4bb5475"
+  },
+  "full_suite": {
+    "passed": 954,
+    "skipped": 29,
+    "seconds": 179.45,
+    "excluded": "tests/test_gpu_lease.py (known upstream failure)"
+  },
+  "real_collection": {
+    "supervisor_pid": 53341,
+    "learner_pid": 53342,
+    "job": "work/qdab-training-cloud-7utifkwd",
+    "output": "work/qdab-training-cloud-7utifkwd/qdab-training-u1h4vxeq",
+    "planned_games": 60,
+    "frozen_split": {
+      "training": 45,
+      "validation": 15
+    },
+    "soft_budget_hours": 3,
+    "status": "running; first full game and four teacher receipts independently verified",
+    "first_game_review": {
+      "independent_stdlib_replay": true,
+      "full_edges": 60,
+      "first_player_boxes": 12,
+      "second_player_boxes": 13,
+      "learner_targets": 19,
+      "teacher_receipts": 4,
+      "teacher_targets_separate_from_exact": true,
+      "teacher_rpc_boards_and_capture_bundles_verified": true,
+      "checkpoint_sha256": "c24bf71cba7e7b358881a966ab35b33174db0715f7dfd2e79f397f331f9e873f",
+      "output": "work/qdab-training-cloud-7utifkwd/qdab-training-u1h4vxeq"
+    }
+  }
+}
