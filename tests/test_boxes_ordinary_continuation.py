@@ -56,13 +56,16 @@ def test_runtime_settings_and_fresh_collection_seeds(launcher: Any, tmp_path: Pa
     assert option(cmd, '--snapshot-every') == '2048'
 
 
-@pytest.mark.parametrize('fail_confirmation', [False, True])
+@pytest.mark.parametrize('cycles,confirmation,fail_confirmation', [
+    (2, True, False), (2, True, True), (4, False, False)])
 def test_fixed_endpoints_latest_weight_lineage_and_resume(
     launcher: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fail_confirmation: bool,
+    cycles: int, confirmation: bool,
 ) -> None:
     from alpha_go.boxes import curriculum, probe_report
 
     c = config()
+    c.update(cycles=cycles, confirmation=confirmation)
     inputs = tmp_path / 'inputs'
     inputs.mkdir()
     for name in ('start.pt', 'iter24.pt'):
@@ -101,24 +104,26 @@ def test_fixed_endpoints_latest_weight_lineage_and_resume(
     monkeypatch.setattr(probe_report, 'write_report', lambda *a: None)
     assert launcher.run(tmp_path, c) == (not fail_confirmation)
     trains = [cmd for cmd in calls if 'alpha_go.boxes.frontier_fit' in cmd]
-    assert len(trains) == 2
-    first = Path(option(trains[0], '--output')) / 'control.pt'
-    last = Path(option(trains[1], '--output')) / 'control.pt'
-    assert option(trains[0], '--reference') == str(inputs / 'start.pt')
-    assert option(trains[1], '--reference') == str(first)
+    assert len(trains) == cycles
+    endpoints = [Path(option(cmd, '--output')) / 'control.pt' for cmd in trains]
+    parents = [inputs / 'start.pt', *endpoints[:-1]]
+    last = endpoints[-1]
+    assert [option(cmd, '--reference') for cmd in trains] == [str(p) for p in parents]
     collectors = [cmd for cmd in calls if '--collect-worker' in cmd]
-    assert [cmd[-2] for cmd in collectors] == [str(inputs / 'start.pt'), str(first)]
+    assert [cmd[-2] for cmd in collectors] == [str(p) for p in parents]
     preparation = [cmd for cmd in calls if 'alpha_go.boxes.frontier_fit_data' in cmd]
     assert all(cmd[cmd.index('--directories')+1:cmd.index('--directories')+3] == c['directories']
                for cmd in preparation)
     assert str(tmp_path / 'cycle-1-labelled') in preparation[1]
     assert str(tmp_path / 'cycle-2-labelled') in preparation[1]
     matches = [cmd for cmd in calls if 'alpha_go.boxes.arena' in cmd]
-    assert option(matches[0], '--a') == 'ckpt:' + str(inputs / 'start.pt')
-    assert option(matches[0], '--b') == 'ckpt:' + str(inputs / 'iter24.pt')
-    assert option(matches[1], '--a') == 'ckpt:' + str(last)
-    assert option(matches[1], '--b') == 'ckpt:' + str(inputs / 'start.pt')
-    assert option(matches[0], '--seed') != option(matches[1], '--seed')
+    assert len(matches) == 1 + int(confirmation)
+    if confirmation:
+        assert option(matches[0], '--a') == 'ckpt:' + str(inputs / 'start.pt')
+        assert option(matches[0], '--b') == 'ckpt:' + str(inputs / 'iter24.pt')
+        assert option(matches[0], '--seed') != option(matches[-1], '--seed')
+    assert option(matches[-1], '--a') == 'ckpt:' + str(last)
+    assert option(matches[-1], '--b') == 'ckpt:' + str(inputs / 'start.pt')
     assert all(option(cmd, '--num_games') == '400' for cmd in matches)
     probes = [cmd for cmd in calls if 'alpha_go.boxes.search_probe' in cmd]
     assert len(probes) == 2
@@ -131,7 +136,7 @@ def test_fixed_endpoints_latest_weight_lineage_and_resume(
     # Completed arenas, collection and training are never repeated. The labeller re-verifies
     # its complete per-game receipts; the interrupted confirmation alone needs new work.
     new = calls[before:]
-    assert len(new) == 2 + int(fail_confirmation)
+    assert len(new) == cycles + int(fail_confirmation)
     assert all('alpha_go.boxes.policy_loop_data' in cmd or 'alpha_go.boxes.arena' in cmd
                for cmd in new)
     assert json.loads((tmp_path / 'summary.json').read_text())['complete']

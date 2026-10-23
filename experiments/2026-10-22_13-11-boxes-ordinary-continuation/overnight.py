@@ -107,7 +107,7 @@ def verify(output: Path, config: dict[str, Any]) -> None:
         checked(output / 'inputs' / name, expected)
     for name, expected in config['code_sha256'].items():
         checked(REPO / name, expected)
-    checked(output / 'inputs/start.pt', START_SHA)
+    checked(output / 'inputs/start.pt', config.get('start_sha256', START_SHA))
     checked(output / 'inputs/iter24.pt', fit.REFERENCE_SHA)
     source = json.loads((output / 'inputs/collection-config.json').read_text())
     if fit.balanced.runtime_identity(source, config['cpu']) != config['runtime']:
@@ -185,7 +185,7 @@ def probe_command(output: Path, candidate: Path, attempt: Path, band: str,
 
 
 def run(output: Path, config: dict[str, Any]) -> bool:
-    """Confirmation never gates the two cycles; failed optional evaluations preserve work."""
+    """Run fixed cycles; optional confirmation never gates or selects training endpoints."""
     from alpha_go.boxes.curriculum import verify_match
     from alpha_go.boxes.probe_report import build_report, write_report
 
@@ -210,8 +210,9 @@ def run(output: Path, config: dict[str, Any]) -> bool:
 
     caps = config['caps']
     checkpoint = output / 'inputs/start.pt'
-    optional('confirmation', caps['arena'], lambda a: arena_command(output, checkpoint,
-        output / 'inputs/iter24.pt', a, config['confirmation_seed'], config), finish_arena)
+    if config.get('confirmation', True):
+        optional('confirmation', caps['arena'], lambda a: arena_command(output, checkpoint,
+            output / 'inputs/iter24.pt', a, config['confirmation_seed'], config), finish_arena)
     directories = list(config['directories'])
     for cycle in range(1, config['cycles'] + 1):
         prefix = f'cycle-{cycle}'
