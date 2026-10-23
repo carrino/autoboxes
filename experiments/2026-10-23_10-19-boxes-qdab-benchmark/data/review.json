@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "status": "verified_saved_records",
+  "input": "work/qdab-gpu-benchmark-1yafbn9k",
+  "config_sha256": "6bbc836ccd511bc5d950f820d46dfb5b1bda62bf771d90fdf9e23680663e3d62",
+  "checkpoint_sha256": "c24bf71cba7e7b358881a966ab35b33174db0715f7dfd2e79f397f331f9e873f",
+  "verification": {
+    "full_games": 120,
+    "edges_replayed": 7200,
+    "first_principles_lattice_replay": true,
+    "qdab_rpc_calls": 2930,
+    "qdab_edges_verified": 3393,
+    "qdab_request_states_verified": true,
+    "qdab_responses_match_played_bundles": true,
+    "frozen_schedule_regenerated": true,
+    "all_game_config_hashes_match": true,
+    "attempts": 120,
+    "complete_attempts": 120,
+    "retries": 0,
+    "source_code_hashes_checked": 70,
+    "source_code_hashes_all_match_current": true,
+    "qdab_artifacts_match_local_pinned_release": {
+      "server": true,
+      "libfann.so.2": true,
+      "AnnModels/24.ann": true,
+      "AnnModels/28.ann": true,
+      "AnnModels/32.ann": true,
+      "AnnModels/stats": true
+    },
+    "separate_previously_uploaded_checkpoint_matches": true,
+    "checkpoint_in_this_upload": false
+  },
+  "panels": {
+    "paired": {
+      "games": 100,
+      "wins": 17,
+      "losses": 83,
+      "draws": 0,
+      "win_rate": 0.17,
+      "mean_margin": 0.76,
+      "median_margin": -1.0,
+      "margin_histogram": {
+        "-9": 2,
+        "-7": 1,
+        "-5": 1,
+        "-3": 14,
+        "-1": 65,
+        "7": 3,
+        "9": 1,
+        "11": 5,
+        "13": 1,
+        "15": 3,
+        "17": 3,
+        "19": 1
+      },
+      "win_margin_mean": 12.529411764705882,
+      "loss_margin_mean": -1.6506024096385543,
+      "one_box_losses": 65,
+      "three_or_fewer_box_losses": 79,
+      "narrow_wins_up_to3": 0,
+      "wins_at_least7": 17,
+      "first_wins": 9,
+      "second_wins": 8,
+      "first_games": 50,
+      "second_games": 50,
+      "a_moves": 2815,
+      "a_seconds": 1452.7377604325302,
+      "a_seconds_per_edge": 0.5160702523739006,
+      "b_moves": 2785,
+      "b_seconds": 5920.931340725161,
+      "b_seconds_per_edge": 2.126007662737939
+    },
+    "empty": {
+      "games": 20,
+      "wins": 1,
+      "losses": 19,
+      "draws": 0,
+      "win_rate": 0.05,
+      "mean_margin": -0.4,
+      "median_margin": -1.0,
+      "margin_histogram": {
+        "-5": 1,
+        "-3": 2,
+        "-1": 16,
+        "19": 1
+      },
+      "win_margin_mean": 19,
+      "loss_margin_mean": -1.4210526315789473,
+      "one_box_losses": 16,
+      "three_or_fewer_box_losses": 18,
+      "narrow_wins_up_to3": 0,
+      "wins_at_least7": 1,
+      "first_wins": 1,
+      "second_wins": 0,
+      "first_games": 10,
+      "second_games": 10,
+      "a_moves": 592,
+      "a_seconds": 295.0906301452778,
+      "a_seconds_per_edge": 0.49846390227242876,
+      "b_moves": 608,
+      "b_seconds": 1365.6475600400008,
+      "b_seconds_per_edge": 2.2461308553289485
+    }
+  },
+  "paired_rating": {
+    "opening_pairs": 50,
+    "game_score": 0.17,
+    "pair_cluster_bootstrap_seed": 20261112,
+    "resamples": 10000,
+    "score_ci95": [
+      0.09,
+      0.26
+    ],
+    "relative_elo": -275.45166839911997,
+    "elo_ci95": [
+      -401.91955315270746,
+      -181.70334870406327
+    ],
+    "exact_whole_pair_sign_test_pvalue": 3.608874976634979e-08,
+    "pair_patterns": {
+      "lose_both": 36,
+      "split": 11,
+      "win_both": 3
+    },
+    "saved_summary_reproduced": true
+  },
+  "timing": {
+    "total_attempt_seconds": 9034.788998645265,
+    "total_a_seconds": 1747.828390577808,
+    "total_b_seconds": 7286.578900765162,
+    "qdab_rpc_seconds": 6604.351782014128,
+    "qdab_wall_seconds": 7238.735185037833,
+    "max_qdab_decision_seconds": 6.167481481097639,
+    "max_qdab_wall_seconds": 6.432736026123166,
+    "rpc_at_least5s": 1238,
+    "requested_seconds": 5,
+    "hard_timeout_seconds": 30,
+    "recorded_runtime": {
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "torch": "2.11.0+cu130",
+      "numpy": "2.4.4",
+      "platform": "Linux-5.15.153.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+      "processor": "x86_64",
+      "cuda": "13.0",
+      "gpu": "NVIDIA GeForce RTX 3070",
+      "extension_sha256": "4fb0b05321c1e4a8f8113d942fb567c2cbd5f96dddc323135ceee7c8cffafdf1"
+    }
+  },
+  "qdab_log_search_diagnostics": {
+    "early_non_capture_turns_0_14": {
+      "logged_searches": 700,
+      "median_simulations": 9296.5,
+      "median_children": 18.0,
+      "median_depth": 5.0
+    },
+    "middle_non_capture_turns_15_23": {
+      "logged_searches": 540,
+      "median_simulations": 7319.0,
+      "median_children": 27.0,
+      "median_depth": 5.0
+    },
+    "later_non_capture_turns_24_plus": {
+      "logged_searches": 117,
+      "median_simulations": 99471,
+      "median_children": 11,
+      "median_depth": 1
+    }
+  },
+  "limitations": [
+    "This verifies uploaded records and consistency, not a re-execution of GPU inference or wall-clock measurement.",
+    "The frozen GPU checkpoint is omitted from this archive; its recorded hash matches the separate previously uploaded checkpoint.",
+    "Remote native extension hash is recorded but its binary is omitted; local native build may differ.",
+    "Relative Elo is conditional on Qdab quctann requested5s versus autoboxes400sim solver34/50k on the recorded hardware, not an equal-time or absolute rating.",
+    "Opening pairs are bootstrap units; repeated empty-board starts are descriptive and excluded from Elo.",
+    "No exact root solves were performed; final one-box losses do not locate the decisive error or prove near-equal strength.",
+    "Qdab seed is not exposed; timed searches vary."
+  ],
+  "analysis_elapsed_seconds": 0.16020917298737913,
+  "paired_opening_lower_bounds": {
+    "autoboxes_initially_winning_positions_eventually_lost_at_least": 36,
+    "qdab_initially_winning_positions_eventually_lost_at_least": 3,
+    "reason": "Each side-swapped pair shares exactly the same post-opening state. The25-box zero-sum game cannot draw, so one physical side is winning under perfect play. A player losing both seats must have lost the initially winning seat in one game.",
+    "limits": "No exact opening values or mistake locations were computed; these are pairwise lower bounds, not solved-state labels."
+  },
+  "observed_margin_interpretation": {
+    "mean_margin_does_not_rank_match_strength": true,
+    "evidence": "Autoboxes paired mean margin+0.76 while winning17/100;65of83losses are\u22121 but all17wins are+7or larger.",
+    "hypothesis": "Consistent with Qdab prioritizing securing a win over preserving margin once losing. Does not by itself establish why our shaping/search fails."
+  }
+}

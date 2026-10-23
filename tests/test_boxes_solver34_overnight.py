@@ -124,3 +124,78 @@ def test_night_recipe_and_final_match_are_matched() -> None:
     assert command[command.index("--solver") + 1] == "34"
     assert command[command.index("--solver_budget") + 1] == "50000"
     assert command[command.index("--num_games") + 1] == "200"
+
+
+@pytest.mark.parametrize("finish_started,started,last_iteration", [
+    (True, True, 2), (True, False, 1), (False, True, 1),
+])
+def test_resume_finishes_started_iteration_only_when_opted_in(
+        tmp_path: Path, monkeypatch, finish_started: bool, started: bool,
+        last_iteration: int) -> None:
+    launcher = load_launcher()
+    experiment = tmp_path / "experiment"
+    output = experiment / "logs" / "resume-test"
+    output.mkdir(parents=True)
+    checkpoints = experiment / "checkpoints"
+    checkpoints.mkdir()
+    reference, first = checkpoints / "iter0.pt", checkpoints / "iter1.pt"
+    reference.write_bytes(b"frozen reference")
+    first.write_bytes(b"completed first iteration")
+    league_path = experiment / f"league_state-{output.name}.json"
+    league = dict(champion=0, history=[dict(
+        iteration=1, candidate_checkpoint_sha256=launcher.digest(first))])
+    launcher.write_json(league_path, league)
+    state_path = output / "state.json"
+    launcher.write_json(state_path, dict(phase="training", completed_iterations=1,
+        active_seconds=4 * 3600 + 1, checkpoints={str(first): launcher.digest(first)}))
+    if started:
+        (output / "iteration-2.log").write_text("interrupted policy preparation\n")
+    config = dict(cwd=str(tmp_path), hours=4, cpu=True, environment=launcher.recipe(),
+                  checkpoint_dir=str(checkpoints), reference=str(reference),
+                  reference_sha256=launcher.digest(reference), code_sha256={},
+                  final_games=2, final_workers=1, final_seed=20261103)
+    if finish_started:
+        config["finish_started_iteration"] = True
+    launcher.write_json(output / "config.json", config)
+    (output / "config.sha256").write_text(launcher.digest(output / "config.json") + "\n")
+    monkeypatch.setattr(launcher, "EXP", experiment)
+    monkeypatch.setattr(launcher, "package_results", lambda _output: None)
+    monkeypatch.chdir(tmp_path)
+    calls = []
+
+    def fake_job(command, log, env, state, saved_state, count_work):
+        calls.append(count_work)
+        if count_work:
+            assert command == ["bash", str(experiment / "run_iteration_local.sh"),
+                               "1", "1", "--cpu"]
+            assert log == output / "iteration-2.log"
+            assert state["active_seconds"] > 4 * 3600
+            candidate = checkpoints / "iter2.pt"
+            candidate.write_bytes(b"completed resumed iteration")
+            league["history"].append(dict(
+                iteration=2, candidate_checkpoint_sha256=launcher.digest(candidate)))
+            launcher.write_json(league_path, league)
+            state["active_seconds"] += 10
+        else:
+            assert command[command.index("--a") + 1] == (
+                f"ckpt:{checkpoints / f'iter{last_iteration}.pt'}")
+            (output / "final-games.jsonl").write_text("mock verified games\n")
+            log.write_text('===RESULT===\n{"games": 2}\n')
+        launcher.write_json(saved_state, state)
+
+    def verify_match(games, summary, expected_games):
+        assert games == output / "final-games.jsonl"
+        assert summary == {"games": 2} and expected_games == 2
+
+    monkeypatch.setattr(launcher, "job", fake_job)
+    monkeypatch.setattr(launcher, "verify_match", verify_match)
+    launcher.run(output, config)
+    saved = json.loads(state_path.read_text())
+    assert saved["phase"] == "complete" and saved["completed_iterations"] == last_iteration
+    assert calls == ([True, False] if last_iteration == 2 else [False])
+    assert len(json.loads((output / "league.json").read_text())["history"]) == last_iteration
+    assert saved["checkpoints"][str(checkpoints / f"iter{last_iteration}.pt")] == (
+        launcher.digest(checkpoints / f"iter{last_iteration}.pt"))
+    before = calls.copy()
+    launcher.run(output, config)
+    assert calls == before

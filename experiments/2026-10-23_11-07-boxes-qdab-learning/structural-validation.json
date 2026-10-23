@@ -1,0 +1,19 @@
+{
+  "scope": "Isolated untrained structural-value prototype; no production integration or strength claim",
+  "feature_schema": "structural-value-v1",
+  "feature_count_5x5": 123,
+  "residual_parameters_5x5_hidden64": 11251,
+  "tests": {
+    "passed": 8,
+    "seconds": 2.0,
+    "command": "PYTHONPATH=src OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 /workspace/autoboxes/.venv/bin/python -m pytest -q experiments/2026-10-23_11-07-boxes-qdab-learning/test_structural_features.py experiments/2026-10-23_11-07-boxes-qdab-learning/test_structural_value.py"
+  },
+  "ruff": "passed on all four Python prototype/test files",
+  "sha256": {
+    "structural_features.py": "251c24cda9b39e8cea645c726f88e499a9f551ecd11baebcfae3a8dbed0661cf",
+    "structural_value.py": "9282ff9e5b74df4af338ac61431bde1459b0fd9f8afd8593d8043cc46415c048",
+    "test_structural_features.py": "a5cae19795343a1ab7ff155206882731a847e9d27d2fed8cc48c62ed0ec95d52",
+    "test_structural_value.py": "d66abd1a7938149ed8a0e043f6fcd72247b9f54ca982ba806defda132732f259",
+    "STRUCTURAL_VALUE.md": "d9565b796be73f010c29fb33a28757c7a123843e636af0c9fbc2ab425865abe9"
+  }
+}
