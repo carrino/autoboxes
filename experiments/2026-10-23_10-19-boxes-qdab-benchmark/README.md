@@ -1,5 +1,9 @@
 # Full-game Qdab benchmark
 
+Completed result: **17/100 paired-opening wins**, relative Elo **−275** against
+this Qdab configuration; empty-board panel **1/20**. The independent verification,
+margin distribution, timing limits and next experiment are in [result.md](result.md).
+
 The latest ordinary four-cycle learner won 271–129 against its parent. That
 establishes improvement inside our player family; it does not establish strength
 against an external opponent or robustness when that opponent chooses the opening.
