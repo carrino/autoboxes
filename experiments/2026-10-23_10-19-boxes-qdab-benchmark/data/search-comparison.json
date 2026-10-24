@@ -1,0 +1,58 @@
+{
+  "old_run": "work/qdab-gpu-benchmark-1yafbn9k",
+  "new_run": "work/qdab-gpu-benchmark-wmsy03l1",
+  "checkpoint_sha256": "c24bf71cba7e7b358881a966ab35b33174db0715f7dfd2e79f397f331f9e873f",
+  "config_sha256": [
+    "6bbc836ccd511bc5d950f820d46dfb5b1bda62bf771d90fdf9e23680663e3d62",
+    "d18f61b6d873717ff14eea5aa8a71c0670859edc23122ecdb8c3c6bfc3b61612"
+  ],
+  "source_changes": {},
+  "source_additions": [
+    "src/alpha_go/boxes/qdab_training_collect.py"
+  ],
+  "opening_pairs": 50,
+  "bootstrap_seed": 20261024,
+  "resamples": 100000,
+  "wins": [
+    17,
+    24
+  ],
+  "score_delta": 0.07,
+  "score_delta_ci95": [
+    -0.05000000000000002,
+    0.19000000000000003
+  ],
+  "transitions": {
+    "0->0": 63,
+    "0->1": 20,
+    "1->0": 13,
+    "1->1": 4
+  },
+  "seats": {
+    "first": {
+      "wins": [
+        9,
+        17
+      ],
+      "games_each": 50,
+      "delta": 0.16,
+      "delta_ci95": [
+        0.0,
+        0.32
+      ]
+    },
+    "second": {
+      "wins": [
+        8,
+        7
+      ],
+      "games_each": 50,
+      "delta": -0.02,
+      "delta_ci95": [
+        -0.18,
+        0.13999999999999999
+      ]
+    }
+  },
+  "scope": "Matched opening-family percentile bootstrap, four games per cluster. Observed configured-strength difference, not equal-time or a learned gain. Qdab's uncontrolled randomness and timing vary between runs. One realization per setting/opening does not isolate opponent variation. Empty-board repeats excluded; seat results are exploratory."
+}

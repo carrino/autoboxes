@@ -408,7 +408,9 @@ def main() -> None:
             ),
             (
                 "Relative Elo is conditional on Qdab quctann requested5s versus "
-                "autoboxes400sim solver34/50k on the recorded hardware, not an "
+                f"autoboxes{config['search']['num_simulations']}sim "
+                f"solver{config['search']['solver_max_undrawn']}/"
+                f"{config['search']['solver_node_budget']} on the recorded hardware, not an "
                 "equal-time or absolute rating."
             ),
             (
@@ -441,8 +443,10 @@ def main() -> None:
     review["observed_margin_interpretation"] = dict(
         mean_margin_does_not_rank_match_strength=True,
         evidence=(
-            "Autoboxes paired mean margin+0.76 while winning17/100;65of83losses "
-            "are−1 but all17wins are+7or larger."
+            f"Autoboxes paired mean margin {panels['paired']['mean_margin']:+g} while "
+            f"winning {panels['paired']['wins']}/100; "
+            f"{panels['paired']['one_box_losses']} of {panels['paired']['losses']} losses "
+            f"are −1 and {panels['paired']['wins_at_least7']} wins are +7 or larger."
         ),
         hypothesis=(
             "Consistent with Qdab prioritizing securing a win over preserving margin "

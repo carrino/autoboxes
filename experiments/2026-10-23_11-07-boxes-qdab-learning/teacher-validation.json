@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "status": "verified_for_gpu_experiment",
+  "validation": "No GPU fits or strength matches executed in cloud; small CPU integration only.",
+  "tests": {
+    "preparer": 7,
+    "runner": 7,
+    "existing_collector_benchmark_plus_initial_preparer_run": 22,
+    "ruff": "passed",
+    "strict_mypy": "passed",
+    "shell_syntax": "passed"
+  },
+  "source_sha256": {
+    "prepare_teacher.py": "0f5a68ed9d3ad236dcac363d4164b250a0f1df0e7375cdecb937f9a76e23081e",
+    "run_teacher_ab.py": "5798fbbce76919e8a32635d615ff9b210aef653efb6fdcd5f05731047c8973fe",
+    "run_teacher_ab.sh": "3bad436dc9dbd041109983b26c80cf16c9e896633e37e045a5c0cbfcaea2eaa8",
+    "test_prepare_teacher.py": "e5fc4f019e63c92ade65853c9f6e287265c11b70550ddd24a058335cfa5e57b3",
+    "test_run_teacher_ab.py": "d51d0445afb8cc4dd75f3ee2a140d1a74eb8f8630d3d9e615315035cdea320cc"
+  },
+  "payload_sha256": "375869d1835178f1749d425ca3d1c6ef8b3c4e12301039b4cad90464e85a703b",
+  "payload": {
+    "source_games": 60,
+    "teacher_queries": 240,
+    "exclusion_states": 61726,
+    "checkpoint_sha256": "c24bf71cba7e7b358881a966ab35b33174db0715f7dfd2e79f397f331f9e873f"
+  },
+  "actual_preparation": {
+    "schema": 1,
+    "status": "complete",
+    "checkpoint_sha256": "c24bf71cba7e7b358881a966ab35b33174db0715f7dfd2e79f397f331f9e873f",
+    "matching": {
+      "positions": 15631,
+      "games": 439,
+      "eligible_teacher_rows": 180,
+      "changed_policy_rows": 180
+    },
+    "removed": {
+      "replay_exact_roots": 0,
+      "teacher_game_state_rows": 27
+    },
+    "coverage": {
+      "training": {
+        "positions": 13692,
+        "exact_roots": 289,
+        "nonroots": 13403,
+        "policy_positions": 5490,
+        "value_only_positions": 8202,
+        "exact_value_positions": 8491,
+        "families": 216,
+        "exact_root_families": 170
+      },
+      "validation": {
+        "positions": 1712,
+        "exact_roots": 39,
+        "nonroots": 1673,
+        "policy_positions": 592,
+        "value_only_positions": 1120,
+        "exact_value_positions": 1159,
+        "families": 29,
+        "exact_root_families": 23
+      }
+    },
+    "validation_filter": {
+      "before": {
+        "positions": 1939,
+        "exact_roots": 41,
+        "nonroots": 1898,
+        "policy_positions": 749,
+        "value_only_positions": 1190,
+        "exact_value_positions": 1231,
+        "families": 29,
+        "exact_root_families": 24
+      },
+      "after": {
+        "positions": 1712,
+        "exact_roots": 39,
+        "nonroots": 1673,
+        "policy_positions": 592,
+        "value_only_positions": 1120,
+        "exact_value_positions": 1159,
+        "families": 29,
+        "exact_root_families": 23
+      },
+      "training_unique_inputs": 12510,
+      "training_overlap": 183,
+      "training_overlap_roots": 2,
+      "validation_duplicate": 44,
+      "validation_duplicate_roots": 0
+    },
+    "validation_band": 35,
+    "eligible_training_teacher_rows": 164,
+    "payload_manifest_sha256": "67febcb404672bf245a84cc5f72446c6157431a4810e3b88e0c07ea06f68bec0",
+    "source_replay_manifest_sha256": "f5b0604946c81c3d2793197fef87693e9ef8a9d6c669f1b7585cf6fea67d4494",
+    "validation_families_excluded": 15,
+    "root_values": "Unavailable for new sources; placeholder zeros never used by frontier_fit (q_mix=0)"
+  },
+  "cpu_smoke": {
+    "reference_sha256": "c24bf71cba7e7b358881a966ab35b33174db0715f7dfd2e79f397f331f9e873f",
+    "validation_band": 35,
+    "reason": "Available cloud replay contains 35\u201336 anchors; production uses existing user replay with 37-edge validation anchors.",
+    "updates_per_arm": 2,
+    "batch_size": 64,
+    "index_trace_sha256": "cce26713a9857a6c2a6315c56ac440ada7aae89e07c97daef0d3f2a7bfef6240",
+    "augmentation_schedule_sha256": "c011c31a923655ce1de9a0fc41fb5184a2748b0b7035389bf1f2ccba3c5518ac",
+    "arms": {
+      "learner-targets": {
+        "status": "complete",
+        "training": {
+          "positions": 13692,
+          "exact_roots": 289,
+          "nonroots": 13403,
+          "policy_positions": 5490,
+          "value_only_positions": 8202,
+          "exact_value_positions": 8491,
+          "families": 216,
+          "exact_root_families": 170
+        },
+        "validation": {
+          "positions": 1712,
+          "exact_roots": 39,
+          "nonroots": 1673,
+          "policy_positions": 592,
+          "value_only_positions": 1120,
+          "exact_value_positions": 1159,
+          "families": 29,
+          "exact_root_families": 23
+        },
+        "elapsed_seconds": 12.144168247999914
+      },
+      "qdab-targets": {
+        "status": "complete",
+        "training": {
+          "positions": 13692,
+          "exact_roots": 289,
+          "nonroots": 13403,
+          "policy_positions": 5490,
+          "value_only_positions": 8202,
+          "exact_value_positions": 8491,
+          "families": 216,
+          "exact_root_families": 170
+        },
+        "validation": {
+          "positions": 1712,
+          "exact_roots": 39,
+          "nonroots": 1673,
+          "policy_positions": 592,
+          "value_only_positions": 1120,
+          "exact_value_positions": 1159,
+          "families": 29,
+          "exact_root_families": 23
+        },
+        "elapsed_seconds": 11.883681095998327
+      }
+    }
+  },
+  "production_protocol": {
+    "updates_per_arm": 2048,
+    "batch_size": 256,
+    "games_per_arm": 200,
+    "full_games_total": 400,
+    "search_simulations": 400,
+    "approximate_advice_not_exact": true,
+    "automatic_promotion": false
+  }
+}

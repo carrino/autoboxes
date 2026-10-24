@@ -1,9 +1,10 @@
 # Next learning pilot: approximate Qdab moves against matched search targets
 
-Status: collection is implemented in `alpha_go.boxes.qdab_training_collect`;
-the matched training-bundle preparer described below still needs implementation.
-This is a bounded experiment, not a ready overnight-training command or a promise
-that imitating Qdab will beat it. The separate [mechanism review](QDAB_REVIEW.md)
+Status: collection and the matched exporter are implemented. The bundled payload
+contains 60 independently replayed teaching games and 240 approximate actions.
+`run_teacher_ab.sh` prepares local replay, fits both endpoints and completes the
+fixed 200-game-per-arm overnight comparison; see [OVERNIGHT.md](OVERNIGHT.md).
+This is a controlled experiment, not a promise that imitating Qdab will beat it. The separate [mechanism review](QDAB_REVIEW.md)
 describes search improvements that should keep their own experimental comparison.
 
 ## Question and frozen starting point
@@ -106,7 +107,7 @@ extension of the successful ordinary sampler, avoiding the previous heavy
 weighting and 120-epoch memorization experiments. Exact exposure depends on the
 actual bundle size and must be reported.
 
-Once the missing preparer produces verified bundles, the existing fit interface
+The exporter produces verified bundles; the existing fit interface
 for each role is:
 
 ```bash
@@ -117,8 +118,7 @@ uv run python -m alpha_go.boxes.frontier_fit \
   --min-undrawn 24 --snapshot-every 1024
 ```
 
-`ROLE` is `learner-targets` or `qdab-targets`; these are proposed bundle names,
-not paths already prepared. Each call produces an internally named `control.pt`;
+`ROLE` is `learner-targets` or `qdab-targets`; these are the roles created by the local preparation stage. Each call produces an internally named `control.pt`;
 the outer manifest must distinguish the two roles. Only the predeclared final
 2,048-update checkpoint is the candidate. The intermediate snapshot is diagnostic.
 
@@ -138,7 +138,7 @@ fitting them without transfer calls for more distinct families, not automaticall
 more epochs or higher weight.
 
 Then play both final checkpoints against pinned Qdab on the same **fresh** bank
-of 20 four-edge opening pairs: 40 full games per arm, 80 games total. Freeze the
+of 100 four-edge opening pairs: 200 full games per arm, 400 games total. Freeze the
 bank and seed `20261121` before either arm plays; exclude training and diagnostic
 families. Keep ours at 400 simulations, solver 34/50,000 and the same shaping;
 keep Qdab at the same requested five seconds and external timeout. Verify every
@@ -148,8 +148,10 @@ resume the same slot; never discard a failed slot based on who appeared ahead.
 The primary quantity is Qdab-arm game score minus control-arm game score, with
 opening-family paired uncertainty. Each cluster contains both sides and both
 models' games. Report each arm's raw wins/losses, first/second rates, game-score
-interval and elapsed time. Forty games per arm is a screening experiment, not a
-rating or promotion. Do not stop early or choose the better-looking snapshot.
+interval and elapsed time. The 200-game endpoint per arm is the overnight comparison, not an automatic
+promotion. The sample was increased before either fit or match at the user's
+request for an unattended overnight run; smaller explicit --games runs are
+screening experiments only. Do not stop early or choose the better-looking snapshot.
 Use the exact same settings to distinguish learned improvement from more search.
 
 A promising screen earns an independent, predeclared larger confirmation; it
@@ -159,19 +161,18 @@ than 50%, not merely beating the old checkpoint. Ultimately measure dominance
 with hundreds of fresh games and separately report empty-board matches. Relative
 Elo against this pinned engine/configuration is not its published absolute Elo.
 
-## Existing interfaces and remaining work
+## Implemented interfaces
 
-| Available now | Needed before this GPU A/B |
-|---|---|
-| Collector's complete-game and approximate-teacher JSON receipts | JSON → paired NPZ/bundle preparer with independent replay and family exclusions |
-| Ordinary positive-vector policy loader and uniform `frontier_fit` | Validator allowing differences only on the explicit approximate-teacher mask |
-| Existing portable replay bundles and exact anchor CSVs | Bundle augmentation preserving hashes, anchors and identical ordering |
-| Training sample/augmentation traces and exact diagnostics | Approximate-teacher exposure/heldout reads and paired two-arm Qdab report |
+`prepare_teacher.py export` verifies and packages the completed cloud collection.
+`prepare_teacher.py augment` builds both portable replay bundles, checks actual
+loaded-dataset matching, excludes heldout/evaluation overlap, and verifies exact
+anchors survive. `run_teacher_ab.sh` verifies the packaged payload, freezes the
+full experiment and runs the existing trainer and Qdab gameplay interfaces.
 
-Do not reuse `policy_target_ab.matched_datasets` unchanged: it only permits target
-changes on exact-policy root masks, which would misrepresent these recommendations.
-The new preparer can reuse portable-bundle hashing and ordinary dataset loading;
-it need not alter the core trainer.
+The runner checks sample and augmentation traces, reports approximate-teacher
+exposure and heldout agreement, then compares both fixed final checkpoints using
+complete opening-pair clusters. It does not change the production loop or
+represent approximate actions as exact policies. See [OVERNIGHT.md](OVERNIGHT.md).
 
 If this small pilot transfers, obtain more approximate targets cheaply from
 Qdab's **own already logged decision states**. Generate matched learner search

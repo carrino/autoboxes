@@ -1,9 +1,11 @@
 # Learn from a stronger opponent's decisions
 
-The latest learner has improved against earlier autoboxes checkpoints, but a
-separate eight-game cloud diagnostic against pinned Qdab won only one game.
-The user's frozen 120-game GPU benchmark is still running. These are different
-samples and hardware; do not pool them or infer a reliable rating from eight games.
+The latest learner won 17/100 paired games against pinned Qdab at 400 simulations
+and 24/100 at 1,600, using the same weights. The matched improvement interval
+includes zero. See the [completed comparison](../2026-10-23_10-19-boxes-qdab-benchmark/result-1600.md).
+The next intervention teaches earlier Qdab moves using separate fresh games.
+The [overnight command and recipe](OVERNIGHT.md) train two matched endpoints and
+complete 200 full games per endpoint against Qdab.
 
 This experiment collects fresh full games against Qdab and asks Qdab what it
 would do in selected positions actually reached by our learner. The first batch
@@ -21,8 +23,8 @@ See [PROTOCOL.md](PROTOCOL.md) for the matched training experiment and
 A separate [structural value experiment](STRUCTURAL_VALUE.md) supplies full
 chain/loop length histograms and graph counts directly to a small value readout.
 The isolated prototype leaves the existing policy and base weights frozen and
-starts with a zero value correction. It is untrained and has not demonstrated
-a playing-strength improvement. The current model already receives ten coarse
+starts with a zero value correction. The initial matched fits completed without a heldout move-selection improvement;
+none is a candidate for a playing-strength promotion. The current model already receives ten coarse
 chain/loop planes; this experiment tests richer information and a direct path
 to the value head, not the first addition of chain awareness.
 
@@ -31,8 +33,8 @@ The bounded offline pipeline is implemented in `prepare_structural.py`,
 collection game and a successful supervisor receipt, then labels roots/children
 for at most 45 minutes and fits three small readouts on cached frozen-network
 features. All arms use the same family-balanced sample indices and 1,024 updates.
-This is a development diagnostic: the actual GPU benchmark histories are still
-needed for its final state-overlap check. It does not alter the running GPU job,
+This is a development diagnostic. Independent audits of both actual GPU benchmark
+archives found no overlap with its frozen states or opening families. It does not alter the running GPU job,
 production weights or arena model loading. See [STRUCTURAL_VALUE.md](STRUCTURAL_VALUE.md)
 for commands, interpretation and limits.
 

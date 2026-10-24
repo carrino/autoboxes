@@ -1,5 +1,7 @@
 # Full-game Qdab benchmark
 
+The completed [1,600-simulation comparison](result-1600.md) scored 24/100 against Qdab, versus 17/100 at 400; the matched improvement interval includes zero.
+
 Completed result: **17/100 paired-opening wins**, relative Elo **−275** against
 this Qdab configuration; empty-board panel **1/20**. The independent verification,
 margin distribution, timing limits and next experiment are in [result.md](result.md).
