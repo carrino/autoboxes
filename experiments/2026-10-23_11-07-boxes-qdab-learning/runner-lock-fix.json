@@ -1,0 +1,5 @@
+{
+  "before_sha256": "5798fbbce76919e8a32635d615ff9b210aef653efb6fdcd5f05731047c8973fe",
+  "after_sha256": "3bcc2c7cd518ab17a1c5e432e8c8ab4997bc89561e0983f2ec509c24b78623d9",
+  "reason": "Use the per-match run.lock; the Qdab adapter owns the separate port lock. Training and match settings are unchanged."
+}

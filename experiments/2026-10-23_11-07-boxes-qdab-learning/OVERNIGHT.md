@@ -23,6 +23,28 @@ running and prevent the host from sleeping. The command prints the run directory
 its `resume.sh`, and the `results.tgz` to return when finished. After interruption,
 run the printed resume command rather than starting a second experiment.
 
+### Recovering the initial Qdab lock failure
+
+The first published runner mistakenly held Qdab's global port lock around the
+whole match. The adapter then requested that same lock for its first decision,
+raising `BlockingIOError` before a game completed. Both training endpoints had
+already finished. The corrected runner holds the per-match `run.lock`; the
+adapter still guards its port for every query.
+
+Pull the correction through Windows and WSL, then run the **existing** run's
+`resume.sh`. Completed preparation and both fits are checked and reused. A pinned
+old/new runner SHA pair in `runner-lock-fix.json` permits this specific correction
+and records `resume-lock-fix.json` beside the run. The original configuration,
+training data, checkpoints, match schedule and failed attempt stay intact.
+Every other source and runtime check remains enforced. No rebuild is required.
+
+Validation: 45 runner/adapter/benchmark tests passed, including real file-lock
+acquisition and rejection of an unrelated source change on resume. A live CPU
+smoke used the corrected runner with pinned Qdab, a tiny network and two
+side-swapped 50-edge prefixes: both games finished with independently verified
+60-edge histories, and a second resume reused them. This checks execution and
+recovery, not playing strength. Ruff and the runner's strict type check passed.
+
 ## What runs
 
 1. Verify and freeze the current checkpoint, existing local replay, code and

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import fcntl
 import hashlib
 import importlib.util
 import io
@@ -216,3 +217,111 @@ def test_match_comparison_clusters_both_seats_and_requires_completion(
     records[paths[runner.ROLES[1]]].pop()
     with pytest.raises(ValueError, match="Complete both"):
         runner.compare_matches(paths, dict(games_per_arm=4, final_seed=9))
+
+
+def test_match_resume_uses_separate_lock_and_preserves_port_exclusion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from alpha_go.boxes import qdab
+    from alpha_go.boxes import qdab_benchmark as match
+
+    checkpoint = tmp_path / "checkpoint.pt"
+    checkpoint.write_bytes(b"saved endpoint")
+    folder = tmp_path / "arena-learner-targets"
+    match_dir = folder / "saved-match"
+    match_dir.mkdir(parents=True)
+    recipe = dict(checkpoint_sha256=runner.digest(checkpoint), schedule=[])
+    runner.write_json(match_dir / "config.json", recipe)
+    runner.write_json(
+        folder / "match.json",
+        dict(directory=match_dir.name, config_sha256=runner.digest(match_dir / "config.json")),
+    )
+    calls = []
+
+    def query_in_match(path: Path, config: dict[str, Any]) -> None:
+        assert path == match_dir and config == recipe
+        with qdab.port_lock():
+            calls.append("query")
+            with pytest.raises(BlockingIOError), qdab.port_lock():
+                pass
+
+    monkeypatch.setattr(match, "run", query_in_match)
+    monkeypatch.setattr(match, "report", lambda *args: None)
+    config = dict(schedule=[], games_per_arm=200)
+    # Exercise the real fixed port-lock path, including the formerly nested
+    # acquisition. This test does not start a server or use the network.
+    assert runner.run_match(tmp_path, "learner-targets", checkpoint, config) == match_dir
+    with (match_dir / "run.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(BlockingIOError):
+            runner.run_match(tmp_path, "learner-targets", checkpoint, config)
+    with qdab.port_lock(), pytest.raises(BlockingIOError):
+        runner.run_match(tmp_path, "learner-targets", checkpoint, config)
+    assert calls == ["query"]
+    assert runner.read_json(match_dir / "config.json") == recipe
+
+
+def test_resume_accepts_only_pinned_lock_fix_and_preserves_original_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from alpha_go.boxes import policy_target_ab
+    from alpha_go.boxes import qdab_benchmark as match
+
+    script = tmp_path / "run_teacher_ab.py"
+    script.write_text("fixed runner")
+    other = tmp_path / "trainer.py"
+    other.write_text("unchanged trainer")
+    monkeypatch.setattr(runner, "SCRIPT", script)
+    monkeypatch.setattr(runner, "REPO", tmp_path)
+    monkeypatch.setattr(match, "runtime", lambda: {})
+    monkeypatch.setattr(policy_target_ab, "bundle_files", lambda _: {})
+    output = tmp_path / "run"
+    (output / "inputs").mkdir(parents=True)
+    (output / "inputs/reference.pt").write_bytes(b"reference")
+    monkeypatch.setattr(runner, "CHECKPOINT_SHA", runner.digest(output / "inputs/reference.pt"))
+    runner.write_json(output / "inputs/replay-hashes.json", {})
+    repair = dict(
+        before_sha256="old-runner",
+        after_sha256=runner.digest(script),
+        reason="Match lock must differ from the adapter port lock",
+    )
+    runner.write_json(script.with_name("runner-lock-fix.json"), repair)
+    config = dict(
+        checkpoint_sha256=runner.CHECKPOINT_SHA,
+        replay="unused",
+        runtime={},
+        input_sha256=runner.tree_hashes(output / "inputs"),
+        code_sha256={script.name: "old-runner", other.name: runner.digest(other)},
+    )
+    runner.write_json(output / "config.json", config)
+    original = (output / "config.json").read_bytes()
+    (output / "config.sha256").write_text(runner.digest(output / "config.json"))
+    runner.verify(output, config)
+    receipt = (output / "resume-lock-fix.json").read_bytes()
+    runner.verify(output, config)
+    assert (output / "resume-lock-fix.json").read_bytes() == receipt
+    assert (output / "config.json").read_bytes() == original
+    other.write_text("different trainer")
+    with pytest.raises(ValueError, match="source changed"):
+        runner.verify(output, config)
+    other.write_text("unchanged trainer")
+    script.write_text("another runner")
+    with pytest.raises(ValueError, match="source changed"):
+        runner.verify(output, config)
+    script.write_text("fixed runner")
+    config["code_sha256"][script.name] = "unrecognized-version"
+    runner.write_json(output / "config.json", config)
+    (output / "config.sha256").write_text(runner.digest(output / "config.json"))
+    with pytest.raises(ValueError, match="source changed"):
+        runner.verify(output, config)
+
+
+def test_published_lock_fix_hash_matches_runner() -> None:
+    repair = runner.read_json(runner.SCRIPT.with_name("runner-lock-fix.json"))
+    assert (
+        repair["before_sha256"]
+        == "5798fbbce76919e8a32635d615ff9b210aef653efb6fdcd5f05731047c8973fe"
+    )
+    assert repair["after_sha256"] == runner.digest(runner.SCRIPT)

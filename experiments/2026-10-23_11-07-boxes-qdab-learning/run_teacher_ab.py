@@ -243,9 +243,29 @@ def verify(output: Path, config: dict[str, Any]) -> None:
         raise ValueError("Source replay changed")
     if match.runtime() != config["runtime"]:
         raise ValueError("Runtime changed; keep the same Python, native extension and GPU")
+    repair = None
     for name, expected in config["code_sha256"].items():
-        if digest(REPO / name) != expected:
+        actual = digest(REPO / name)
+        if actual == expected:
+            continue
+        # A single published runner correction can resume the already completed
+        # fits. All training, input, runtime and nested-match hashes stay frozen.
+        if name != str(SCRIPT.relative_to(REPO)):
             raise ValueError(f"Experiment source changed during run: {name}")
+        repair = read_json(SCRIPT.with_name("runner-lock-fix.json"))
+        if repair["before_sha256"] != expected or repair["after_sha256"] != actual:
+            raise ValueError(f"Experiment source changed during run: {name}")
+    if repair is not None:
+        receipt = dict(config_sha256=digest(output / "config.json"), **repair)
+        path = output / "resume-lock-fix.json"
+        if path.exists() and read_json(path) != receipt:
+            raise ValueError("Lock-fix resume receipt changed")
+        if not path.exists():
+            write_json(path, receipt)
+            print(
+                "Recorded lock-fix resume; completed fits and frozen match settings retained.",
+                flush=True,
+            )
 
 
 def job(command: list[str], log: Path, cap_seconds: int) -> None:
@@ -463,7 +483,9 @@ def run_match(output: Path, role: str, checkpoint: Path, config: dict[str, Any])
     ):
         raise ValueError("Wrong endpoint or opening schedule for match")
     print(f"{role}: {config['games_per_arm']} fixed full games against Qdab", flush=True)
-    with Path("/tmp/autoboxes-qdab-12345.lock").open("a") as lock:
+    # The adapter takes the global port lock for each query. Hold only this
+    # match's lock here, also excluding a concurrent standalone match resume.
+    with (match_dir / "run.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
             match.run(match_dir, recipe)
