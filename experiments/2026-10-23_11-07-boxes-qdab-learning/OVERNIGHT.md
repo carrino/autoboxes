@@ -1,5 +1,9 @@
 # Overnight Qdab policy transfer
 
+Completed first run: **28/200 control versus 27/200 Qdab targets**, with no
+demonstrated gain. See [the result and revised next step](TEACHER_RESULT.md).
+Do not repeat this recipe by default; screen teaching uptake before another arena.
+
 Train two models from the same current checkpoint, then finish **200 full games
 per model against Qdab**. Expected duration on the user's RTX 3070/WSL setup is
 approximately **8–12 hours**, dominated by 400 Qdab games. This is a fixed

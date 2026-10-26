@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "run": "qdab-teacher-ab-lb2xd5_9",
+  "archive_sha256": "7f24fb074705c6e8b2d7d8131628376ac1b16559099b3bbc04547343f64a9f47",
+  "summary": {
+    "status": "complete",
+    "games_per_arm": 200,
+    "opening_pairs": 100,
+    "roles": [
+      "learner-targets",
+      "qdab-targets"
+    ],
+    "wins": [
+      28,
+      27
+    ],
+    "score": [
+      0.14,
+      0.135
+    ],
+    "qdab_target_minus_control": -0.005,
+    "paired_difference_ci95": [
+      -0.06999999999999999,
+      0.06
+    ],
+    "bootstrap_seed": 20261121,
+    "resamples": 10000,
+    "panels": {
+      "learner-targets": {
+        "planned": 200,
+        "completed": 200,
+        "wins": 28,
+        "losses": 172,
+        "status": "complete",
+        "mean_margin": 0.62,
+        "a_sec_per_move": 0.5430023908247776,
+        "b_sec_per_move": 2.1054378992158465,
+        "score": 0.14,
+        "games": 200,
+        "opening_pairs": 100,
+        "draws": 0,
+        "game_score": 0.14,
+        "first_score": 0.18,
+        "second_score": 0.1,
+        "paired_win_pvalue": 7.940933880509066e-21,
+        "pair_bootstrap_ci95": [
+          0.095,
+          0.19
+        ],
+        "hoeffding_ci95": [
+          0.004189848425938059,
+          0.27581015157406197
+        ],
+        "game_score_ci95": [
+          0.095,
+          0.19
+        ],
+        "interval_method": "opening-pair cluster percentile bootstrap",
+        "relative_elo": -315.34816622613187,
+        "relative_elo_ci95": [
+          -391.56998956654223,
+          -251.8925671703283
+        ],
+        "bootstrap_seed": 20261121,
+        "bootstrap_resamples": 10000,
+        "scope": "Relative to this opponent and match configuration, not published absolute Elo. Infinity strings denote unbounded logit estimates, not proven infinite strength. Fixed complete match; independent opening pairs; no sequential-stop correction."
+      },
+      "qdab-targets": {
+        "planned": 200,
+        "completed": 200,
+        "wins": 27,
+        "losses": 173,
+        "status": "complete",
+        "mean_margin": 0.68,
+        "a_sec_per_move": 0.5170951613768852,
+        "b_sec_per_move": 2.1083809649958085,
+        "score": 0.135,
+        "games": 200,
+        "opening_pairs": 100,
+        "draws": 0,
+        "game_score": 0.135,
+        "first_score": 0.15,
+        "second_score": 0.12,
+        "paired_win_pvalue": 1.4495364161868997e-18,
+        "pair_bootstrap_ci95": [
+          0.085,
+          0.19
+        ],
+        "hoeffding_ci95": [
+          0.0,
+          0.27081015157406196
+        ],
+        "game_score_ci95": [
+          0.085,
+          0.19
+        ],
+        "interval_method": "opening-pair cluster percentile bootstrap",
+        "relative_elo": -322.67293558792323,
+        "relative_elo_ci95": [
+          -412.8008673408623,
+          -251.8925671703283
+        ],
+        "bootstrap_seed": 20261121,
+        "bootstrap_resamples": 10000,
+        "scope": "Relative to this opponent and match configuration, not published absolute Elo. Infinity strings denote unbounded logit estimates, not proven infinite strength. Fixed complete match; independent opening pairs; no sequential-stop correction."
+      }
+    },
+    "scope": "Matched final-endpoint policy-target comparison against configured Qdab. Opening family is the bootstrap unit. Timed opponent randomness is uncontrolled. No automatic promotion or published absolute Elo."
+  },
+  "matched_training": {
+    "index_trace_sha256": "ca59171267b65f4ea925b52da750a69c7301941eb4f73fb58c8fb50c17584f10",
+    "augmentation_schedule_sha256": "5d03cb6d5518e9e794a8a8784baa0044ddf202aba4d869a17ac3fe9db2125129",
+    "updates": 2048,
+    "positions": 98747,
+    "eligible_teacher_rows": 164,
+    "teacher_exposures": 869,
+    "unique_teacher_rows_exposed": 164,
+    "all_training_indices_identical": true,
+    "exact_targets_and_values_matched": true
+  },
+  "teacher_read_metrics": {
+    "reference": {
+      "training": {
+        "positions": 180,
+        "families": 45,
+        "mean_teacher_probability": 0.034978150962787266,
+        "top_move_agreement": 0.044444444444444446
+      },
+      "validation": {
+        "positions": 60,
+        "families": 15,
+        "mean_teacher_probability": 0.03559709585024393,
+        "top_move_agreement": 0.05
+      }
+    },
+    "learner-targets": {
+      "training": {
+        "positions": 180,
+        "families": 45,
+        "mean_teacher_probability": 0.035336023019368036,
+        "top_move_agreement": 0.03888888888888889
+      },
+      "validation": {
+        "positions": 60,
+        "families": 15,
+        "mean_teacher_probability": 0.03561313545748514,
+        "top_move_agreement": 0.05
+      }
+    },
+    "qdab-targets": {
+      "training": {
+        "positions": 180,
+        "families": 45,
+        "mean_teacher_probability": 0.036805737195148444,
+        "top_move_agreement": 0.06111111111111111
+      },
+      "validation": {
+        "positions": 60,
+        "families": 15,
+        "mean_teacher_probability": 0.0357721413563316,
+        "top_move_agreement": 0.05
+      }
+    }
+  },
+  "independent_review": {
+    "games": 400,
+    "edges": 24000,
+    "qdab_rpc_states": 9652,
+    "qdab_played_edges": 11138,
+    "failed_attempts": 1,
+    "failure": "Initial first-game duplicate lock; retained and retried on same opening",
+    "scope": "Raw endpoint weights, replay and sample-index arrays omitted; their recorded hashes agree but unavailable bytes cannot be independently verified."
+  },
+  "cloud_labels": {
+    "source_games": 120,
+    "roots": 480,
+    "states": 23528,
+    "known_states": 23271,
+    "complete_root_groups": 471,
+    "band_coverage": {
+      "38": {
+        "roots": 120,
+        "complete_roots": 113,
+        "known_roots": 113
+      },
+      "37": {
+        "roots": 120,
+        "complete_roots": 119,
+        "known_roots": 119
+      },
+      "36": {
+        "roots": 120,
+        "complete_roots": 119,
+        "known_roots": 119
+      },
+      "35": {
+        "roots": 120,
+        "complete_roots": 120,
+        "known_roots": 120
+      }
+    },
+    "family_split": {
+      "training": 100,
+      "validation": 20
+    }
+  },
+  "decision": "No demonstrated teaching gain; retain original c24 checkpoint. Screen larger-data explicit teacher exposure before further full matches.",
+  "recycling": "User authorized reuse after freezing results. Retire all used opening families from future evaluation; original result remains immutable. Recycled Qdab actions are approximate, observed outcomes are not exact values."
+}
