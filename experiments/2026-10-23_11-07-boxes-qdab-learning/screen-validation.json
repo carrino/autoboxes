@@ -1,0 +1,88 @@
+{
+  "status": "passed",
+  "tests": 18,
+  "checks": [
+    "targeted pytest",
+    "strict mypy",
+    "Ruff",
+    "bash syntax",
+    "git diff whitespace"
+  ],
+  "payload": {
+    "manifest_sha256": "599e3caa80e65c6fe4d9df5ec05c50edd1eb1e481f160cf82a68bebc7ad934ca",
+    "archive_sha256": "d46826494b829c6797cd43577df9c18465327f14cb03bb4447199adbe4f5c762",
+    "training_positions": 3072,
+    "primary_validation_positions": 80,
+    "diagnostic_positions": 60
+  },
+  "real_cpu_smoke": {
+    "output": "work/teacher-screen-smoke/qdab-teacher-screen-0svd250i",
+    "status": "complete",
+    "reference_sha256": "c24bf71cba7e7b358881a966ab35b33174db0715f7dfd2e79f397f331f9e873f",
+    "settings": {
+      "steps": 2,
+      "batch_size": 16,
+      "teacher_per_batch": 4,
+      "lr": 0.0001,
+      "seed": 20261128,
+      "min_undrawn": 24,
+      "weight_decay": 0.0001,
+      "value_supervision": "ordinary replay only",
+      "precision": "bf16 CUDA / FP32 CPU",
+      "control": "Frozen reference raw legal policy on identical teacher states"
+    },
+    "training": {
+      "positions": 13138,
+      "exact_roots": 289,
+      "nonroots": 12849,
+      "policy_positions": 4936,
+      "value_only_positions": 8202,
+      "exact_value_positions": 8491,
+      "families": 175,
+      "exact_root_families": 170
+    },
+    "validation": {
+      "positions": 1658,
+      "exact_roots": 39,
+      "nonroots": 1619,
+      "policy_positions": 538,
+      "value_only_positions": 1120,
+      "exact_value_positions": 1159,
+      "families": 25,
+      "exact_root_families": 23
+    },
+    "teacher_counts": {
+      "training": 3072,
+      "validation": 80,
+      "diagnostic": 60
+    },
+    "arms": {
+      "reference-policy": {
+        "steps": 2,
+        "teacher_exposures": 8,
+        "teacher_value_exposures": 0,
+        "replay_value_exposures": 24,
+        "index_trace_sha256": "e6a312a650d09e5ae69520a85490908c025d3fcfe6e5a8c9c29463fab2955a88",
+        "augmentation_schedule_sha256": "5f20d61c268b375bfff7c497efe0687537217bf6d150cae0de5412d512f3a0c0",
+        "elapsed_seconds": 23.91441775902058
+      },
+      "qdab-policy": {
+        "steps": 2,
+        "teacher_exposures": 8,
+        "teacher_value_exposures": 0,
+        "replay_value_exposures": 24,
+        "index_trace_sha256": "e6a312a650d09e5ae69520a85490908c025d3fcfe6e5a8c9c29463fab2955a88",
+        "augmentation_schedule_sha256": "5f20d61c268b375bfff7c497efe0687537217bf6d150cae0de5412d512f3a0c0",
+        "elapsed_seconds": 24.25440406301641
+      }
+    },
+    "completed_shell_resume": "reused completed fits and readouts with existing cloud venv"
+  },
+  "source_sha256": {
+    "prepare_teacher_screen.py": "0fdfab616509432047bc82297f7e8b3a7a1547253f51cf8309f02f0388a338f0",
+    "fit_teacher_screen.py": "44f7ffbd77dfc5afa0d0a87721dc747a87ff60a79e2c3e7be316b85df83649f4",
+    "run_teacher_screen.py": "0a7a9ad877dc551a1fbeedb25f77c63e43e778103219c69deb7ef7e0c1143ec2",
+    "run_teacher_screen.sh": "cb219f8a14f622b340172ed8fcb3e7b80f1ff65dd039c8d4d66e2253efadcc12"
+  },
+  "scope": "Implementation smoke with original full-size c24 model, complete bundled teacher payload and older cloud replay; two CPU updates per arm. Default 2048-update CUDA run not executed here. No strength or generalization claim."
+}

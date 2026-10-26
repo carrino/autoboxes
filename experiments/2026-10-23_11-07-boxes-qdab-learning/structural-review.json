@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "reviewer": "qdab_mechanism_review",
+  "status": "ready_for_bounded_development_queue",
+  "scope": "Independent source and semantic-test review. No large-board solving, training or strength claim performed by reviewer.",
+  "source_sha256": {
+    "prepare_structural.py": "19d30e77a1b83e5a17a46e85f84ffaac8d10a5b70be7917c5184af99393c8013",
+    "fit_structural.py": "d1528677a970465cb903cddf594e8d3938eb93bf7fb2356c57c8537b1a4b8496",
+    "queue_structural.py": "1c814f89b067b4a17c2b35e76251d19f03000819bbeee5fc194674536cb0c503",
+    "test_prepare_structural.py": "f7871f5181b61af0983b2536b880927708a5bc95e4ae1f1e53f0b83e49f85ed8",
+    "test_fit_structural.py": "a09065239021e787ba472b13b6ade48da9116ebf0bfad8f0461449a1190123a5",
+    "test_queue_structural.py": "35896d01a18a743e883b76ba943cfdccf01a1c5c0c17a9903ab4a6926d529f3b"
+  },
+  "checks": [
+    "Remaining margin converted to final P1 using current score and actual mover; loss/read conversion to mover occurs separately.",
+    "Raw and collapsed states replay independently and native forced-capture board identity is checked; retained captures do not flip perspective.",
+    "Unknown labels remain null; exact labels require exact status and integer parity/range; primary child-choice metrics require every legal child.",
+    "D4 edge mask plus mover-relative scores blocks semantic cross-split leakage, including physical color swaps; source families stay in one split.",
+    "State and query identities are source-game private; duplicate receipt stems fail instead of silently overwriting exact labels.",
+    "Frozen base inference uses eval/no_grad; calibration and structural heads share sampled family/root/state indices, optimizer schedule and CE target.",
+    "Child-order deltas pair common validation roots and bootstrap source families; complete held-out family coverage is explicit.",
+    "Known exclusion receipt is hashed and checked; unresolved actual GPU benchmark overlap remains provisional in both loader and report.",
+    "Controller uses compatible shared source locks and exclusive timed-opponent lock; worker process groups are reaped and partial exact receipts exported on interruption.",
+    "Both labeling phases use the full bounded session deadline; phase two visits one root per source game before the next band."
+  ],
+  "tests_reported_by_owners": {
+    "prepare": {
+      "passed": 11,
+      "seconds": 11.21,
+      "includes": "Actual prepare.export to fit.run on exhaustive 2x2 labels; SIGTERM worker reaping; same-family separate-game ownership."
+    },
+    "fit": {
+      "passed": 11,
+      "seconds": 3.14,
+      "includes": "Frozen base/BN, exact child perspective, collapse/status tampering, incomplete-group exclusion, family bootstrap, cache reuse/corruption, provisional receipt scope."
+    },
+    "queue": {
+      "passed": 6,
+      "includes": "Cross-process shared readers accepted, exclusive collection writer denied; bounded subprocess lifecycle and resume artifact integrity."
+    },
+    "lint_typing": "Owners report Ruff and strict mypy clean; root owns final combined check."
+  },
+  "limitations": [
+    "Heads are diagnostic and are not production-compatible promoted checkpoints.",
+    "Actual GPU benchmark state exclusions remain pending.",
+    "Node-budget failures and wall-clock truncation produce conditional coverage; zero or few complete validation families cannot establish child-order improvement.",
+    "No evidence of improved strength until a fixed independent search/arena evaluation."
+  ]
+}
