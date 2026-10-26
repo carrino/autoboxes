@@ -3,9 +3,13 @@
 The latest learner won 17/100 paired games against pinned Qdab at 400 simulations
 and 24/100 at 1,600, using the same weights. The matched improvement interval
 includes zero. See the [completed comparison](../2026-10-23_10-19-boxes-qdab-benchmark/result-1600.md).
-The next intervention teaches earlier Qdab moves using separate fresh games.
-The [overnight command and recipe](OVERNIGHT.md) train two matched endpoints and
-complete 200 full games per endpoint against Qdab.
+The first teaching comparison completed at 28/200 control wins versus 27/200
+with Qdab targets. Teaching occupied only 0.293% of policy samples and did not
+demonstrate better heldout choices; see [the result](TEACHER_RESULT.md).
+The next command is the [short teaching screen](SCREEN.md), using 3,072 teacher
+positions and an explicit 8/256 quota. It performs two fixed fits and diagnostic
+reads, with no arena. The [old overnight recipe](OVERNIGHT.md) remains documented
+for reproduction and is not the next recommended run.
 
 This experiment collects fresh full games against Qdab and asks Qdab what it
 would do in selected positions actually reached by our learner. The first batch
